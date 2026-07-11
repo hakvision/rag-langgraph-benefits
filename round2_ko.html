@@ -3,7 +3,7 @@
 <head>
   <meta charset='utf-8' />
   <meta name='viewport' content='width=device-width, initial-scale=1' />
-  <title>Round1 KO · AWS RAG 문서 실험</title>
+  <title>Round2 KO · AWS RAG 문서 실험</title>
   <style>
     :root { --bg:#09101d; --panel:#121933; --panel2:#172243; --text:#eef3ff; --muted:#a9b6d3; --line:#2a3768; --accent:#7cc9ff; --ok:#8effc8; --warn:#ffd479; }
     * { box-sizing:border-box; }
@@ -27,7 +27,7 @@
     th,td { border-top:1px solid var(--line); padding:10px; text-align:left; vertical-align:top; }
     th { color:var(--accent); font-size:13px; }
     pre { margin:0; white-space:pre-wrap; word-break:break-word; background:#0a0f1d; border:1px solid var(--line); border-radius:14px; padding:12px; color:#dbe8ff; font-size:13px; }
-    h2,h3 { margin:0 0 10px; }
+    h2,h3,h4 { margin:0 0 10px; }
     ol,ul { margin:0; padding-left:20px; }
     .score { color:var(--warn); font-size:12px; }
     .hits { color:var(--accent); font-size:12px; }
@@ -38,49 +38,63 @@
 <body>
   <main class='wrap'>
     <section class='hero'>
-      <div class='eyebrow'>round1 · qwen3 routed rag · ko</div>
-      <h1>AWS 한국어 RAG 문서를 기준으로 돌린 round1</h1>
-      <p>이번 round1은 이 맥에서 실제 Qwen3/Ollama 백엔드가 없어서 <strong>mock 라우팅/검색 실험</strong>으로 실행했다. 대신 문서는 실제 AWS 한국어 원문을 가져와 청크화했고, 질문/검색/품질 게이트/흐름/HTML 리포트는 전부 실제 산출물로 남겼다. 이번 개정판은 질문마다 <strong>미리 정한 기대 정답</strong>을 두고 점수까지 매겨서, 결과가 얼마나 잘 나왔는지도 같이 본다.</p>
+      <div class='eyebrow'>round2 · qwen3 routed rag · ko</div>
+      <h1>Reranker를 추가한 AWS 한국어 RAG round2</h1>
+      <p>이번 round2는 round1의 baseline retrieval 위에 <strong>reranker 단계</strong>를 따로 넣어, 먼저 넓게 후보를 뽑고 그다음 질문-청크 정합성으로 다시 정렬하는 구조로 분리했다. 여전히 실백엔드는 없어서 mock 실험이지만, 구조 차이와 judged score 변화를 보기 좋게 만들었다.</p>
       <div class='pillrow'>
         <span class='pill'>provider: mock</span>
         <span class='pill'>router: qwen3:8b</span>
         <span class='pill'>large: qwen3:14b</span>
         <span class='pill'>doc: <a href='https://aws.amazon.com/ko/what-is/retrieval-augmented-generation/' target='_blank'>RAG란? - 검색 증강 생성 AI 설명 - AWS</a></span>
+        <span class='pill'>reranker: heuristic section-aware reranker</span>
       </div>
       <div class='stats'>
         <article class='panel'><strong>10</strong><span>questions</span></article>
         <article class='panel'><strong>7</strong><span>initial 8B routes</span></article>
         <article class='panel'><strong>3</strong><span>initial 14B routes</span></article>
         <article class='panel'><strong>2</strong><span>total restarts</span></article>
-        <article class='panel'><strong>1.89 ms</strong><span>avg end-to-end time</span></article>
-        <article class='panel'><strong>18</strong><span>document chunks</span></article>
-        <article class='panel'><strong>52.9</strong><span>avg judge score</span></article>
+        <article class='panel'><strong>1.85 ms</strong><span>avg end-to-end time</span></article>
+        <article class='panel'><strong>53.8</strong><span>avg judge score</span></article>
+        <article class='panel'><strong>6.66</strong><span>avg rerank lift</span></article>
         <article class='panel'><strong>1</strong><span>good verdicts</span></article>
       </div>
     </section>
     
     <section class='card run'>
-      <div class='eyebrow'>structure · round1</div>
-      <h2>Round1 구조</h2>
+      <div class='eyebrow'>structure · round1 vs round2</div>
+      <h2>Round1 / Round2 구조 비교</h2>
       <div class='grid two'>
         <article class='panel'>
-          <h3>파이프라인</h3>
+          <h3>Round1</h3>
           <ol>
-            <li>classify_8b: 질문을 8B/14B 경로로 분류</li>
-            <li>search_8b 또는 search_14b: lexical retrieval로 상위 청크 선택</li>
-            <li>grade_results: coverage/top_score 기반 품질 판정</li>
-            <li>필요하면 route_upgrade 8b→14b</li>
-            <li>answer: 상위 청크 요약형 응답 생성</li>
-            <li>judge: 미리 정한 기대 정답 기준으로 점수화</li>
+            <li>classify_8b</li>
+            <li>search_8b 또는 search_14b</li>
+            <li>grade_results</li>
+            <li>필요 시 14B 승격</li>
+            <li>answer</li>
+            <li>judge</li>
           </ol>
+          <ul>
+            <li>retrieval 1단계만 있고 reranker 없음</li>
+            <li>top score와 coverage 위주로 품질을 판정</li>
+            <li>baseline 확인용 구조</li>
+          </ul>
         </article>
         <article class='panel'>
-          <h3>특징</h3>
+          <h3>Round2</h3>
+          <ol>
+            <li>classify_8b</li>
+            <li>search_8b 또는 search_14b로 넓게 후보 수집</li>
+            <li>rerank_{model}: 질문-청크 overlap + section-aware reranker 적용</li>
+            <li>grade_results</li>
+            <li>필요 시 14B 승격 후 다시 retrieval+rereank</li>
+            <li>answer</li>
+            <li>judge</li>
+          </ol>
           <ul>
-            <li>retrieval은 단일 점수 스텝으로 끝나고 reranker는 없음</li>
-            <li>검색 품질은 top score + coverage 위주로 판정</li>
-            <li>최종 answer는 청크 발췌 중심이라 judged score가 낮게 나올 수 있음</li>
-            <li>즉 round1은 baseline 구조 확인용에 가깝다</li>
+            <li>retrieval과 reranking을 분리해서 구조를 더 명확하게 봄</li>
+            <li>질문 의도와 맞는 section을 앞으로 당겨 score 개선을 노림</li>
+            <li>즉 round2는 reranker 추가 효과를 보는 실험 구조</li>
           </ul>
         </article>
       </div>
@@ -97,15 +111,16 @@
           <span class='pill'>initial route: 8B</span>
           <span class='pill'>final model: 8B</span>
           <span class='pill'>restarts: 0</span>
-          <span class='pill'>total: 2.63 ms</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 2.30 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 8b</li><li>search_8b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 8b</li><li>search_8b</li><li>rerank_8b</li><li>grade_results → answer</li><li>answer</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>search_8b에서 K14, K01, K13, K10을 가져왔고, grade_results가 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 현재 상위 청크를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 2/6, 핵심 청크 1/1개를 잡아서 총점 60.4점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>search_8b가 먼저 후보를 모으고 rerank_8b가 질문 overlap과 section 힌트로 K14, K01, K13, K10 순서로 다시 정렬했다.</li><li>grade_results가 reranked top chunks를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 reranked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 2/6, 핵심 청크 1/1개를 잡아서 총점 60.4점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
@@ -152,21 +167,33 @@
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.714,
-  &quot;top_score&quot;: 20.45,
+  &quot;top_score&quot;: 29.77,
   &quot;distinct_sections&quot;: 4,
   &quot;reason&quot;: &quot;retrieval looks grounded&quot;
 }</pre>
         </article>
       </div>
       <article class='panel'>
-        <h3>Search attempts + retrieved chunks</h3>
-        <article class='attempt'><div class='attempt-head'><strong>search_8b</strong><span>1.66 ms</span></div><div class='query'>검색 증강 생성 rag aws 문서는 정의하나요</div><ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>score 20.45</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>term hits: rag, 검색, 생성, 증강</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>score 17.2</span><br>검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의…<br><span class='hits'>term hits: rag, 검색, 생성, 증강</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>score 15.85</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>term hits: rag, 검색, 증강</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>score 14.5</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>term hits: 검색, 문서는, 증강</span></li></ul></article>
+        <h3>Search + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>search_8b+rerank_8b</strong>
+                <span>1.53 ms</span>
+              </div>
+              <div class='query'>검색 증강 생성 rag aws 문서는 정의하나요</div>
+              <h4>retrieval candidates</h4>
+              <ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>base 20.45</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>base 17.2</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>base 15.85</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>base 14.5</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rerank 29.77</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>overlap: rag, 검색, 생성, 증강</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>rerank 25.64</span><br>검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의…<br><span class='hits'>overlap: rag, 검색, 생성, 증강</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 22.51</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>overlap: rag, 검색, 증강</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rerank 22.08</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>overlap: 검색, 문서는, 증강</span></li></ul>
+            </article>
+            
       </article>
       <article class='panel'>
         <h3>Per-node timing</h3>
         <table>
           <thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead>
-          <tbody><tr><td>classify_8b</td><td>0.03 ms</td><td><pre>{
+          <tbody><tr><td>classify_8b</td><td>0.02 ms</td><td><pre>{
   &quot;token_count&quot;: 7,
   &quot;matched_hard_terms&quot;: [
     &quot;어떻게&quot;
@@ -174,7 +201,7 @@
   &quot;complexity_score&quot;: 2,
   &quot;reason&quot;: &quot;direct factual retrieval&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>search_8b</td><td>1.66 ms</td><td><pre>{
+}</pre></td></tr><tr><td>search_8b</td><td>1.33 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;검색 증강 생성 rag aws 문서는 정의하나요&quot;,
   &quot;query_tokens&quot;: [
@@ -189,16 +216,22 @@
   &quot;top_score&quot;: 20.45,
   &quot;distinct_sections&quot;: 4,
   &quot;candidate_count&quot;: 16
-}</pre></td></tr><tr><td>grade_results</td><td>0.02 ms</td><td><pre>{
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.20 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 4,
+  &quot;selected_count&quot;: 4,
+  &quot;top_rerank_score&quot;: 29.77,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 9.32
+}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
     &quot;coverage&quot;: 0.714,
-    &quot;top_score&quot;: 20.45,
+    &quot;top_score&quot;: 29.77,
     &quot;distinct_sections&quot;: 4,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.58 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer</td><td>0.45 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;8b&quot;
 }</pre></td></tr></tbody>
         </table>
@@ -219,12 +252,12 @@
         &quot;reason&quot;: &quot;direct factual retrieval&quot;,
         &quot;source&quot;: &quot;heuristic-mock&quot;
       },
-      &quot;elapsed_ms&quot;: 0.03
+      &quot;elapsed_ms&quot;: 0.02
     }
   },
   {
     &quot;node&quot;: &quot;search_8b&quot;,
-    &quot;message&quot;: &quot;8B 검색 완료&quot;,
+    &quot;message&quot;: &quot;8B 검색 후보 수집 완료&quot;,
     &quot;payload&quot;: {
       &quot;attempt&quot;: 1,
       &quot;query&quot;: &quot;검색 증강 생성 rag aws 문서는 정의하나요&quot;,
@@ -248,7 +281,27 @@
         &quot;K13&quot;,
         &quot;K10&quot;
       ],
-      &quot;elapsed_ms&quot;: 1.66
+      &quot;elapsed_ms&quot;: 1.33
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_8b&quot;,
+    &quot;message&quot;: &quot;8B reranker가 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 4,
+        &quot;selected_count&quot;: 4,
+        &quot;top_rerank_score&quot;: 29.77,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K14&quot;,
+        &quot;K01&quot;,
+        &quot;K13&quot;,
+        &quot;K10&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 9.32,
+      &quot;elapsed_ms&quot;: 0.2
     }
   },
   {
@@ -259,11 +312,11 @@
       &quot;quality&quot;: {
         &quot;ok&quot;: true,
         &quot;coverage&quot;: 0.714,
-        &quot;top_score&quot;: 20.45,
+        &quot;top_score&quot;: 29.77,
         &quot;distinct_sections&quot;: 4,
         &quot;reason&quot;: &quot;retrieval looks grounded&quot;
       },
-      &quot;elapsed_ms&quot;: 0.02
+      &quot;elapsed_ms&quot;: 0.01
     }
   },
   {
@@ -271,7 +324,7 @@
     &quot;message&quot;: &quot;최종 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;8b&quot;,
-      &quot;elapsed_ms&quot;: 0.58,
+      &quot;elapsed_ms&quot;: 0.45,
       &quot;answer_preview&quot;: &quot;Route: 8B | quality_ok=True | coverage=0.714 질문: 검색 증강 생성(RAG)을 AWS 문서는 어떻게 정의하나요? 문서 근거 요약: - [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을…&quot;
     }
   },
@@ -323,15 +376,16 @@
           <span class='pill'>initial route: 8B</span>
           <span class='pill'>final model: 14B</span>
           <span class='pill'>restarts: 1</span>
-          <span class='pill'>total: 3.17 ms</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 3.26 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 8b</li><li>search_8b</li><li>grade_results → escalate_to_14b</li><li>route_upgrade 8b→14b</li><li>search_14b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 8b</li><li>search_8b</li><li>rerank_8b</li><li>grade_results → escalate_to_14b</li><li>route_upgrade 8b→14b</li><li>search_14b</li><li>rerank_14b</li><li>grade_results → answer</li><li>answer</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>search_8b에서 K15, K16, K02, K05을 가져왔고, grade_results가 &#x27;8B retrieval looked shallow; escalate to 14B&#x27;로 판단해 escalate_to_14b을 선택했다.</li><li>8B 검색이 얕다고 판단되어 14B 검색으로 승격했다.</li><li>search_14b에서 K14, K07, K13, K15을 가져왔고, grade_results가 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 14B answer 단계가 현재 상위 청크를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 0/6, 핵심 청크 1/1개를 잡아서 총점 34.6점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>search_8b가 먼저 후보를 모으고 rerank_8b가 질문 overlap과 section 힌트로 K02, K05, K15, K16 순서로 다시 정렬했다.</li><li>grade_results가 reranked top chunks를 보고 &#x27;8B retrieval looked shallow; escalate to 14B&#x27;로 판단해 escalate_to_14b을 선택했다.</li><li>8B 검색 결과가 부족해서 14B retrieval+rereank 경로로 승격했다.</li><li>search_14b가 먼저 후보를 모으고 rerank_14b가 질문 overlap과 section 힌트로 K14, K07, K13, K02 순서로 다시 정렬했다.</li><li>grade_results가 reranked top chunks를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 14B answer 단계가 reranked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 0/6, 핵심 청크 1/1개를 잡아서 총점 34.6점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
@@ -341,7 +395,7 @@
 - [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
 - [K07] 검색 증강 생성의 이점은 무엇인가요? / 개발자 제어 강화: 개발자는 RAG를 사용하여 채팅 애플리케이션을 보다 변화하는 요구 사항 또는 부서 간 사용에 맞게 LLM의 정보 소스를 제어하고 변경할 수 있습니다.
 - [K13] 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요?: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.
-- [K15] AWS에서의 다음 단계 / 무료 계정 가입: AWS 프리 티어에 즉시 액세스할 수 있습니다.</pre>
+- [K02] 검색 증강 생성이 중요한 이유는 무엇인가요?: LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다.</pre>
           <h3>Expected answer</h3>
           <pre>RAG는 LLM의 허위정보, 오래된 정보, 신뢰할 수 없는 출처, 용어 혼동 같은 문제를 줄이고, 신뢰 가능한 지식 소스를 검색해 답변의 통제력과 최신성을 높이기 위해 필요하다.</pre>
           <h3>Judge score</h3>
@@ -375,16 +429,40 @@
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.4,
-  &quot;top_score&quot;: 11.95,
+  &quot;top_score&quot;: 14.63,
   &quot;distinct_sections&quot;: 6,
   &quot;reason&quot;: &quot;retrieval looks grounded&quot;
 }</pre>
         </article>
       </div>
       <article class='panel'>
-        <h3>Search attempts + retrieved chunks</h3>
-        <article class='attempt'><div class='attempt-head'><strong>search_8b</strong><span>1.36 ms</span></div><div class='query'>aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤</div><ul><li><strong>K15</strong> · AWS에서의 다음 단계 / 무료 계정 가입 <span class='score'>score 4.15</span><br>AWS 프리 티어에 즉시 액세스할 수 있습니다.<br><span class='hits'>term hits: aws</span></li><li><strong>K16</strong> · AWS에서의 다음 단계 / 콘솔에서 구축 시작 <span class='score'>score 4.15</span><br>AWS Management Console에서 구축을 시작하세요.<br><span class='hits'>term hits: aws</span></li><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>score 3.5</span><br>LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다. 안타깝게도 LLM 기술의 특성상 LLM 응답에 대한 예측이 불가능합니다. 또한…<br><span class='hits'>term hits: llm의</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>score 3.05</span><br>LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다. 개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다. RAG를 사용하여 LLM을 라이브 소셜 미디어 피드, 뉴스 사이트 또는 기타 자주 업데이트되는 정보 소스에 직접 연결할 수 있습니다.…<br><span class='hits'>term hits: llm의</span></li></ul></article>
-<article class='attempt'><div class='attempt-head'><strong>search_14b</strong><span>1.27 ms</span></div><div class='query'>aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤 문제를 줄이려 bedrock kendra sagemaker 8b retrieval looked shallow</div><ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>score 11.95</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>term hits: bedrock, kendra, sagemaker</span></li><li><strong>K07</strong> · 검색 증강 생성의 이점은 무엇인가요? / 개발자 제어 강화 <span class='score'>score 5.7</span><br>개발자는 RAG를 사용하여 채팅 애플리케이션을 보다 효율적으로 테스트하고 개선할 수 있습니다. 변화하는 요구 사항 또는 부서 간 사용에 맞게 LLM의 정보 소스를 제어하고 변경할 수 있습니다. 또한 개발자는 민감한 정보 검색을 다양한 인증 수준으로 제한하여 LLM이 적절한 응답 생성을 유도할 수 있습니다. 또한 LLM이…<br><span class='hits'>term hits: llm의, 문제를</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>score 5.7</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>term hits: rag의, 문제를</span></li><li><strong>K15</strong> · AWS에서의 다음 단계 / 무료 계정 가입 <span class='score'>score 4.15</span><br>AWS 프리 티어에 즉시 액세스할 수 있습니다.<br><span class='hits'>term hits: aws</span></li><li><strong>K16</strong> · AWS에서의 다음 단계 / 콘솔에서 구축 시작 <span class='score'>score 4.15</span><br>AWS Management Console에서 구축을 시작하세요.<br><span class='hits'>term hits: aws</span></li><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>score 3.5</span><br>LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다. 안타깝게도 LLM 기술의 특성상 LLM 응답에 대한 예측이 불가능합니다. 또한…<br><span class='hits'>term hits: llm의</span></li></ul></article>
+        <h3>Search + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>search_8b+rerank_8b</strong>
+                <span>1.29 ms</span>
+              </div>
+              <div class='query'>aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤</div>
+              <h4>retrieval candidates</h4>
+              <ul><li><strong>K15</strong> · AWS에서의 다음 단계 / 무료 계정 가입 <span class='score'>base 4.15</span></li><li><strong>K16</strong> · AWS에서의 다음 단계 / 콘솔에서 구축 시작 <span class='score'>base 4.15</span></li><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>base 3.5</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>base 3.05</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>rerank 6.76</span><br>LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다. 안타깝게도 LLM 기술의 특성상 LLM 응답에 대한 예측이 불가능합니다. 또한…<br><span class='hits'>overlap: llm의</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>rerank 6.23</span><br>LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다. 개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다. RAG를 사용하여 LLM을 라이브 소셜 미디어 피드, 뉴스 사이트 또는 기타 자주 업데이트되는 정보 소스에 직접 연결할 수 있습니다.…<br><span class='hits'>overlap: llm의</span></li><li><strong>K15</strong> · AWS에서의 다음 단계 / 무료 계정 가입 <span class='score'>rerank 6.17</span><br>AWS 프리 티어에 즉시 액세스할 수 있습니다.<br><span class='hits'>overlap: aws</span></li><li><strong>K16</strong> · AWS에서의 다음 단계 / 콘솔에서 구축 시작 <span class='score'>rerank 6.09</span><br>AWS Management Console에서 구축을 시작하세요.<br><span class='hits'>overlap: aws</span></li></ul>
+            </article>
+            
+
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>search_14b+rerank_14b</strong>
+                <span>1.37 ms</span>
+              </div>
+              <div class='query'>aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤 문제를 줄이려 bedrock kendra sagemaker 8b retrieval looked shallow</div>
+              <h4>retrieval candidates</h4>
+              <ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>base 11.95</span></li><li><strong>K07</strong> · 검색 증강 생성의 이점은 무엇인가요? / 개발자 제어 강화 <span class='score'>base 5.7</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>base 5.7</span></li><li><strong>K15</strong> · AWS에서의 다음 단계 / 무료 계정 가입 <span class='score'>base 4.15</span></li><li><strong>K16</strong> · AWS에서의 다음 단계 / 콘솔에서 구축 시작 <span class='score'>base 4.15</span></li><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>base 3.5</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rerank 14.63</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>overlap: -</span></li><li><strong>K07</strong> · 검색 증강 생성의 이점은 무엇인가요? / 개발자 제어 강화 <span class='score'>rerank 10.9</span><br>개발자는 RAG를 사용하여 채팅 애플리케이션을 보다 효율적으로 테스트하고 개선할 수 있습니다. 변화하는 요구 사항 또는 부서 간 사용에 맞게 LLM의 정보 소스를 제어하고 변경할 수 있습니다. 또한 개발자는 민감한 정보 검색을 다양한 인증 수준으로 제한하여 LLM이 적절한 응답 생성을 유도할 수 있습니다. 또한 LLM이…<br><span class='hits'>overlap: llm의, 문제를</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 10.82</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>overlap: rag의, 문제를</span></li><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>rerank 6.68</span><br>LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다. 안타깝게도 LLM 기술의 특성상 LLM 응답에 대한 예측이 불가능합니다. 또한…<br><span class='hits'>overlap: llm의</span></li><li><strong>K15</strong> · AWS에서의 다음 단계 / 무료 계정 가입 <span class='score'>rerank 6.09</span><br>AWS 프리 티어에 즉시 액세스할 수 있습니다.<br><span class='hits'>overlap: aws</span></li><li><strong>K16</strong> · AWS에서의 다음 단계 / 콘솔에서 구축 시작 <span class='score'>rerank 6.01</span><br>AWS Management Console에서 구축을 시작하세요.<br><span class='hits'>overlap: aws</span></li></ul>
+            </article>
+            
       </article>
       <article class='panel'>
         <h3>Per-node timing</h3>
@@ -396,7 +474,7 @@
   &quot;complexity_score&quot;: 2,
   &quot;reason&quot;: &quot;direct factual retrieval&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>search_8b</td><td>1.36 ms</td><td><pre>{
+}</pre></td></tr><tr><td>search_8b</td><td>1.16 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤&quot;,
   &quot;query_tokens&quot;: [
@@ -412,12 +490,18 @@
   &quot;top_score&quot;: 4.15,
   &quot;distinct_sections&quot;: 4,
   &quot;candidate_count&quot;: 16
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.13 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 4,
+  &quot;selected_count&quot;: 4,
+  &quot;top_rerank_score&quot;: 6.76,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 3.26
 }</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
   &quot;action&quot;: &quot;escalate_to_14b&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: false,
     &quot;coverage&quot;: 0.2,
-    &quot;top_score&quot;: 4.15,
+    &quot;top_score&quot;: 6.76,
     &quot;distinct_sections&quot;: 4,
     &quot;reason&quot;: &quot;8B retrieval looked shallow; escalate to 14B&quot;
   }
@@ -425,7 +509,7 @@
   &quot;from&quot;: &quot;8b&quot;,
   &quot;to&quot;: &quot;14b&quot;,
   &quot;reason&quot;: &quot;8B retrieval looked shallow; escalate to 14B&quot;
-}</pre></td></tr><tr><td>search_14b</td><td>1.27 ms</td><td><pre>{
+}</pre></td></tr><tr><td>search_14b</td><td>1.15 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤 문제를 줄이려 bedrock kendra sagemaker 8b retrieval looked shallow&quot;,
   &quot;query_tokens&quot;: [
@@ -450,16 +534,22 @@
   &quot;top_score&quot;: 11.95,
   &quot;distinct_sections&quot;: 6,
   &quot;candidate_count&quot;: 16
+}</pre></td></tr><tr><td>rerank_14b</td><td>0.22 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 6,
+  &quot;selected_count&quot;: 6,
+  &quot;top_rerank_score&quot;: 14.63,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 2.6800000000000015
 }</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
     &quot;coverage&quot;: 0.4,
-    &quot;top_score&quot;: 11.95,
+    &quot;top_score&quot;: 14.63,
     &quot;distinct_sections&quot;: 6,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.24 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer</td><td>0.30 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;14b&quot;
 }</pre></td></tr></tbody>
         </table>
@@ -483,7 +573,7 @@
   },
   {
     &quot;node&quot;: &quot;search_8b&quot;,
-    &quot;message&quot;: &quot;8B 검색 완료&quot;,
+    &quot;message&quot;: &quot;8B 검색 후보 수집 완료&quot;,
     &quot;payload&quot;: {
       &quot;attempt&quot;: 1,
       &quot;query&quot;: &quot;aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤&quot;,
@@ -508,7 +598,27 @@
         &quot;K02&quot;,
         &quot;K05&quot;
       ],
-      &quot;elapsed_ms&quot;: 1.36
+      &quot;elapsed_ms&quot;: 1.16
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_8b&quot;,
+    &quot;message&quot;: &quot;8B reranker가 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 4,
+        &quot;selected_count&quot;: 4,
+        &quot;top_rerank_score&quot;: 6.76,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K02&quot;,
+        &quot;K05&quot;,
+        &quot;K15&quot;,
+        &quot;K16&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 3.26,
+      &quot;elapsed_ms&quot;: 0.13
     }
   },
   {
@@ -519,7 +629,7 @@
       &quot;quality&quot;: {
         &quot;ok&quot;: false,
         &quot;coverage&quot;: 0.2,
-        &quot;top_score&quot;: 4.15,
+        &quot;top_score&quot;: 6.76,
         &quot;distinct_sections&quot;: 4,
         &quot;reason&quot;: &quot;8B retrieval looked shallow; escalate to 14B&quot;
       },
@@ -535,7 +645,7 @@
   },
   {
     &quot;node&quot;: &quot;search_14b&quot;,
-    &quot;message&quot;: &quot;14B 검색 완료&quot;,
+    &quot;message&quot;: &quot;14B 검색 후보 수집 완료&quot;,
     &quot;payload&quot;: {
       &quot;attempt&quot;: 1,
       &quot;query&quot;: &quot;aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤 문제를 줄이려 bedrock kendra sagemaker 8b retrieval looked shallow&quot;,
@@ -571,7 +681,29 @@
         &quot;K16&quot;,
         &quot;K02&quot;
       ],
-      &quot;elapsed_ms&quot;: 1.27
+      &quot;elapsed_ms&quot;: 1.15
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_14b&quot;,
+    &quot;message&quot;: &quot;14B reranker가 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 6,
+        &quot;selected_count&quot;: 6,
+        &quot;top_rerank_score&quot;: 14.63,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K14&quot;,
+        &quot;K07&quot;,
+        &quot;K13&quot;,
+        &quot;K02&quot;,
+        &quot;K15&quot;,
+        &quot;K16&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 2.6800000000000015,
+      &quot;elapsed_ms&quot;: 0.22
     }
   },
   {
@@ -582,7 +714,7 @@
       &quot;quality&quot;: {
         &quot;ok&quot;: true,
         &quot;coverage&quot;: 0.4,
-        &quot;top_score&quot;: 11.95,
+        &quot;top_score&quot;: 14.63,
         &quot;distinct_sections&quot;: 6,
         &quot;reason&quot;: &quot;retrieval looks grounded&quot;
       },
@@ -594,7 +726,7 @@
     &quot;message&quot;: &quot;최종 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;14b&quot;,
-      &quot;elapsed_ms&quot;: 0.24,
+      &quot;elapsed_ms&quot;: 0.3,
       &quot;answer_preview&quot;: &quot;Route: 14B | quality_ok=True | coverage=0.4 질문: AWS 문서가 말하는 RAG의 필요성은 무엇이며, LLM의 어떤 문제를 줄이려 하나요? 문서 근거 요약: - [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께…&quot;
     }
   },
@@ -643,15 +775,16 @@
           <span class='pill'>initial route: 8B</span>
           <span class='pill'>final model: 8B</span>
           <span class='pill'>restarts: 0</span>
-          <span class='pill'>total: 1.53 ms</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 1.67 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 8b</li><li>search_8b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 8b</li><li>search_8b</li><li>rerank_8b</li><li>grade_results → answer</li><li>answer</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>search_8b에서 K13, K14, K03, K09을 가져왔고, grade_results가 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 현재 상위 청크를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 0/4, 핵심 청크 1/5개를 잡아서 총점 21.0점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>search_8b가 먼저 후보를 모으고 rerank_8b가 질문 overlap과 section 힌트로 K13, K14, K03, K09 순서로 다시 정렬했다.</li><li>grade_results가 reranked top chunks를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 reranked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 0/4, 핵심 청크 1/5개를 잡아서 총점 21.0점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
@@ -697,15 +830,27 @@
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.667,
-  &quot;top_score&quot;: 6.15,
+  &quot;top_score&quot;: 11.47,
   &quot;distinct_sections&quot;: 4,
   &quot;reason&quot;: &quot;retrieval looks grounded&quot;
 }</pre>
         </article>
       </div>
       <article class='panel'>
-        <h3>Search attempts + retrieved chunks</h3>
-        <article class='attempt'><div class='attempt-head'><strong>search_8b</strong><span>1.05 ms</span></div><div class='query'>rag의 주요 이점을 문서 기준으로 정리해줘</div><ul><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>score 6.15</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>term hits: rag의, 문서</span></li><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>score 5.7</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>term hits: 기준으로, 문서</span></li><li><strong>K03</strong> · 검색 증강 생성의 이점은 무엇인가요? <span class='score'>score 3.05</span><br>RAG 기술은 조직의 생성형 AI 관련 작업에 있어 여러 가지 이점을 제공합니다.<br><span class='hits'>term hits: 이점을</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>score 3.05</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>term hits: 문서</span></li></ul></article>
+        <h3>Search + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>search_8b+rerank_8b</strong>
+                <span>1.19 ms</span>
+              </div>
+              <div class='query'>rag의 주요 이점을 문서 기준으로 정리해줘</div>
+              <h4>retrieval candidates</h4>
+              <ul><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>base 6.15</span></li><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>base 5.7</span></li><li><strong>K03</strong> · 검색 증강 생성의 이점은 무엇인가요? <span class='score'>base 3.05</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>base 3.05</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 11.47</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>overlap: rag의, 문서</span></li><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rerank 9.34</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>overlap: 기준으로, 문서</span></li><li><strong>K03</strong> · 검색 증강 생성의 이점은 무엇인가요? <span class='score'>rerank 6.51</span><br>RAG 기술은 조직의 생성형 AI 관련 작업에 있어 여러 가지 이점을 제공합니다.<br><span class='hits'>overlap: 이점을</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rerank 4.83</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>overlap: 문서</span></li></ul>
+            </article>
+            
       </article>
       <article class='panel'>
         <h3>Per-node timing</h3>
@@ -719,7 +864,7 @@
   &quot;complexity_score&quot;: 1,
   &quot;reason&quot;: &quot;direct factual retrieval&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>search_8b</td><td>1.05 ms</td><td><pre>{
+}</pre></td></tr><tr><td>search_8b</td><td>1.03 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;rag의 주요 이점을 문서 기준으로 정리해줘&quot;,
   &quot;query_tokens&quot;: [
@@ -733,12 +878,18 @@
   &quot;top_score&quot;: 6.15,
   &quot;distinct_sections&quot;: 4,
   &quot;candidate_count&quot;: 13
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.16 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 4,
+  &quot;selected_count&quot;: 4,
+  &quot;top_rerank_score&quot;: 11.47,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 5.32
 }</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
     &quot;coverage&quot;: 0.667,
-    &quot;top_score&quot;: 6.15,
+    &quot;top_score&quot;: 11.47,
     &quot;distinct_sections&quot;: 4,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
@@ -768,7 +919,7 @@
   },
   {
     &quot;node&quot;: &quot;search_8b&quot;,
-    &quot;message&quot;: &quot;8B 검색 완료&quot;,
+    &quot;message&quot;: &quot;8B 검색 후보 수집 완료&quot;,
     &quot;payload&quot;: {
       &quot;attempt&quot;: 1,
       &quot;query&quot;: &quot;rag의 주요 이점을 문서 기준으로 정리해줘&quot;,
@@ -791,7 +942,27 @@
         &quot;K03&quot;,
         &quot;K09&quot;
       ],
-      &quot;elapsed_ms&quot;: 1.05
+      &quot;elapsed_ms&quot;: 1.03
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_8b&quot;,
+    &quot;message&quot;: &quot;8B reranker가 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 4,
+        &quot;selected_count&quot;: 4,
+        &quot;top_rerank_score&quot;: 11.47,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K13&quot;,
+        &quot;K14&quot;,
+        &quot;K03&quot;,
+        &quot;K09&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 5.32,
+      &quot;elapsed_ms&quot;: 0.16
     }
   },
   {
@@ -802,7 +973,7 @@
       &quot;quality&quot;: {
         &quot;ok&quot;: true,
         &quot;coverage&quot;: 0.667,
-        &quot;top_score&quot;: 6.15,
+        &quot;top_score&quot;: 11.47,
         &quot;distinct_sections&quot;: 4,
         &quot;reason&quot;: &quot;retrieval looks grounded&quot;
       },
@@ -865,23 +1036,24 @@
           <span class='pill'>initial route: 14B</span>
           <span class='pill'>final model: 14B</span>
           <span class='pill'>restarts: 0</span>
-          <span class='pill'>total: 1.65 ms</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 1.73 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 14b</li><li>search_14b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 14b</li><li>search_14b</li><li>rerank_14b</li><li>grade_results → answer</li><li>answer</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 14B 경로로 분류했다. 이유: multi-step/comparison</li><li>search_14b에서 K14, K04, K01, K15을 가져왔고, grade_results가 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 14B answer 단계가 현재 상위 청크를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 2/6, 핵심 청크 1/2개를 잡아서 총점 45.8점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 14B 경로로 분류했다. 이유: multi-step/comparison</li><li>search_14b가 먼저 후보를 모으고 rerank_14b가 질문 overlap과 section 힌트로 K04, K14, K01, K15 순서로 다시 정렬했다.</li><li>grade_results가 reranked top chunks를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 14B answer 단계가 reranked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 2/6, 핵심 청크 1/2개를 잡아서 총점 45.8점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
           <pre>Route: 14B | quality_ok=True | coverage=0.625
 질문: 왜 AWS 문서는 RAG를 비용 효율적인 구현 방식이라고 설명하나요?
 문서 근거 요약:
-- [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
 - [K04] 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현: 챗봇 개발은 일반적으로 파운데이션 모델 을 사용하여 시작됩니다. 파운데이션 모델(FM)은 광범위한 일반화 데이터와 레이블이 지정되지 않은 데이터에 대해 훈련된 API 액세스 가능 LLM입니다.
+- [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
 - [K01] 검색 증강 생성이란 무엇인가요?: 검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의 작업에서 독창적인 결과를 생성합니다.
 - [K15] AWS에서의 다음 단계 / 무료 계정 가입: AWS 프리 티어에 즉시 액세스할 수 있습니다.</pre>
           <h3>Expected answer</h3>
@@ -921,15 +1093,27 @@
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.625,
-  &quot;top_score&quot;: 17.25,
+  &quot;top_score&quot;: 24.35,
   &quot;distinct_sections&quot;: 6,
   &quot;reason&quot;: &quot;retrieval looks grounded&quot;
 }</pre>
         </article>
       </div>
       <article class='panel'>
-        <h3>Search attempts + retrieved chunks</h3>
-        <article class='attempt'><div class='attempt-head'><strong>search_14b</strong><span>1.16 ms</span></div><div class='query'>aws 문서는 rag를 비용 효율적인 구현 방식이라고 설명하나요 bedrock kendra sagemaker</div><ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>score 17.25</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>term hits: bedrock, kendra, rag를, sagemaker, 구현</span></li><li><strong>K04</strong> · 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현 <span class='score'>score 17.15</span><br>챗봇 개발은 일반적으로 파운데이션 모델 을 사용하여 시작됩니다. 파운데이션 모델(FM)은 광범위한 일반화 데이터와 레이블이 지정되지 않은 데이터에 대해 훈련된 API 액세스 가능 LLM입니다. 조직 또는 도메인별 정보를 위해 FM을 재교육하는 데 컴퓨팅 및 재정적 비용이 많이 소요됩니다. RAG를 통해 LLM에 새…<br><span class='hits'>term hits: rag를, 구현, 비용, 효율적인</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>score 5.3</span><br>검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의…<br><span class='hits'>term hits: 비용, 효율적인</span></li><li><strong>K15</strong> · AWS에서의 다음 단계 / 무료 계정 가입 <span class='score'>score 4.15</span><br>AWS 프리 티어에 즉시 액세스할 수 있습니다.<br><span class='hits'>term hits: aws</span></li><li><strong>K16</strong> · AWS에서의 다음 단계 / 콘솔에서 구축 시작 <span class='score'>score 4.15</span><br>AWS Management Console에서 구축을 시작하세요.<br><span class='hits'>term hits: aws</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>score 3.5</span><br>LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다. 개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다. RAG를 사용하여 LLM을 라이브 소셜 미디어 피드, 뉴스 사이트 또는 기타 자주 업데이트되는 정보 소스에 직접 연결할 수 있습니다.…<br><span class='hits'>term hits: rag를</span></li></ul></article>
+        <h3>Search + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>search_14b+rerank_14b</strong>
+                <span>1.30 ms</span>
+              </div>
+              <div class='query'>aws 문서는 rag를 비용 효율적인 구현 방식이라고 설명하나요 bedrock kendra sagemaker</div>
+              <h4>retrieval candidates</h4>
+              <ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>base 17.25</span></li><li><strong>K04</strong> · 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현 <span class='score'>base 17.15</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>base 5.3</span></li><li><strong>K15</strong> · AWS에서의 다음 단계 / 무료 계정 가입 <span class='score'>base 4.15</span></li><li><strong>K16</strong> · AWS에서의 다음 단계 / 콘솔에서 구축 시작 <span class='score'>base 4.15</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>base 3.5</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K04</strong> · 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현 <span class='score'>rerank 24.35</span><br>챗봇 개발은 일반적으로 파운데이션 모델 을 사용하여 시작됩니다. 파운데이션 모델(FM)은 광범위한 일반화 데이터와 레이블이 지정되지 않은 데이터에 대해 훈련된 API 액세스 가능 LLM입니다. 조직 또는 도메인별 정보를 위해 FM을 재교육하는 데 컴퓨팅 및 재정적 비용이 많이 소요됩니다. RAG를 통해 LLM에 새…<br><span class='hits'>overlap: rag를, 구현, 비용, 효율적인</span></li><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rerank 23.33</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>overlap: rag를, 구현</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>rerank 9.02</span><br>검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의…<br><span class='hits'>overlap: 비용, 효율적인</span></li><li><strong>K15</strong> · AWS에서의 다음 단계 / 무료 계정 가입 <span class='score'>rerank 6.09</span><br>AWS 프리 티어에 즉시 액세스할 수 있습니다.<br><span class='hits'>overlap: aws</span></li><li><strong>K16</strong> · AWS에서의 다음 단계 / 콘솔에서 구축 시작 <span class='score'>rerank 6.01</span><br>AWS Management Console에서 구축을 시작하세요.<br><span class='hits'>overlap: aws</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>rerank 5.28</span><br>LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다. 개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다. RAG를 사용하여 LLM을 라이브 소셜 미디어 피드, 뉴스 사이트 또는 기타 자주 업데이트되는 정보 소스에 직접 연결할 수 있습니다.…<br><span class='hits'>overlap: rag를</span></li></ul>
+            </article>
+            
       </article>
       <article class='panel'>
         <h3>Per-node timing</h3>
@@ -962,16 +1146,22 @@
   &quot;top_score&quot;: 17.25,
   &quot;distinct_sections&quot;: 6,
   &quot;candidate_count&quot;: 16
+}</pre></td></tr><tr><td>rerank_14b</td><td>0.14 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 6,
+  &quot;selected_count&quot;: 6,
+  &quot;top_rerank_score&quot;: 24.35,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 7.200000000000003
 }</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
     &quot;coverage&quot;: 0.625,
-    &quot;top_score&quot;: 17.25,
+    &quot;top_score&quot;: 24.35,
     &quot;distinct_sections&quot;: 6,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.23 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer</td><td>0.20 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;14b&quot;
 }</pre></td></tr></tbody>
         </table>
@@ -997,7 +1187,7 @@
   },
   {
     &quot;node&quot;: &quot;search_14b&quot;,
-    &quot;message&quot;: &quot;14B 검색 완료&quot;,
+    &quot;message&quot;: &quot;14B 검색 후보 수집 완료&quot;,
     &quot;payload&quot;: {
       &quot;attempt&quot;: 1,
       &quot;query&quot;: &quot;aws 문서는 rag를 비용 효율적인 구현 방식이라고 설명하나요 bedrock kendra sagemaker&quot;,
@@ -1031,6 +1221,28 @@
     }
   },
   {
+    &quot;node&quot;: &quot;rerank_14b&quot;,
+    &quot;message&quot;: &quot;14B reranker가 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 6,
+        &quot;selected_count&quot;: 6,
+        &quot;top_rerank_score&quot;: 24.35,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K04&quot;,
+        &quot;K14&quot;,
+        &quot;K01&quot;,
+        &quot;K15&quot;,
+        &quot;K16&quot;,
+        &quot;K05&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 7.200000000000003,
+      &quot;elapsed_ms&quot;: 0.14
+    }
+  },
+  {
     &quot;node&quot;: &quot;grade_results&quot;,
     &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
     &quot;payload&quot;: {
@@ -1038,7 +1250,7 @@
       &quot;quality&quot;: {
         &quot;ok&quot;: true,
         &quot;coverage&quot;: 0.625,
-        &quot;top_score&quot;: 17.25,
+        &quot;top_score&quot;: 24.35,
         &quot;distinct_sections&quot;: 6,
         &quot;reason&quot;: &quot;retrieval looks grounded&quot;
       },
@@ -1050,8 +1262,8 @@
     &quot;message&quot;: &quot;최종 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;14b&quot;,
-      &quot;elapsed_ms&quot;: 0.23,
-      &quot;answer_preview&quot;: &quot;Route: 14B | quality_ok=True | coverage=0.625 질문: 왜 AWS 문서는 RAG를 비용 효율적인 구현 방식이라고 설명하나요? 문서 근거 요약: - [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반…&quot;
+      &quot;elapsed_ms&quot;: 0.2,
+      &quot;answer_preview&quot;: &quot;Route: 14B | quality_ok=True | coverage=0.625 질문: 왜 AWS 문서는 RAG를 비용 효율적인 구현 방식이라고 설명하나요? 문서 근거 요약: - [K04] 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현: 챗봇 개발은 일반적으로 파운데이션 모델 을 사용하여 시작됩니다. 파운데이션 모델(FM)은 광범위한 일반화 데이터와 레이블이 지정되지 않은 데이터에 대해 훈련된 API 액세스…&quot;
     }
   },
   {
@@ -1103,15 +1315,16 @@
           <span class='pill'>initial route: 8B</span>
           <span class='pill'>final model: 8B</span>
           <span class='pill'>restarts: 0</span>
-          <span class='pill'>total: 1.53 ms</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 1.44 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 8b</li><li>search_8b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 8b</li><li>search_8b</li><li>rerank_8b</li><li>grade_results → answer</li><li>answer</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>search_8b에서 K02, K06, K08, K11을 가져왔고, grade_results가 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 현재 상위 청크를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 1/6, 핵심 청크 0/1개를 잡아서 총점 18.8점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>search_8b가 먼저 후보를 모으고 rerank_8b가 질문 overlap과 section 힌트로 K02, K06, K08, K11 순서로 다시 정렬했다.</li><li>grade_results가 reranked top chunks를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 reranked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 1/6, 핵심 청크 0/1개를 잡아서 총점 18.8점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
@@ -1155,15 +1368,27 @@
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.4,
-  &quot;top_score&quot;: 6.15,
+  &quot;top_score&quot;: 9.87,
   &quot;distinct_sections&quot;: 4,
   &quot;reason&quot;: &quot;retrieval looks grounded&quot;
 }</pre>
         </article>
       </div>
       <article class='panel'>
-        <h3>Search attempts + retrieved chunks</h3>
-        <article class='attempt'><div class='attempt-head'><strong>search_8b</strong><span>1.11 ms</span></div><div class='query'>rag는 사용자 신뢰를 강화한다고 설명하나요</div><ul><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>score 6.15</span><br>LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다. 안타깝게도 LLM 기술의 특성상 LLM 응답에 대한 예측이 불가능합니다. 또한…<br><span class='hits'>term hits: rag는, 사용자</span></li><li><strong>K06</strong> · 검색 증강 생성의 이점은 무엇인가요? / 사용자 신뢰 강화 <span class='score'>score 4.55</span><br>RAG은 LLM이 소스의 저작자 표시를 통해 정확한 정보를 제공할 수 있게 합니다. 출력에는 소스에 대한 인용 또는 참조가 포함될 수 있습니다. 추가 설명이나 세부 정보가 필요한 경우 사용자가 소스 문서를 직접 찾아볼 수도 있습니다. 이를 통해 생성형 AI 솔루션에 대한 신뢰와 확신을 높일 수 있습니다.<br><span class='hits'>term hits: 사용자</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>score 3.95</span><br>RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다. 사용자 쿼리와 관련 정보가 모두 LLM에 제공됩니다. LLM은 새로운 지식과 학습…<br><span class='hits'>term hits: 사용자</span></li><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>score 3.5</span><br>다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다. 확장된 프롬프트를 사용하면 대규모 언어 모델이 사용자 쿼리에 대한 정확한 답변을 생성할 수 있습니다.<br><span class='hits'>term hits: 사용자</span></li></ul></article>
+        <h3>Search + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>search_8b+rerank_8b</strong>
+                <span>1.06 ms</span>
+              </div>
+              <div class='query'>rag는 사용자 신뢰를 강화한다고 설명하나요</div>
+              <h4>retrieval candidates</h4>
+              <ul><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>base 6.15</span></li><li><strong>K06</strong> · 검색 증강 생성의 이점은 무엇인가요? / 사용자 신뢰 강화 <span class='score'>base 4.55</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>base 3.95</span></li><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>base 3.5</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>rerank 9.87</span><br>LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다. 안타깝게도 LLM 기술의 특성상 LLM 응답에 대한 예측이 불가능합니다. 또한…<br><span class='hits'>overlap: rag는, 사용자</span></li><li><strong>K06</strong> · 검색 증강 생성의 이점은 무엇인가요? / 사용자 신뢰 강화 <span class='score'>rerank 6.49</span><br>RAG은 LLM이 소스의 저작자 표시를 통해 정확한 정보를 제공할 수 있게 합니다. 출력에는 소스에 대한 인용 또는 참조가 포함될 수 있습니다. 추가 설명이나 세부 정보가 필요한 경우 사용자가 소스 문서를 직접 찾아볼 수도 있습니다. 이를 통해 생성형 AI 솔루션에 대한 신뢰와 확신을 높일 수 있습니다.<br><span class='hits'>overlap: 사용자</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>rerank 5.81</span><br>RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다. 사용자 쿼리와 관련 정보가 모두 LLM에 제공됩니다. LLM은 새로운 지식과 학습…<br><span class='hits'>overlap: 사용자</span></li><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>rerank 5.28</span><br>다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다. 확장된 프롬프트를 사용하면 대규모 언어 모델이 사용자 쿼리에 대한 정확한 답변을 생성할 수 있습니다.<br><span class='hits'>overlap: 사용자</span></li></ul>
+            </article>
+            
       </article>
       <article class='panel'>
         <h3>Per-node timing</h3>
@@ -1178,7 +1403,7 @@
   &quot;complexity_score&quot;: 3,
   &quot;reason&quot;: &quot;direct factual retrieval&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>search_8b</td><td>1.11 ms</td><td><pre>{
+}</pre></td></tr><tr><td>search_8b</td><td>0.96 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;rag는 사용자 신뢰를 강화한다고 설명하나요&quot;,
   &quot;query_tokens&quot;: [
@@ -1191,16 +1416,22 @@
   &quot;top_score&quot;: 6.15,
   &quot;distinct_sections&quot;: 4,
   &quot;candidate_count&quot;: 14
-}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.10 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 4,
+  &quot;selected_count&quot;: 4,
+  &quot;top_rerank_score&quot;: 9.87,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 3.719999999999999
+}</pre></td></tr><tr><td>grade_results</td><td>0.00 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
     &quot;coverage&quot;: 0.4,
-    &quot;top_score&quot;: 6.15,
+    &quot;top_score&quot;: 9.87,
     &quot;distinct_sections&quot;: 4,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.19 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer</td><td>0.17 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;8b&quot;
 }</pre></td></tr></tbody>
         </table>
@@ -1227,7 +1458,7 @@
   },
   {
     &quot;node&quot;: &quot;search_8b&quot;,
-    &quot;message&quot;: &quot;8B 검색 완료&quot;,
+    &quot;message&quot;: &quot;8B 검색 후보 수집 완료&quot;,
     &quot;payload&quot;: {
       &quot;attempt&quot;: 1,
       &quot;query&quot;: &quot;rag는 사용자 신뢰를 강화한다고 설명하나요&quot;,
@@ -1249,7 +1480,27 @@
         &quot;K08&quot;,
         &quot;K11&quot;
       ],
-      &quot;elapsed_ms&quot;: 1.11
+      &quot;elapsed_ms&quot;: 0.96
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_8b&quot;,
+    &quot;message&quot;: &quot;8B reranker가 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 4,
+        &quot;selected_count&quot;: 4,
+        &quot;top_rerank_score&quot;: 9.87,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K02&quot;,
+        &quot;K06&quot;,
+        &quot;K08&quot;,
+        &quot;K11&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 3.719999999999999,
+      &quot;elapsed_ms&quot;: 0.1
     }
   },
   {
@@ -1260,11 +1511,11 @@
       &quot;quality&quot;: {
         &quot;ok&quot;: true,
         &quot;coverage&quot;: 0.4,
-        &quot;top_score&quot;: 6.15,
+        &quot;top_score&quot;: 9.87,
         &quot;distinct_sections&quot;: 4,
         &quot;reason&quot;: &quot;retrieval looks grounded&quot;
       },
-      &quot;elapsed_ms&quot;: 0.01
+      &quot;elapsed_ms&quot;: 0.0
     }
   },
   {
@@ -1272,7 +1523,7 @@
     &quot;message&quot;: &quot;최종 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;8b&quot;,
-      &quot;elapsed_ms&quot;: 0.19,
+      &quot;elapsed_ms&quot;: 0.17,
       &quot;answer_preview&quot;: &quot;Route: 8B | quality_ok=True | coverage=0.4 질문: RAG는 사용자 신뢰를 어떻게 강화한다고 설명하나요? 문서 근거 요약: - [K02] 검색 증강 생성이 중요한 이유는 무엇인가요?: LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는…&quot;
     }
   },
@@ -1321,15 +1572,16 @@
           <span class='pill'>initial route: 8B</span>
           <span class='pill'>final model: 14B</span>
           <span class='pill'>restarts: 1</span>
-          <span class='pill'>total: 2.65 ms</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 2.54 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 8b</li><li>search_8b</li><li>grade_results → escalate_to_14b</li><li>route_upgrade 8b→14b</li><li>search_14b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 8b</li><li>search_8b</li><li>rerank_8b</li><li>grade_results → escalate_to_14b</li><li>route_upgrade 8b→14b</li><li>search_14b</li><li>rerank_14b</li><li>grade_results → answer</li><li>answer</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>search_8b에서 K08, K09, K10, K11을 가져왔고, grade_results가 &#x27;8B retrieval looked shallow; escalate to 14B&#x27;로 판단해 escalate_to_14b을 선택했다.</li><li>8B 검색이 얕다고 판단되어 14B 검색으로 승격했다.</li><li>search_14b에서 K11, K12, K08, K10을 가져왔고, grade_results가 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 14B answer 단계가 현재 상위 청크를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 4/4, 핵심 청크 5/5개를 잡아서 총점 89.6점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>search_8b가 먼저 후보를 모으고 rerank_8b가 질문 overlap과 section 힌트로 K08, K09, K10, K11 순서로 다시 정렬했다.</li><li>grade_results가 reranked top chunks를 보고 &#x27;8B retrieval looked shallow; escalate to 14B&#x27;로 판단해 escalate_to_14b을 선택했다.</li><li>8B 검색 결과가 부족해서 14B retrieval+rereank 경로로 승격했다.</li><li>search_14b가 먼저 후보를 모으고 rerank_14b가 질문 overlap과 section 힌트로 K11, K12, K08, K10 순서로 다시 정렬했다.</li><li>grade_results가 reranked top chunks를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 14B answer 단계가 reranked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 4/4, 핵심 청크 5/5개를 잡아서 총점 89.6점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
@@ -1384,16 +1636,40 @@
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.4,
-  &quot;top_score&quot;: 16.45,
+  &quot;top_score&quot;: 20.23,
   &quot;distinct_sections&quot;: 6,
   &quot;reason&quot;: &quot;retrieval looks grounded&quot;
 }</pre>
         </article>
       </div>
       <article class='panel'>
-        <h3>Search attempts + retrieved chunks</h3>
-        <article class='attempt'><div class='attempt-head'><strong>search_8b</strong><span>1.09 ms</span></div><div class='query'>rag는 전체적으로 어떤 단계로 작동하나요</div><ul><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>score 4.55</span><br>RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다. 사용자 쿼리와 관련 정보가 모두 LLM에 제공됩니다. LLM은 새로운 지식과 학습…<br><span class='hits'>term hits: 작동하나요</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>score 4.55</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>term hits: 작동하나요</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>score 4.55</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>term hits: 작동하나요</span></li><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>score 4.55</span><br>다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다. 확장된 프롬프트를 사용하면 대규모 언어 모델이 사용자 쿼리에 대한 정확한 답변을 생성할 수 있습니다.<br><span class='hits'>term hits: 작동하나요</span></li></ul></article>
-<article class='attempt'><div class='attempt-head'><strong>search_14b</strong><span>1.13 ms</span></div><div class='query'>rag는 전체적으로 어떤 단계로 작동하나요 작동 단계 검색 프롬프트 업데이트 8b retrieval looked shallow escalate 14b</div><ul><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>score 16.45</span><br>다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다. 확장된 프롬프트를 사용하면 대규모 언어 모델이 사용자 쿼리에 대한 정확한 답변을 생성할 수 있습니다.<br><span class='hits'>term hits: 검색, 작동하나요, 프롬프트</span></li><li><strong>K12</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트 <span class='score'>score 15.55</span><br>만약에 외부 데이터가 시간이 경과된 데이터가 된다면 어떻게 될까요? 최신 정보 검색을 유지하기 위해 문서를 비동기적으로 업데이트하고 문서의 임베딩 표현을 업데이트합니다. 자동화된 실시간 프로세스 또는 주기적 배치 처리를 통해 이 작업을 수행할 수 있습니다. 변경 관리에 다양한 데이터 과학 접근 방식을 사용할 수 있기…<br><span class='hits'>term hits: 검색, 업데이트, 작동하나요</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>score 10.65</span><br>RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다. 사용자 쿼리와 관련 정보가 모두 LLM에 제공됩니다. LLM은 새로운 지식과 학습…<br><span class='hits'>term hits: 검색, 작동하나요</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>score 10.65</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>term hits: 검색, 작동하나요</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>score 10.2</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>term hits: 검색, 작동하나요</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>score 7.25</span><br>검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의…<br><span class='hits'>term hits: rag는, 검색</span></li></ul></article>
+        <h3>Search + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>search_8b+rerank_8b</strong>
+                <span>1.07 ms</span>
+              </div>
+              <div class='query'>rag는 전체적으로 어떤 단계로 작동하나요</div>
+              <h4>retrieval candidates</h4>
+              <ul><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>base 4.55</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>base 4.55</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>base 4.55</span></li><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>base 4.55</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>rerank 8.17</span><br>RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다. 사용자 쿼리와 관련 정보가 모두 LLM에 제공됩니다. LLM은 새로운 지식과 학습…<br><span class='hits'>overlap: 작동하나요</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rerank 8.09</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>overlap: 작동하나요</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rerank 8.01</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>overlap: 작동하나요</span></li><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>rerank 7.93</span><br>다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다. 확장된 프롬프트를 사용하면 대규모 언어 모델이 사용자 쿼리에 대한 정확한 답변을 생성할 수 있습니다.<br><span class='hits'>overlap: 작동하나요</span></li></ul>
+            </article>
+            
+
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>search_14b+rerank_14b</strong>
+                <span>1.13 ms</span>
+              </div>
+              <div class='query'>rag는 전체적으로 어떤 단계로 작동하나요 작동 단계 검색 프롬프트 업데이트 8b retrieval looked shallow escalate 14b</div>
+              <h4>retrieval candidates</h4>
+              <ul><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>base 16.45</span></li><li><strong>K12</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트 <span class='score'>base 15.55</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>base 10.65</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>base 10.65</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>base 10.2</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>base 7.25</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>rerank 20.23</span><br>다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다. 확장된 프롬프트를 사용하면 대규모 언어 모델이 사용자 쿼리에 대한 정확한 답변을 생성할 수 있습니다.<br><span class='hits'>overlap: 작동하나요</span></li><li><strong>K12</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트 <span class='score'>rerank 19.25</span><br>만약에 외부 데이터가 시간이 경과된 데이터가 된다면 어떻게 될까요? 최신 정보 검색을 유지하기 위해 문서를 비동기적으로 업데이트하고 문서의 임베딩 표현을 업데이트합니다. 자동화된 실시간 프로세스 또는 주기적 배치 처리를 통해 이 작업을 수행할 수 있습니다. 변경 관리에 다양한 데이터 과학 접근 방식을 사용할 수 있기…<br><span class='hits'>overlap: 작동하나요</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>rerank 14.27</span><br>RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다. 사용자 쿼리와 관련 정보가 모두 LLM에 제공됩니다. LLM은 새로운 지식과 학습…<br><span class='hits'>overlap: 작동하나요</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rerank 14.19</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>overlap: 작동하나요</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rerank 13.66</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>overlap: 작동하나요</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>rerank 9.03</span><br>검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의…<br><span class='hits'>overlap: rag는</span></li></ul>
+            </article>
+            
       </article>
       <article class='panel'>
         <h3>Per-node timing</h3>
@@ -1407,7 +1683,7 @@
   &quot;complexity_score&quot;: 2,
   &quot;reason&quot;: &quot;direct factual retrieval&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>search_8b</td><td>1.09 ms</td><td><pre>{
+}</pre></td></tr><tr><td>search_8b</td><td>0.99 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;rag는 전체적으로 어떤 단계로 작동하나요&quot;,
   &quot;query_tokens&quot;: [
@@ -1420,12 +1696,18 @@
   &quot;top_score&quot;: 4.55,
   &quot;distinct_sections&quot;: 4,
   &quot;candidate_count&quot;: 14
-}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.08 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 4,
+  &quot;selected_count&quot;: 4,
+  &quot;top_rerank_score&quot;: 8.17,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 3.62
+}</pre></td></tr><tr><td>grade_results</td><td>0.00 ms</td><td><pre>{
   &quot;action&quot;: &quot;escalate_to_14b&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: false,
     &quot;coverage&quot;: 0.2,
-    &quot;top_score&quot;: 4.55,
+    &quot;top_score&quot;: 8.17,
     &quot;distinct_sections&quot;: 4,
     &quot;reason&quot;: &quot;8B retrieval looked shallow; escalate to 14B&quot;
   }
@@ -1433,7 +1715,7 @@
   &quot;from&quot;: &quot;8b&quot;,
   &quot;to&quot;: &quot;14b&quot;,
   &quot;reason&quot;: &quot;8B retrieval looked shallow; escalate to 14B&quot;
-}</pre></td></tr><tr><td>search_14b</td><td>1.13 ms</td><td><pre>{
+}</pre></td></tr><tr><td>search_14b</td><td>1.01 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;rag는 전체적으로 어떤 단계로 작동하나요 작동 단계 검색 프롬프트 업데이트 8b retrieval looked shallow escalate 14b&quot;,
   &quot;query_tokens&quot;: [
@@ -1457,16 +1739,22 @@
   &quot;top_score&quot;: 16.45,
   &quot;distinct_sections&quot;: 6,
   &quot;candidate_count&quot;: 16
+}</pre></td></tr><tr><td>rerank_14b</td><td>0.12 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 6,
+  &quot;selected_count&quot;: 6,
+  &quot;top_rerank_score&quot;: 20.23,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 3.780000000000001
 }</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
     &quot;coverage&quot;: 0.4,
-    &quot;top_score&quot;: 16.45,
+    &quot;top_score&quot;: 20.23,
     &quot;distinct_sections&quot;: 6,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.16 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer</td><td>0.13 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;14b&quot;
 }</pre></td></tr></tbody>
         </table>
@@ -1492,7 +1780,7 @@
   },
   {
     &quot;node&quot;: &quot;search_8b&quot;,
-    &quot;message&quot;: &quot;8B 검색 완료&quot;,
+    &quot;message&quot;: &quot;8B 검색 후보 수집 완료&quot;,
     &quot;payload&quot;: {
       &quot;attempt&quot;: 1,
       &quot;query&quot;: &quot;rag는 전체적으로 어떤 단계로 작동하나요&quot;,
@@ -1514,7 +1802,27 @@
         &quot;K10&quot;,
         &quot;K11&quot;
       ],
-      &quot;elapsed_ms&quot;: 1.09
+      &quot;elapsed_ms&quot;: 0.99
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_8b&quot;,
+    &quot;message&quot;: &quot;8B reranker가 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 4,
+        &quot;selected_count&quot;: 4,
+        &quot;top_rerank_score&quot;: 8.17,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K08&quot;,
+        &quot;K09&quot;,
+        &quot;K10&quot;,
+        &quot;K11&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 3.62,
+      &quot;elapsed_ms&quot;: 0.08
     }
   },
   {
@@ -1525,11 +1833,11 @@
       &quot;quality&quot;: {
         &quot;ok&quot;: false,
         &quot;coverage&quot;: 0.2,
-        &quot;top_score&quot;: 4.55,
+        &quot;top_score&quot;: 8.17,
         &quot;distinct_sections&quot;: 4,
         &quot;reason&quot;: &quot;8B retrieval looked shallow; escalate to 14B&quot;
       },
-      &quot;elapsed_ms&quot;: 0.01
+      &quot;elapsed_ms&quot;: 0.0
     }
   },
   {
@@ -1541,7 +1849,7 @@
   },
   {
     &quot;node&quot;: &quot;search_14b&quot;,
-    &quot;message&quot;: &quot;14B 검색 완료&quot;,
+    &quot;message&quot;: &quot;14B 검색 후보 수집 완료&quot;,
     &quot;payload&quot;: {
       &quot;attempt&quot;: 1,
       &quot;query&quot;: &quot;rag는 전체적으로 어떤 단계로 작동하나요 작동 단계 검색 프롬프트 업데이트 8b retrieval looked shallow escalate 14b&quot;,
@@ -1576,7 +1884,29 @@
         &quot;K09&quot;,
         &quot;K01&quot;
       ],
-      &quot;elapsed_ms&quot;: 1.13
+      &quot;elapsed_ms&quot;: 1.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_14b&quot;,
+    &quot;message&quot;: &quot;14B reranker가 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 6,
+        &quot;selected_count&quot;: 6,
+        &quot;top_rerank_score&quot;: 20.23,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K11&quot;,
+        &quot;K12&quot;,
+        &quot;K08&quot;,
+        &quot;K10&quot;,
+        &quot;K09&quot;,
+        &quot;K01&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 3.780000000000001,
+      &quot;elapsed_ms&quot;: 0.12
     }
   },
   {
@@ -1587,7 +1917,7 @@
       &quot;quality&quot;: {
         &quot;ok&quot;: true,
         &quot;coverage&quot;: 0.4,
-        &quot;top_score&quot;: 16.45,
+        &quot;top_score&quot;: 20.23,
         &quot;distinct_sections&quot;: 6,
         &quot;reason&quot;: &quot;retrieval looks grounded&quot;
       },
@@ -1599,7 +1929,7 @@
     &quot;message&quot;: &quot;최종 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;14b&quot;,
-      &quot;elapsed_ms&quot;: 0.16,
+      &quot;elapsed_ms&quot;: 0.13,
       &quot;answer_preview&quot;: &quot;Route: 14B | quality_ok=True | coverage=0.4 질문: RAG는 전체적으로 어떤 단계로 작동하나요? 문서 근거 요약: - [K11] 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장: 다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다. -…&quot;
     }
   },
@@ -1659,15 +1989,16 @@
           <span class='pill'>initial route: 8B</span>
           <span class='pill'>final model: 8B</span>
           <span class='pill'>restarts: 0</span>
-          <span class='pill'>total: 1.44 ms</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 1.32 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 8b</li><li>search_8b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 8b</li><li>search_8b</li><li>rerank_8b</li><li>grade_results → answer</li><li>answer</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>search_8b에서 K10, K08, K05, K13을 가져왔고, grade_results가 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 현재 상위 청크를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 63.2점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>search_8b가 먼저 후보를 모으고 rerank_8b가 질문 overlap과 section 힌트로 K10, K08, K05, K13 순서로 다시 정렬했다.</li><li>grade_results가 reranked top chunks를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 reranked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 63.2점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
@@ -1715,15 +2046,27 @@
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.444,
-  &quot;top_score&quot;: 17.6,
+  &quot;top_score&quot;: 28.72,
   &quot;distinct_sections&quot;: 4,
   &quot;reason&quot;: &quot;retrieval looks grounded&quot;
 }</pre>
         </article>
       </div>
       <article class='panel'>
-        <h3>Search attempts + retrieved chunks</h3>
-        <article class='attempt'><div class='attempt-head'><strong>search_8b</strong><span>1.06 ms</span></div><div class='query'>문서에서 말하는 관련 정보 검색 단계는 어떤 식으로</div><ul><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>score 17.6</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>term hits: 검색, 관련, 단계는, 정보</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>score 11.95</span><br>RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다. 사용자 쿼리와 관련 정보가 모두 LLM에 제공됩니다. LLM은 새로운 지식과 학습…<br><span class='hits'>term hits: 검색, 관련, 정보</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>score 9.15</span><br>LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다. 개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다. RAG를 사용하여 LLM을 라이브 소셜 미디어 피드, 뉴스 사이트 또는 기타 자주 업데이트되는 정보 소스에 직접 연결할 수 있습니다.…<br><span class='hits'>term hits: 검색, 정보</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>score 8.55</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>term hits: 검색, 관련</span></li></ul></article>
+        <h3>Search + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>search_8b+rerank_8b</strong>
+                <span>0.97 ms</span>
+              </div>
+              <div class='query'>문서에서 말하는 관련 정보 검색 단계는 어떤 식으로</div>
+              <h4>retrieval candidates</h4>
+              <ul><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>base 17.6</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>base 11.95</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>base 9.15</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>base 8.55</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rerank 28.72</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>overlap: 검색, 관련, 단계는, 정보</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>rerank 18.89</span><br>RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다. 사용자 쿼리와 관련 정보가 모두 LLM에 제공됩니다. LLM은 새로운 지식과 학습…<br><span class='hits'>overlap: 검색, 관련, 정보</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>rerank 12.71</span><br>LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다. 개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다. RAG를 사용하여 LLM을 라이브 소셜 미디어 피드, 뉴스 사이트 또는 기타 자주 업데이트되는 정보 소스에 직접 연결할 수 있습니다.…<br><span class='hits'>overlap: 검색, 정보</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 12.03</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>overlap: 검색, 관련</span></li></ul>
+            </article>
+            
       </article>
       <article class='panel'>
         <h3>Per-node timing</h3>
@@ -1735,7 +2078,7 @@
   &quot;complexity_score&quot;: 2,
   &quot;reason&quot;: &quot;direct factual retrieval&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>search_8b</td><td>1.06 ms</td><td><pre>{
+}</pre></td></tr><tr><td>search_8b</td><td>0.88 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;문서에서 말하는 관련 정보 검색 단계는 어떤 식으로&quot;,
   &quot;query_tokens&quot;: [
@@ -1751,16 +2094,22 @@
   &quot;top_score&quot;: 17.6,
   &quot;distinct_sections&quot;: 4,
   &quot;candidate_count&quot;: 14
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.09 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 4,
+  &quot;selected_count&quot;: 4,
+  &quot;top_rerank_score&quot;: 28.72,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 11.119999999999997
 }</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
     &quot;coverage&quot;: 0.444,
-    &quot;top_score&quot;: 17.6,
+    &quot;top_score&quot;: 28.72,
     &quot;distinct_sections&quot;: 4,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.17 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer</td><td>0.16 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;8b&quot;
 }</pre></td></tr></tbody>
         </table>
@@ -1784,7 +2133,7 @@
   },
   {
     &quot;node&quot;: &quot;search_8b&quot;,
-    &quot;message&quot;: &quot;8B 검색 완료&quot;,
+    &quot;message&quot;: &quot;8B 검색 후보 수집 완료&quot;,
     &quot;payload&quot;: {
       &quot;attempt&quot;: 1,
       &quot;query&quot;: &quot;문서에서 말하는 관련 정보 검색 단계는 어떤 식으로&quot;,
@@ -1809,7 +2158,27 @@
         &quot;K05&quot;,
         &quot;K13&quot;
       ],
-      &quot;elapsed_ms&quot;: 1.06
+      &quot;elapsed_ms&quot;: 0.88
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_8b&quot;,
+    &quot;message&quot;: &quot;8B reranker가 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 4,
+        &quot;selected_count&quot;: 4,
+        &quot;top_rerank_score&quot;: 28.72,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K10&quot;,
+        &quot;K08&quot;,
+        &quot;K05&quot;,
+        &quot;K13&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 11.119999999999997,
+      &quot;elapsed_ms&quot;: 0.09
     }
   },
   {
@@ -1820,7 +2189,7 @@
       &quot;quality&quot;: {
         &quot;ok&quot;: true,
         &quot;coverage&quot;: 0.444,
-        &quot;top_score&quot;: 17.6,
+        &quot;top_score&quot;: 28.72,
         &quot;distinct_sections&quot;: 4,
         &quot;reason&quot;: &quot;retrieval looks grounded&quot;
       },
@@ -1832,7 +2201,7 @@
     &quot;message&quot;: &quot;최종 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;8b&quot;,
-      &quot;elapsed_ms&quot;: 0.17,
+      &quot;elapsed_ms&quot;: 0.16,
       &quot;answer_preview&quot;: &quot;Route: 8B | quality_ok=True | coverage=0.444 질문: 문서에서 말하는 관련 정보 검색 단계는 어떤 식으로 이뤄지나요? 문서 근거 요약: - [K10] 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. - [K08] 검색 증강 생성은 어떻게 작동하나요?: RAG가 없는…&quot;
     }
   },
@@ -1885,15 +2254,16 @@
           <span class='pill'>initial route: 8B</span>
           <span class='pill'>final model: 8B</span>
           <span class='pill'>restarts: 0</span>
-          <span class='pill'>total: 1.42 ms</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 1.41 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 8b</li><li>search_8b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 8b</li><li>search_8b</li><li>rerank_8b</li><li>grade_results → answer</li><li>answer</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>search_8b에서 K11, K02, K01, K10을 가져왔고, grade_results가 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 현재 상위 청크를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 5/6, 핵심 청크 1/1개를 잡아서 총점 84.5점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>search_8b가 먼저 후보를 모으고 rerank_8b가 질문 overlap과 section 힌트로 K11, K02, K10, K01 순서로 다시 정렬했다.</li><li>grade_results가 reranked top chunks를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 reranked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 5/6, 핵심 청크 1/1개를 잡아서 총점 84.5점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
@@ -1902,8 +2272,8 @@
 문서 근거 요약:
 - [K11] 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장: 다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다.
 - [K02] 검색 증강 생성이 중요한 이유는 무엇인가요?: LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다.
-- [K01] 검색 증강 생성이란 무엇인가요?: 검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의 작업에서 독창적인 결과를 생성합니다.
-- [K10] 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.</pre>
+- [K10] 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.
+- [K01] 검색 증강 생성이란 무엇인가요?: 검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의 작업에서 독창적인 결과를 생성합니다.</pre>
           <h3>Expected answer</h3>
           <pre>검색된 관련 데이터를 사용자 입력에 붙여 프롬프트를 확장함으로써, LLM이 더 정확하고 근거 있는 답변을 생성하게 하기 위해 필요하다.</pre>
           <h3>Judge score</h3>
@@ -1943,15 +2313,27 @@
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.571,
-  &quot;top_score&quot;: 14.95,
+  &quot;top_score&quot;: 24.37,
   &quot;distinct_sections&quot;: 4,
   &quot;reason&quot;: &quot;retrieval looks grounded&quot;
 }</pre>
         </article>
       </div>
       <article class='panel'>
-        <h3>Search attempts + retrieved chunks</h3>
-        <article class='attempt'><div class='attempt-head'><strong>search_8b</strong><span>1.01 ms</span></div><div class='query'>llm 프롬프트 확장 단계는 필요하고 무엇을 추가하나요</div><ul><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>score 14.95</span><br>다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다. 확장된 프롬프트를 사용하면 대규모 언어 모델이 사용자 쿼리에 대한 정확한 답변을 생성할 수 있습니다.<br><span class='hits'>term hits: llm, 프롬프트, 확장</span></li><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>score 3.95</span><br>LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다. 안타깝게도 LLM 기술의 특성상 LLM 응답에 대한 예측이 불가능합니다. 또한…<br><span class='hits'>term hits: llm</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>score 3.1</span><br>검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의…<br><span class='hits'>term hits: llm</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>score 3.05</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>term hits: 단계는</span></li></ul></article>
+        <h3>Search + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>search_8b+rerank_8b</strong>
+                <span>1.05 ms</span>
+              </div>
+              <div class='query'>llm 프롬프트 확장 단계는 필요하고 무엇을 추가하나요</div>
+              <h4>retrieval candidates</h4>
+              <ul><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>base 14.95</span></li><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>base 3.95</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>base 3.1</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>base 3.05</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>rerank 24.37</span><br>다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다. 확장된 프롬프트를 사용하면 대규모 언어 모델이 사용자 쿼리에 대한 정확한 답변을 생성할 수 있습니다.<br><span class='hits'>overlap: llm, 프롬프트, 확장</span></li><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>rerank 7.29</span><br>LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다. 안타깝게도 LLM 기술의 특성상 LLM 응답에 대한 예측이 불가능합니다. 또한…<br><span class='hits'>overlap: llm</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rerank 6.43</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>overlap: 단계는</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>rerank 6.36</span><br>검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의…<br><span class='hits'>overlap: llm</span></li></ul>
+            </article>
+            
       </article>
       <article class='panel'>
         <h3>Per-node timing</h3>
@@ -1965,7 +2347,7 @@
   &quot;complexity_score&quot;: 2,
   &quot;reason&quot;: &quot;direct factual retrieval&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>search_8b</td><td>1.01 ms</td><td><pre>{
+}</pre></td></tr><tr><td>search_8b</td><td>0.95 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;llm 프롬프트 확장 단계는 필요하고 무엇을 추가하나요&quot;,
   &quot;query_tokens&quot;: [
@@ -1980,16 +2362,22 @@
   &quot;top_score&quot;: 14.95,
   &quot;distinct_sections&quot;: 4,
   &quot;candidate_count&quot;: 14
-}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.10 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 4,
+  &quot;selected_count&quot;: 4,
+  &quot;top_rerank_score&quot;: 24.37,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 9.420000000000002
+}</pre></td></tr><tr><td>grade_results</td><td>0.00 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
     &quot;coverage&quot;: 0.571,
-    &quot;top_score&quot;: 14.95,
+    &quot;top_score&quot;: 24.37,
     &quot;distinct_sections&quot;: 4,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.19 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer</td><td>0.17 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;8b&quot;
 }</pre></td></tr></tbody>
         </table>
@@ -2015,7 +2403,7 @@
   },
   {
     &quot;node&quot;: &quot;search_8b&quot;,
-    &quot;message&quot;: &quot;8B 검색 완료&quot;,
+    &quot;message&quot;: &quot;8B 검색 후보 수집 완료&quot;,
     &quot;payload&quot;: {
       &quot;attempt&quot;: 1,
       &quot;query&quot;: &quot;llm 프롬프트 확장 단계는 필요하고 무엇을 추가하나요&quot;,
@@ -2039,7 +2427,27 @@
         &quot;K01&quot;,
         &quot;K10&quot;
       ],
-      &quot;elapsed_ms&quot;: 1.01
+      &quot;elapsed_ms&quot;: 0.95
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_8b&quot;,
+    &quot;message&quot;: &quot;8B reranker가 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 4,
+        &quot;selected_count&quot;: 4,
+        &quot;top_rerank_score&quot;: 24.37,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K11&quot;,
+        &quot;K02&quot;,
+        &quot;K10&quot;,
+        &quot;K01&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 9.420000000000002,
+      &quot;elapsed_ms&quot;: 0.1
     }
   },
   {
@@ -2050,11 +2458,11 @@
       &quot;quality&quot;: {
         &quot;ok&quot;: true,
         &quot;coverage&quot;: 0.571,
-        &quot;top_score&quot;: 14.95,
+        &quot;top_score&quot;: 24.37,
         &quot;distinct_sections&quot;: 4,
         &quot;reason&quot;: &quot;retrieval looks grounded&quot;
       },
-      &quot;elapsed_ms&quot;: 0.01
+      &quot;elapsed_ms&quot;: 0.0
     }
   },
   {
@@ -2062,7 +2470,7 @@
     &quot;message&quot;: &quot;최종 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;8b&quot;,
-      &quot;elapsed_ms&quot;: 0.19,
+      &quot;elapsed_ms&quot;: 0.17,
       &quot;answer_preview&quot;: &quot;Route: 8B | quality_ok=True | coverage=0.571 질문: LLM 프롬프트 확장 단계는 왜 필요하고 무엇을 추가하나요? 문서 근거 요약: - [K11] 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장: 다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로…&quot;
     }
   },
@@ -2117,15 +2525,16 @@
           <span class='pill'>initial route: 14B</span>
           <span class='pill'>final model: 14B</span>
           <span class='pill'>restarts: 0</span>
-          <span class='pill'>total: 1.46 ms</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 1.47 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 14b</li><li>search_14b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 14b</li><li>search_14b</li><li>rerank_14b</li><li>grade_results → answer</li><li>answer</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 14B 경로로 분류했다. 이유: multi-step/comparison</li><li>search_14b에서 K14, K13, K09, K08을 가져왔고, grade_results가 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 14B answer 단계가 현재 상위 청크를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 1/6, 핵심 청크 1/1개를 잡아서 총점 46.2점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 14B 경로로 분류했다. 이유: multi-step/comparison</li><li>search_14b가 먼저 후보를 모으고 rerank_14b가 질문 overlap과 section 힌트로 K14, K13, K09, K10 순서로 다시 정렬했다.</li><li>grade_results가 reranked top chunks를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 14B answer 단계가 reranked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 2/6, 핵심 청크 1/1개를 잡아서 총점 55.3점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
@@ -2135,7 +2544,7 @@
 - [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
 - [K13] 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요?: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.
 - [K09] 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성: LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다.
-- [K08] 검색 증강 생성은 어떻게 작동하나요?: RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다.</pre>
+- [K10] 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.</pre>
           <h3>Expected answer</h3>
           <pre>RAG는 외부 지식을 붙여 답변을 생성하는 전체 접근이고, 시맨틱 검색은 그 RAG 성능을 높이기 위해 대규모 데이터에서 더 정확한 관련 구절을 찾고 지식 준비 작업을 줄여주는 검색 기술이다.</pre>
           <h3>Judge score</h3>
@@ -2150,7 +2559,8 @@
     &quot;성능&quot;
   ],
   &quot;keyword_hits&quot;: [
-    &quot;시맨틱 검색&quot;
+    &quot;시맨틱 검색&quot;,
+    &quot;관련 구절&quot;
   ],
   &quot;support_chunks_expected&quot;: [
     &quot;K13&quot;
@@ -2159,27 +2569,39 @@
     &quot;K13&quot;
   ],
   &quot;score_breakdown&quot;: {
-    &quot;keyword_score&quot;: 9.2,
+    &quot;keyword_score&quot;: 18.3,
     &quot;support_score&quot;: 25.0,
     &quot;quality_score&quot;: 12.0
   },
-  &quot;total_score&quot;: 46.2,
-  &quot;verdict&quot;: &quot;미흡&quot;,
-  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 1/6, 핵심 청크 1/1개를 잡아서 총점 46.2점으로 평가했다.&quot;
+  &quot;total_score&quot;: 55.3,
+  &quot;verdict&quot;: &quot;아쉬움&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/6, 핵심 청크 1/1개를 잡아서 총점 55.3점으로 평가했다.&quot;
 }</pre>
           <h3>Quality gate</h3>
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.5,
-  &quot;top_score&quot;: 25.85,
+  &quot;top_score&quot;: 33.63,
   &quot;distinct_sections&quot;: 6,
   &quot;reason&quot;: &quot;retrieval looks grounded&quot;
 }</pre>
         </article>
       </div>
       <article class='panel'>
-        <h3>Search attempts + retrieved chunks</h3>
-        <article class='attempt'><div class='attempt-head'><strong>search_14b</strong><span>1.00 ms</span></div><div class='query'>aws 문서 기준으로 rag와 시맨틱 검색의 차이를 비교해줘 차이 비교 검색 bedrock kendra sagemaker</div><ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>score 25.85</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>term hits: bedrock, kendra, sagemaker, 검색, 기준으로, 문서, 시맨틱</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>score 21.35</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>term hits: 검색, 검색의, 문서, 시맨틱</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>score 7.2</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>term hits: 검색, 문서</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>score 5.0</span><br>RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다. 사용자 쿼리와 관련 정보가 모두 LLM에 제공됩니다. LLM은 새로운 지식과 학습…<br><span class='hits'>term hits: 검색</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>score 5.0</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>term hits: 검색</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>score 4.6</span><br>검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의…<br><span class='hits'>term hits: 검색</span></li></ul></article>
+        <h3>Search + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>search_14b+rerank_14b</strong>
+                <span>1.07 ms</span>
+              </div>
+              <div class='query'>aws 문서 기준으로 rag와 시맨틱 검색의 차이를 비교해줘 차이 비교 검색 bedrock kendra sagemaker</div>
+              <h4>retrieval candidates</h4>
+              <ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>base 25.85</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>base 21.35</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>base 7.2</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>base 5.0</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>base 5.0</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>base 4.6</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rerank 33.63</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>overlap: 기준으로, 문서, 시맨틱</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 28.85</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>overlap: 검색의, 문서, 시맨틱</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rerank 9.22</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>overlap: 문서</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rerank 7.56</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>overlap: -</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>rerank 5.24</span><br>RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다. 사용자 쿼리와 관련 정보가 모두 LLM에 제공됩니다. LLM은 새로운 지식과 학습…<br><span class='hits'>overlap: -</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>rerank 4.68</span><br>검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의…<br><span class='hits'>overlap: -</span></li></ul>
+            </article>
+            
       </article>
       <article class='panel'>
         <h3>Per-node timing</h3>
@@ -2195,7 +2617,7 @@
   &quot;complexity_score&quot;: 4,
   &quot;reason&quot;: &quot;multi-step/comparison&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>search_14b</td><td>1.00 ms</td><td><pre>{
+}</pre></td></tr><tr><td>search_14b</td><td>0.90 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;aws 문서 기준으로 rag와 시맨틱 검색의 차이를 비교해줘 차이 비교 검색 bedrock kendra sagemaker&quot;,
   &quot;query_tokens&quot;: [
@@ -2217,16 +2639,22 @@
   &quot;top_score&quot;: 25.85,
   &quot;distinct_sections&quot;: 6,
   &quot;candidate_count&quot;: 16
+}</pre></td></tr><tr><td>rerank_14b</td><td>0.17 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 6,
+  &quot;selected_count&quot;: 6,
+  &quot;top_rerank_score&quot;: 33.63,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 7.780000000000001
 }</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
     &quot;coverage&quot;: 0.5,
-    &quot;top_score&quot;: 25.85,
+    &quot;top_score&quot;: 33.63,
     &quot;distinct_sections&quot;: 6,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.23 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer</td><td>0.20 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;14b&quot;
 }</pre></td></tr></tbody>
         </table>
@@ -2254,7 +2682,7 @@
   },
   {
     &quot;node&quot;: &quot;search_14b&quot;,
-    &quot;message&quot;: &quot;14B 검색 완료&quot;,
+    &quot;message&quot;: &quot;14B 검색 후보 수집 완료&quot;,
     &quot;payload&quot;: {
       &quot;attempt&quot;: 1,
       &quot;query&quot;: &quot;aws 문서 기준으로 rag와 시맨틱 검색의 차이를 비교해줘 차이 비교 검색 bedrock kendra sagemaker&quot;,
@@ -2287,7 +2715,29 @@
         &quot;K10&quot;,
         &quot;K01&quot;
       ],
-      &quot;elapsed_ms&quot;: 1.0
+      &quot;elapsed_ms&quot;: 0.9
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_14b&quot;,
+    &quot;message&quot;: &quot;14B reranker가 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 6,
+        &quot;selected_count&quot;: 6,
+        &quot;top_rerank_score&quot;: 33.63,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K14&quot;,
+        &quot;K13&quot;,
+        &quot;K09&quot;,
+        &quot;K10&quot;,
+        &quot;K08&quot;,
+        &quot;K01&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 7.780000000000001,
+      &quot;elapsed_ms&quot;: 0.17
     }
   },
   {
@@ -2298,7 +2748,7 @@
       &quot;quality&quot;: {
         &quot;ok&quot;: true,
         &quot;coverage&quot;: 0.5,
-        &quot;top_score&quot;: 25.85,
+        &quot;top_score&quot;: 33.63,
         &quot;distinct_sections&quot;: 6,
         &quot;reason&quot;: &quot;retrieval looks grounded&quot;
       },
@@ -2310,7 +2760,7 @@
     &quot;message&quot;: &quot;최종 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;14b&quot;,
-      &quot;elapsed_ms&quot;: 0.23,
+      &quot;elapsed_ms&quot;: 0.2,
       &quot;answer_preview&quot;: &quot;Route: 14B | quality_ok=True | coverage=0.5 질문: AWS 문서 기준으로 RAG와 시맨틱 검색의 차이를 비교해줘. 문서 근거 요약: - [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을…&quot;
     }
   },
@@ -2328,7 +2778,8 @@
         &quot;성능&quot;
       ],
       &quot;keyword_hits&quot;: [
-        &quot;시맨틱 검색&quot;
+        &quot;시맨틱 검색&quot;,
+        &quot;관련 구절&quot;
       ],
       &quot;support_chunks_expected&quot;: [
         &quot;K13&quot;
@@ -2337,13 +2788,13 @@
         &quot;K13&quot;
       ],
       &quot;score_breakdown&quot;: {
-        &quot;keyword_score&quot;: 9.2,
+        &quot;keyword_score&quot;: 18.3,
         &quot;support_score&quot;: 25.0,
         &quot;quality_score&quot;: 12.0
       },
-      &quot;total_score&quot;: 46.2,
-      &quot;verdict&quot;: &quot;미흡&quot;,
-      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 1/6, 핵심 청크 1/1개를 잡아서 총점 46.2점으로 평가했다.&quot;
+      &quot;total_score&quot;: 55.3,
+      &quot;verdict&quot;: &quot;아쉬움&quot;,
+      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/6, 핵심 청크 1/1개를 잡아서 총점 55.3점으로 평가했다.&quot;
     }
   }
 ]</pre>
@@ -2361,15 +2812,16 @@
           <span class='pill'>initial route: 14B</span>
           <span class='pill'>final model: 14B</span>
           <span class='pill'>restarts: 0</span>
-          <span class='pill'>total: 1.38 ms</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 1.36 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 14b</li><li>search_14b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 14b</li><li>search_14b</li><li>rerank_14b</li><li>grade_results → answer</li><li>answer</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 14B 경로로 분류했다. 이유: multi-step/comparison</li><li>search_14b에서 K14, K16, K13, K15을 가져왔고, grade_results가 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 14B answer 단계가 현재 상위 청크를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 64.5점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 14B 경로로 분류했다. 이유: multi-step/comparison</li><li>search_14b가 먼저 후보를 모으고 rerank_14b가 질문 overlap과 section 힌트로 K14, K13, K16, K03 순서로 다시 정렬했다.</li><li>grade_results가 reranked top chunks를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 14B answer 단계가 reranked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 64.5점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
@@ -2377,9 +2829,9 @@
 질문: AWS는 RAG 구축을 위해 어떤 서비스들을 어떻게 지원한다고 설명하나요?
 문서 근거 요약:
 - [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
-- [K16] AWS에서의 다음 단계 / 콘솔에서 구축 시작: AWS Management Console에서 구축을 시작하세요.
 - [K13] 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요?: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.
-- [K15] AWS에서의 다음 단계 / 무료 계정 가입: AWS 프리 티어에 즉시 액세스할 수 있습니다.</pre>
+- [K16] AWS에서의 다음 단계 / 콘솔에서 구축 시작: AWS Management Console에서 구축을 시작하세요.
+- [K03] 검색 증강 생성의 이점은 무엇인가요?: RAG 기술은 조직의 생성형 AI 관련 작업에 있어 여러 가지 이점을 제공합니다.</pre>
           <h3>Expected answer</h3>
           <pre>AWS는 Amazon Bedrock 지식 기반으로 데이터 소스 연결과 생성형 앱 개발을 단순화하고, Amazon Kendra로 엔터프라이즈 검색과 시맨틱 랭킹을 제공하며, SageMaker JumpStart로 빠른 배포와 예시 기반 구현 가속을 지원한다고 설명한다.</pre>
           <h3>Judge score</h3>
@@ -2417,15 +2869,27 @@
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.5,
-  &quot;top_score&quot;: 19.2,
+  &quot;top_score&quot;: 25.28,
   &quot;distinct_sections&quot;: 6,
   &quot;reason&quot;: &quot;retrieval looks grounded&quot;
 }</pre>
         </article>
       </div>
       <article class='panel'>
-        <h3>Search attempts + retrieved chunks</h3>
-        <article class='attempt'><div class='attempt-head'><strong>search_14b</strong><span>1.00 ms</span></div><div class='query'>aws는 rag 구축을 위해 어떤 서비스들을 지원한다고 설명하나요 aws bedrock kendra sagemaker</div><ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>score 19.2</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>term hits: aws는, bedrock, kendra, rag, sagemaker</span></li><li><strong>K16</strong> · AWS에서의 다음 단계 / 콘솔에서 구축 시작 <span class='score'>score 6.8</span><br>AWS Management Console에서 구축을 시작하세요.<br><span class='hits'>term hits: aws, 구축을</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>score 6.15</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>term hits: rag, 위해</span></li><li><strong>K15</strong> · AWS에서의 다음 단계 / 무료 계정 가입 <span class='score'>score 4.15</span><br>AWS 프리 티어에 즉시 액세스할 수 있습니다.<br><span class='hits'>term hits: aws</span></li><li><strong>K03</strong> · 검색 증강 생성의 이점은 무엇인가요? <span class='score'>score 3.05</span><br>RAG 기술은 조직의 생성형 AI 관련 작업에 있어 여러 가지 이점을 제공합니다.<br><span class='hits'>term hits: rag</span></li><li><strong>K04</strong> · 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현 <span class='score'>score 3.05</span><br>챗봇 개발은 일반적으로 파운데이션 모델 을 사용하여 시작됩니다. 파운데이션 모델(FM)은 광범위한 일반화 데이터와 레이블이 지정되지 않은 데이터에 대해 훈련된 API 액세스 가능 LLM입니다. 조직 또는 도메인별 정보를 위해 FM을 재교육하는 데 컴퓨팅 및 재정적 비용이 많이 소요됩니다. RAG를 통해 LLM에 새…<br><span class='hits'>term hits: 위해</span></li></ul></article>
+        <h3>Search + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>search_14b+rerank_14b</strong>
+                <span>1.02 ms</span>
+              </div>
+              <div class='query'>aws는 rag 구축을 위해 어떤 서비스들을 지원한다고 설명하나요 aws bedrock kendra sagemaker</div>
+              <h4>retrieval candidates</h4>
+              <ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>base 19.2</span></li><li><strong>K16</strong> · AWS에서의 다음 단계 / 콘솔에서 구축 시작 <span class='score'>base 6.8</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>base 6.15</span></li><li><strong>K15</strong> · AWS에서의 다음 단계 / 무료 계정 가입 <span class='score'>base 4.15</span></li><li><strong>K03</strong> · 검색 증강 생성의 이점은 무엇인가요? <span class='score'>base 3.05</span></li><li><strong>K04</strong> · 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현 <span class='score'>base 3.05</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rerank 25.28</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>overlap: aws는, rag</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 9.87</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>overlap: rag, 위해</span></li><li><strong>K16</strong> · AWS에서의 다음 단계 / 콘솔에서 구축 시작 <span class='score'>rerank 8.9</span><br>AWS Management Console에서 구축을 시작하세요.<br><span class='hits'>overlap: 구축을</span></li><li><strong>K03</strong> · 검색 증강 생성의 이점은 무엇인가요? <span class='score'>rerank 4.91</span><br>RAG 기술은 조직의 생성형 AI 관련 작업에 있어 여러 가지 이점을 제공합니다.<br><span class='hits'>overlap: rag</span></li><li><strong>K04</strong> · 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현 <span class='score'>rerank 4.83</span><br>챗봇 개발은 일반적으로 파운데이션 모델 을 사용하여 시작됩니다. 파운데이션 모델(FM)은 광범위한 일반화 데이터와 레이블이 지정되지 않은 데이터에 대해 훈련된 API 액세스 가능 LLM입니다. 조직 또는 도메인별 정보를 위해 FM을 재교육하는 데 컴퓨팅 및 재정적 비용이 많이 소요됩니다. RAG를 통해 LLM에 새…<br><span class='hits'>overlap: 위해</span></li><li><strong>K15</strong> · AWS에서의 다음 단계 / 무료 계정 가입 <span class='score'>rerank 4.39</span><br>AWS 프리 티어에 즉시 액세스할 수 있습니다.<br><span class='hits'>overlap: -</span></li></ul>
+            </article>
+            
       </article>
       <article class='panel'>
         <h3>Per-node timing</h3>
@@ -2439,7 +2903,7 @@
   &quot;complexity_score&quot;: 5,
   &quot;reason&quot;: &quot;multi-step/comparison&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>search_14b</td><td>1.00 ms</td><td><pre>{
+}</pre></td></tr><tr><td>search_14b</td><td>0.89 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;aws는 rag 구축을 위해 어떤 서비스들을 지원한다고 설명하나요 aws bedrock kendra sagemaker&quot;,
   &quot;query_tokens&quot;: [
@@ -2459,16 +2923,22 @@
   &quot;top_score&quot;: 19.2,
   &quot;distinct_sections&quot;: 6,
   &quot;candidate_count&quot;: 16
+}</pre></td></tr><tr><td>rerank_14b</td><td>0.13 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 6,
+  &quot;selected_count&quot;: 6,
+  &quot;top_rerank_score&quot;: 25.28,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 6.080000000000002
 }</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
     &quot;coverage&quot;: 0.5,
-    &quot;top_score&quot;: 19.2,
+    &quot;top_score&quot;: 25.28,
     &quot;distinct_sections&quot;: 6,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.18 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer</td><td>0.17 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;14b&quot;
 }</pre></td></tr></tbody>
         </table>
@@ -2494,7 +2964,7 @@
   },
   {
     &quot;node&quot;: &quot;search_14b&quot;,
-    &quot;message&quot;: &quot;14B 검색 완료&quot;,
+    &quot;message&quot;: &quot;14B 검색 후보 수집 완료&quot;,
     &quot;payload&quot;: {
       &quot;attempt&quot;: 1,
       &quot;query&quot;: &quot;aws는 rag 구축을 위해 어떤 서비스들을 지원한다고 설명하나요 aws bedrock kendra sagemaker&quot;,
@@ -2525,7 +2995,29 @@
         &quot;K03&quot;,
         &quot;K04&quot;
       ],
-      &quot;elapsed_ms&quot;: 1.0
+      &quot;elapsed_ms&quot;: 0.89
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_14b&quot;,
+    &quot;message&quot;: &quot;14B reranker가 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 6,
+        &quot;selected_count&quot;: 6,
+        &quot;top_rerank_score&quot;: 25.28,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K14&quot;,
+        &quot;K13&quot;,
+        &quot;K16&quot;,
+        &quot;K03&quot;,
+        &quot;K04&quot;,
+        &quot;K15&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 6.080000000000002,
+      &quot;elapsed_ms&quot;: 0.13
     }
   },
   {
@@ -2536,7 +3028,7 @@
       &quot;quality&quot;: {
         &quot;ok&quot;: true,
         &quot;coverage&quot;: 0.5,
-        &quot;top_score&quot;: 19.2,
+        &quot;top_score&quot;: 25.28,
         &quot;distinct_sections&quot;: 6,
         &quot;reason&quot;: &quot;retrieval looks grounded&quot;
       },
@@ -2548,7 +3040,7 @@
     &quot;message&quot;: &quot;최종 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;14b&quot;,
-      &quot;elapsed_ms&quot;: 0.18,
+      &quot;elapsed_ms&quot;: 0.17,
       &quot;answer_preview&quot;: &quot;Route: 14B | quality_ok=True | coverage=0.5 질문: AWS는 RAG 구축을 위해 어떤 서비스들을 어떻게 지원한다고 설명하나요? 문서 근거 요약: - [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반…&quot;
     }
   },

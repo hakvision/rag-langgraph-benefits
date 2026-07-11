@@ -504,6 +504,37 @@ def render_search_attempts(run: dict[str, Any]) -> str:
     return "\n".join(blocks)
 
 
+def render_structure_section() -> str:
+    return """
+    <section class='card run'>
+      <div class='eyebrow'>structure · round1</div>
+      <h2>Round1 구조</h2>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>파이프라인</h3>
+          <ol>
+            <li>classify_8b: 질문을 8B/14B 경로로 분류</li>
+            <li>search_8b 또는 search_14b: lexical retrieval로 상위 청크 선택</li>
+            <li>grade_results: coverage/top_score 기반 품질 판정</li>
+            <li>필요하면 route_upgrade 8b→14b</li>
+            <li>answer: 상위 청크 요약형 응답 생성</li>
+            <li>judge: 미리 정한 기대 정답 기준으로 점수화</li>
+          </ol>
+        </article>
+        <article class='panel'>
+          <h3>특징</h3>
+          <ul>
+            <li>retrieval은 단일 점수 스텝으로 끝나고 reranker는 없음</li>
+            <li>검색 품질은 top score + coverage 위주로 판정</li>
+            <li>최종 answer는 청크 발췌 중심이라 judged score가 낮게 나올 수 있음</li>
+            <li>즉 round1은 baseline 구조 확인용에 가깝다</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+    """
+
+
 def render_run(run: dict[str, Any]) -> str:
     return f"""
     <section class='card run'>
@@ -620,6 +651,7 @@ def render_report(payload: dict[str, Any]) -> str:
         <article class='panel'><strong>{summary['score_bands']['good']}</strong><span>good verdicts</span></article>
       </div>
     </section>
+    {render_structure_section()}
     {run_html}
   </main>
 </body>
