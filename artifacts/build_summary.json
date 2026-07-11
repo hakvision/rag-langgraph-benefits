@@ -1,0 +1,25 @@
+{
+  "source": {
+    "title": "Build a custom RAG agent with LangGraph",
+    "url": "https://docs.langchain.com/oss/python/langgraph/agentic-rag",
+    "chunk_count": 14
+  },
+  "questions": [
+    "In the preprocess documents step, what source material does the tutorial fetch for retrieval?",
+    "Compare the direct-answer path with the retriever-tool path and explain where document grading and question rewrite sit in the workflow.",
+    "What happens if the search results look weird or low quality?",
+    "Compare the normal answer path with the recovery path after low-quality retrieval, including grading and question rewrite."
+  ],
+  "routes": [
+    "8b",
+    "14b",
+    "8b",
+    "14b"
+  ],
+  "restarts": [
+    0,
+    0,
+    2,
+    1
+  ]
+}
