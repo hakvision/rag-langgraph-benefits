@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>로컬 8B/14B RAG UI 실행 안내</title>
+  <style>
+    :root { --bg:#0b1020; --panel:#121933; --text:#eef3ff; --muted:#a9b6d3; --line:#2a3768; --accent:#7cc9ff; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif; background:linear-gradient(180deg,#09101d 0%,#0b1020 100%); color:var(--text); }
+    .wrap { max-width:980px; margin:0 auto; padding:28px 18px 80px; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:22px; padding:22px; margin-bottom:18px; }
+    h1,h2 { line-height:1.2; }
+    h1 { margin:0 0 12px; font-size:clamp(30px,4vw,46px); }
+    h2 { margin:0 0 10px; font-size:26px; }
+    p, li { color:var(--muted); line-height:1.7; }
+    pre { white-space:pre-wrap; word-break:break-word; background:#09101d; border:1px solid var(--line); border-radius:16px; padding:14px; color:#dce8ff; }
+    a { color:var(--accent); }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <h1>이 페이지는 안내용, 실제 인터랙티브 UI는 집 PC에서 로컬로 띄운다</h1>
+      <p>GitHub Pages는 정적 호스팅이라 로컬 8B/14B 백엔드에 직접 붙어 동작하는 UI를 안정적으로 제공하기 어렵다. 그래서 실제 질문 입력/로그 확인 UI는 <strong>집 PC에서 직접 서버를 띄워서</strong> 쓰는 구조로 만들었다.</p>
+    </section>
+
+    <section class="card">
+      <h2>실행 방법</h2>
+      <pre>cd rag-langgraph-benefits
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python server.py</pre>
+      <p>그 다음 브라우저에서 아래 주소로 접속:</p>
+      <pre>http://127.0.0.1:8000/</pre>
+    </section>
+
+    <section class="card">
+      <h2>무슨 일이 일어나나</h2>
+      <ul>
+        <li>네가 질문 입력</li>
+        <li>8B router가 질문 난이도/종류를 분류</li>
+        <li>8B로 검색 가능한 질문이면 8B 검색</li>
+        <li>복잡하거나 실패하면 14B로 승격</li>
+        <li>검색 품질이 낮으면 같은 노드를 재시작</li>
+        <li>최종 답변 + 검색 청크 + 상세 로그를 한 화면에 표시</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>RAG 문서</h2>
+      <p>현재 기본 RAG 문서는 LangGraph 공식 agentic RAG 튜토리얼을 가져오도록 연결해 두었다:</p>
+      <pre>https://docs.langchain.com/oss/python/langgraph/agentic-rag</pre>
+      <p>즉 지금은 문서도 실제로 가져와서 청크화하는 구조다.</p>
+    </section>
+  </main>
+</body>
+</html>
