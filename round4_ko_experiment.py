@@ -2,12 +2,9 @@ from __future__ import annotations
 
 import html
 import json
-import math
-import re
 import textwrap
 import time
 from dataclasses import asdict
-from pathlib import Path
 from typing import Any, Literal
 
 from round1_ko_experiment import (
@@ -22,266 +19,81 @@ from round1_ko_experiment import (
     extract_chunks,
     fetch_source_document,
     grade_search,
-    tokenize,
 )
+from round3_ko_experiment import hybrid_retrieve, rerank_chunks
 
-REPORT_HTML = REPO_ROOT / "round3_ko.html"
-RESULTS_JSON = ARTIFACTS_DIR / "round3_ko_results.json"
-SUMMARY_JSON = ARTIFACTS_DIR / "round3_ko_summary.json"
-SOURCE_JSON = ARTIFACTS_DIR / "round3_ko_source_document.json"
-
-SYNONYM_GROUPS = [
-    {"rag", "검색", "검색증강", "증강", "retrieval", "augmented", "generation"},
-    {"신뢰", "정확", "정확성", "확신", "근거", "출처"},
-    {"최신", "업데이트", "오래된", "현행", "새", "새로운"},
-    {"비용", "효율", "재학습", "컴퓨팅", "재정"},
-    {"작동", "흐름", "단계", "프로세스", "절차"},
-    {"검색", "정보", "문서", "구절", "청크", "벡터", "데이터베이스", "매칭"},
-    {"프롬프트", "확장", "입력", "질문", "쿼리"},
-    {"비교", "차이", "대비"},
-    {"aws", "bedrock", "kendra", "sagemaker"},
-]
+REPORT_HTML = REPO_ROOT / "round4_ko.html"
+RESULTS_JSON = ARTIFACTS_DIR / "round4_ko_results.json"
+SUMMARY_JSON = ARTIFACTS_DIR / "round4_ko_summary.json"
+SOURCE_JSON = ARTIFACTS_DIR / "round4_ko_source_document.json"
 
 
-def expand_tokens(tokens: list[str]) -> set[str]:
-    expanded = set(tokens)
-    for token in list(expanded):
-        for group in SYNONYM_GROUPS:
-            if token in group:
-                expanded.update(group)
-    return expanded
-
-
-def lexical_retrieve(chunks: list[Any], query: str, model_name: Literal["8b", "14b"]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    query_tokens = tokenize(query)
-    scored: list[dict[str, Any]] = []
-    for chunk in chunks:
-        token_counts: dict[str, int] = {}
-        for token in chunk.tokens:
-            token_counts[token] = token_counts.get(token, 0) + 1
-
-        hits: list[str] = []
-        score = 0.0
-        section_lower = chunk.section.lower()
-        for token in query_tokens:
-            if token in token_counts:
-                hits.append(token)
-                score += 2.2 + min(token_counts[token] * 0.45, 1.8)
-            if token in section_lower:
-                score += 1.5
-        if any(term in chunk.section for term in ["이점", "작동", "차이", "지원", "중요"]):
-            score += 0.4
-        if len(set(hits)) >= 3:
-            score += 1.2
-        if score <= 0:
-            continue
-        scored.append(
-            {
-                "chunk_id": chunk.chunk_id,
-                "section": chunk.section,
-                "text": chunk.text,
-                "preview": chunk.preview,
-                "score": round(score, 3),
-                "term_hits": sorted(set(hits)),
-            }
-        )
-    scored.sort(key=lambda item: (-item["score"], item["chunk_id"]))
-    limit = 6 if model_name == "8b" else 8
-    top = scored[:limit]
-    stats = {
-        "query_tokens": query_tokens,
-        "top_score": top[0]["score"] if top else 0,
-        "distinct_sections": len({item["section"] for item in top}),
-        "candidate_count": len(scored),
-    }
-    return top, stats
-
-
-def semantic_retrieve(chunks: list[Any], question: str, query: str, model_name: Literal["8b", "14b"]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    expanded = expand_tokens(tokenize(question) + tokenize(query))
-    scored: list[dict[str, Any]] = []
-    for chunk in chunks:
-        chunk_tokens = set(chunk.tokens)
-        overlap = sorted(chunk_tokens & expanded)
-        if not overlap:
-            continue
-        coverage = len(overlap) / max(len(expanded), 1)
-        density = len(overlap) / max(len(chunk_tokens), 1)
-        section_bonus = 0.0
-        section = chunk.section.lower()
-        if {"정의", "무엇"} & expanded and "rag란" in section:
-            section_bonus += 1.6
-        if {"이점", "비용", "신뢰", "제어"} & expanded and ("이점" in section or "중요" in section):
-            section_bonus += 1.8
-        if {"작동", "흐름", "단계"} & expanded and "작동 방식" in section:
-            section_bonus += 2.2
-        if {"검색", "벡터", "데이터베이스"} & expanded and "관련 정보 검색" in section:
-            section_bonus += 2.6
-        if {"프롬프트", "확장"} & expanded and "프롬프트 확장" in section:
-            section_bonus += 2.6
-        if {"비교", "차이", "시맨틱"} & expanded and "차이점" in section:
-            section_bonus += 2.2
-        if {"aws", "bedrock", "kendra", "sagemaker"} & expanded and "지원" in section:
-            section_bonus += 2.8
-        score = round(8.0 * coverage + 16.0 * density + section_bonus, 3)
-        scored.append(
-            {
-                "chunk_id": chunk.chunk_id,
-                "section": chunk.section,
-                "text": chunk.text,
-                "preview": chunk.preview,
-                "semantic_score": score,
-                "semantic_hits": overlap,
-            }
-        )
-    scored.sort(key=lambda item: (-item["semantic_score"], item["chunk_id"]))
-    limit = 6 if model_name == "8b" else 8
-    top = scored[:limit]
-    stats = {
-        "expanded_query_terms": sorted(expanded),
-        "top_semantic_score": top[0]["semantic_score"] if top else 0,
-        "candidate_count": len(scored),
-    }
-    return top, stats
-
-
-def hybrid_retrieve(chunks: list[Any], question: str, query: str, model_name: Literal["8b", "14b"]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    lexical, lexical_stats = lexical_retrieve(chunks, query, model_name)
-    semantic, semantic_stats = semantic_retrieve(chunks, question, query, model_name)
-
-    combined: dict[str, dict[str, Any]] = {}
-    lexical_rank = {item["chunk_id"]: idx + 1 for idx, item in enumerate(lexical)}
-    semantic_rank = {item["chunk_id"]: idx + 1 for idx, item in enumerate(semantic)}
-    chunk_lookup = {chunk.chunk_id: chunk for chunk in chunks}
-
-    all_ids = set(lexical_rank) | set(semantic_rank)
-    for chunk_id in all_ids:
-        base = chunk_lookup[chunk_id]
-        l_rank = lexical_rank.get(chunk_id)
-        s_rank = semantic_rank.get(chunk_id)
-        l_score = next((item["score"] for item in lexical if item["chunk_id"] == chunk_id), 0.0)
-        s_score = next((item["semantic_score"] for item in semantic if item["chunk_id"] == chunk_id), 0.0)
-        l_hits = next((item.get("term_hits", []) for item in lexical if item["chunk_id"] == chunk_id), [])
-        s_hits = next((item.get("semantic_hits", []) for item in semantic if item["chunk_id"] == chunk_id), [])
-        rrf = (1 / (60 + l_rank) if l_rank else 0.0) + (1 / (60 + s_rank) if s_rank else 0.0)
-        combined[chunk_id] = {
-            "chunk_id": chunk_id,
-            "section": base.section,
-            "text": base.text,
-            "preview": base.preview,
-            "score": round(rrf * 1000, 3),
-            "rrf_score": round(rrf * 1000, 3),
-            "lexical_rank": l_rank,
-            "semantic_rank": s_rank,
-            "lexical_score": l_score,
-            "semantic_score": s_score,
-            "term_hits": sorted(set(l_hits + s_hits)),
-            "sources": [name for name, rank in (("lexical", l_rank), ("semantic", s_rank)) if rank],
-        }
-
-    ranked = sorted(combined.values(), key=lambda item: (-item["rrf_score"], item["chunk_id"]))
-    limit = 6 if model_name == "8b" else 8
-    top = ranked[:limit]
-    stats = {
-        "strategy": "hybrid lexical + semantic with RRF fusion",
-        "lexical_candidates": len(lexical),
-        "semantic_candidates": len(semantic),
-        "hybrid_candidates": len(ranked),
-        "top_score": top[0]["score"] if top else 0,
-        "distinct_sections": len({item["section"] for item in top}),
-        "query_tokens": lexical_stats["query_tokens"],
-        "expanded_query_terms": semantic_stats["expanded_query_terms"],
-    }
-    return top, stats
-
-
-def rerank_chunks(question: str, candidates: list[dict[str, Any]], model_name: Literal["8b", "14b"]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    question_tokens = set(tokenize(question))
-    expanded_question = expand_tokens(list(question_tokens))
-    reranked: list[dict[str, Any]] = []
-    for idx, chunk in enumerate(candidates):
-        chunk_tokens = set(tokenize(chunk["section"] + " " + chunk["text"]))
-        overlap = sorted(question_tokens & chunk_tokens)
-        semantic_overlap = sorted(expanded_question & chunk_tokens)
-        overlap_score = len(overlap) * 1.8 + len(semantic_overlap) * 0.45
-        section_bonus = 0.0
-        question_lower = question.lower()
-        section_lower = chunk["section"].lower()
-        if "정의" in question or "무엇" in question:
-            section_bonus += 1.5 if "rag란" in section_lower else 0.0
-        if "이점" in question:
-            section_bonus += 1.8 if "이점" in section_lower else 0.0
-        if "작동" in question or "단계" in question or "흐름" in question:
-            section_bonus += 1.8 if "작동 방식" in section_lower else 0.0
-        if "검색" in question and "관련 정보 검색" in chunk["section"]:
-            section_bonus += 2.8
-        if "프롬프트" in question and "프롬프트 확장" in chunk["section"]:
-            section_bonus += 2.8
-        if "차이" in question and "차이점" in section_lower:
-            section_bonus += 2.2
-        if "aws" in question_lower and "지원" in section_lower:
-            section_bonus += 2.6
-        rank_bonus = max(0.0, (len(candidates) - idx) * 0.08)
-        rerank_score = round(chunk["score"] + overlap_score + section_bonus + rank_bonus, 3)
-        reranked.append(
-            {
-                **chunk,
-                "rerank_score": rerank_score,
-                "rerank_overlap": overlap,
-                "semantic_overlap": semantic_overlap,
-                "base_score": chunk["score"],
-            }
-        )
-
-    reranked.sort(key=lambda item: (-item["rerank_score"], -item["score"], item["chunk_id"]))
-    final_limit = 4 if model_name == "8b" else 6
-    selected = reranked[:final_limit]
-    stats = {
-        "candidate_count": len(candidates),
-        "selected_count": len(selected),
-        "top_rerank_score": selected[0]["rerank_score"] if selected else 0,
-        "rerank_strategy": "hybrid candidate reranker: overlap + section-aware heuristic",
-    }
-    return selected, stats
-
-
-def build_answer(question_item: dict[str, Any], final_model: str, chunks: list[dict[str, Any]], quality: dict[str, Any]) -> str:
+def build_answer(question_item: dict[str, Any], final_model: str, chunks: list[dict[str, Any]], quality: dict[str, Any], mode: Literal["draft", "revised"] = "draft") -> str:
     question = question_item["question"]
     category = question_item["category"]
     citations = ", ".join(chunk["chunk_id"] for chunk in chunks[:3]) or "근거 없음"
     key_points = [clean_excerpt(item["text"]) for item in chunks[:3]]
 
-    if category == "definition":
-        conclusion = "RAG는 외부의 신뢰 가능한 지식을 검색해 프롬프트에 붙인 뒤 응답을 생성함으로써, 모델 재학습 없이 정확성과 최신성을 높이는 접근이다."
-    elif category == "importance":
-        conclusion = "AWS 문서 기준 RAG의 필요성은 LLM의 허위정보·오래된 정보·근거 불분명 문제를 줄이고 더 통제된 답변을 만들기 위해서다."
-    elif category == "benefits":
-        conclusion = "핵심 이점은 비용 효율성, 최신 정보 반영, 사용자 신뢰 강화, 개발자 제어 강화다."
-    elif category == "cost":
-        conclusion = "문서는 RAG가 별도 재학습 대신 외부 지식을 연결하므로 컴퓨팅·재정 비용을 줄이는 방식이라고 본다."
-    elif category == "trust":
-        conclusion = "RAG는 출처와 원문 확인 가능성을 제공해 사용자 신뢰와 확신을 높인다."
-    elif category == "workflow":
-        conclusion = "전체 흐름은 외부 데이터 준비 → 관련 정보 검색 → 프롬프트 확장 → 응답 생성/업데이트로 요약된다."
-    elif category == "retrieval":
-        conclusion = "관련 정보 검색 단계에서는 사용자 쿼리를 벡터화하고 벡터 데이터베이스에서 연관성 높은 문서·구절을 찾는다."
-    elif category == "prompting":
-        conclusion = "프롬프트 확장은 검색된 관련 데이터를 사용자 입력에 덧붙여 더 정확하고 근거 있는 답변을 만들기 위해 필요하다."
-    elif category == "comparison":
-        conclusion = "RAG는 외부 지식을 붙여 답변을 생성하는 전체 구조이고, 시맨틱 검색은 그 안에서 관련 구절을 더 잘 찾게 돕는 검색 기술이다."
-    else:
-        conclusion = "AWS는 Bedrock, Kendra, SageMaker JumpStart를 통해 지식 연결, 엔터프라이즈 검색, 빠른 배포를 지원한다고 설명한다."
+    direct_map = {
+        "definition": "RAG는 응답 생성 전에 외부의 신뢰할 수 있는 지식 소스를 참조하도록 LLM 출력을 최적화하는 방식이며, 모델 재학습 없이 정확성과 유용성을 높이는 접근이다.",
+        "importance": "AWS 문서 기준 RAG의 필요성은 LLM의 허위정보, 오래된 정보, 신뢰하기 어려운 출처 문제를 줄이고 더 통제된 답변을 만들기 위해서다.",
+        "benefits": "문서 기준 핵심 이점은 비용 효율적인 구현, 최신 정보 반영, 사용자 신뢰 강화, 개발자 제어 강화다.",
+        "cost": "AWS 문서는 파운데이션 모델을 다시 학습시키는 대신 외부 지식을 연결해 새 데이터를 주입하므로 컴퓨팅 및 재정 비용을 크게 줄일 수 있다고 본다.",
+        "trust": "RAG는 정확한 정보를 출처와 함께 제시하고 사용자가 원문을 직접 확인할 수 있게 해 신뢰와 확신을 높인다.",
+        "workflow": "문서는 외부 데이터 생성, 관련 정보 검색, LLM 프롬프트 확장, 외부 데이터 업데이트 흐름으로 RAG 작동 방식을 설명한다.",
+        "retrieval": "관련 정보 검색 단계에서는 사용자 쿼리를 벡터 표현으로 바꾸고 벡터 데이터베이스와 매칭해 연관성 높은 문서나 구절을 찾는다.",
+        "prompting": "프롬프트 확장 단계는 검색된 관련 데이터를 사용자 입력에 덧붙여 LLM이 더 정확하고 근거 있는 답변을 생성하게 하기 위해 필요하다.",
+        "comparison": "RAG는 외부 지식을 붙여 답변을 생성하는 전체 접근이고, 시맨틱 검색은 그 성능을 높이기 위해 관련 구절을 더 정확히 찾는 검색 기술이다.",
+        "aws-support": "AWS는 Amazon Bedrock 지식 기반, Amazon Kendra, SageMaker JumpStart를 통해 데이터 연결, 엔터프라이즈 검색, 빠른 배포를 지원한다고 설명한다.",
+    }
+    direct_answer = direct_map[category]
 
+    if mode == "draft":
+        lines = [
+            f"결론: {direct_answer}",
+            f"질문: {question}",
+            f"근거 청크: {citations}",
+            f"모드: draft-{final_model.upper()} | quality_ok={quality.get('ok')} | coverage={quality.get('coverage')}",
+            "핵심 근거:",
+        ]
+        for idx, point in enumerate(key_points, start=1):
+            lines.append(f"- 근거 {idx}: {point}")
+        return "\n".join(lines)
+
+    # revised answer: explicit direct answer + why + evidence + limitation
+    why_map = {
+        "definition": "핵심은 외부 지식을 참조한다는 점과, 모델 재학습 없이도 특정 도메인 정보를 붙일 수 있다는 점이다.",
+        "importance": "즉 RAG는 허위정보, 오래된 정보, 불분명한 출처 문제를 줄이면서 최신성과 통제력을 보강한다.",
+        "benefits": "정리하면 비용, 최신성, 신뢰, 제어라는 네 축에서 가치가 난다.",
+        "cost": "따라서 대규모 재학습보다 훨씬 비용 효율적인 구현 경로가 된다.",
+        "trust": "사용자는 출처와 원문 확인 경로가 있어 결과를 검증할 수 있다.",
+        "workflow": "이 순서 덕분에 검색된 외부 데이터가 생성 단계에 직접 연결된다.",
+        "retrieval": "여기서 핵심은 벡터화와 벡터 데이터베이스 매칭으로 연관성 높은 구절을 찾는 점이다.",
+        "prompting": "즉 관련 데이터를 프롬프트에 붙여 답변 정확성과 groundedness를 높인다.",
+        "comparison": "그래서 RAG는 상위 아키텍처이고, 시맨틱 검색은 그 안의 retrieval 품질을 끌어올리는 하위 기술이다.",
+        "aws-support": "그래서 데이터 연결, 검색, 배포 가속을 AWS 관리형 서비스로 나눠 지원하는 구조다.",
+    }
     lines = [
-        f"결론: {conclusion}",
+        f"직답: {direct_answer}",
+        f"왜 이렇게 말하나: {why_map[category]}",
         f"질문: {question}",
         f"근거 청크: {citations}",
-        f"모드: mock-{final_model.upper()} | quality_ok={quality.get('ok')} | coverage={quality.get('coverage')}",
-        "핵심 근거:",
+        f"모드: revised-{final_model.upper()} | quality_ok={quality.get('ok')} | coverage={quality.get('coverage')}",
+        "핵심 포인트:",
     ]
     for idx, point in enumerate(key_points, start=1):
-        lines.append(f"- 근거 {idx}: {point}")
+        lines.append(f"- 포인트 {idx}: {point}")
+    lines.append("한계: 이번 round는 실백엔드가 아니라 mock 파이프라인이므로 모델 추론 성능 자체를 뜻하지는 않는다.")
     return "\n".join(lines)
+
+
+def judge_answer(question_item: dict[str, Any], answer: str, chunks: list[dict[str, Any]], quality: dict[str, Any]) -> tuple[str, dict[str, Any], str]:
+    evaluation = evaluate_run(question_item, answer, chunks, quality)
+    if evaluation["total_score"] >= 70:
+        return "finish", evaluation, "answer judge 통과: 응답이 정답 기준을 충분히 충족함."
+    if not chunks:
+        return "finish", evaluation, "answer judge 종료: 근거 청크가 부족해서 재생성보다 종료가 낫다고 판단함."
+    return "regenerate_once", evaluation, "answer judge가 응답 형식/키워드 충족이 약하다고 판단해 한 번 더 생성함."
 
 
 def render_timing_table(run: dict[str, Any]) -> str:
@@ -325,39 +137,39 @@ def render_search_attempts(run: dict[str, Any]) -> str:
 def render_structure_section() -> str:
     return """
     <section class='card run'>
-      <div class='eyebrow'>structure · round2 vs round3</div>
-      <h2>Round2 / Round3 구조 비교</h2>
+      <div class='eyebrow'>structure · round3 vs round4</div>
+      <h2>Round3 / Round4 구조 비교</h2>
       <div class='grid two'>
         <article class='panel'>
-          <h3>Round2</h3>
+          <h3>Round3</h3>
           <ol>
             <li>classify_8b</li>
-            <li>lexical retrieval로 후보 수집</li>
-            <li>section-aware reranker</li>
+            <li>hybrid retrieval</li>
+            <li>reranker</li>
             <li>grade_results</li>
             <li>필요 시 14B 승격</li>
             <li>answer / judge</li>
           </ol>
           <ul>
-            <li>후보군 recall은 lexical retrieval에 많이 의존</li>
-            <li>reranker는 좋아졌지만 후보 자체가 약하면 한계가 있음</li>
+            <li>retrieval quality와 answer quality가 한 덩어리로 보임</li>
+            <li>답변 형식이 약해도 retrieval 문제처럼 보일 수 있음</li>
           </ul>
         </article>
         <article class='panel'>
-          <h3>Round3</h3>
+          <h3>Round4</h3>
           <ol>
             <li>classify_8b</li>
-            <li>hybrid_retrieve: lexical + semantic 후보 수집</li>
-            <li>RRF fusion으로 후보군 결합</li>
-            <li>rerank_{model}: 질문 overlap + section-aware 재정렬</li>
-            <li>grade_results</li>
-            <li>필요 시 14B 승격 후 hybrid retrieve 반복</li>
-            <li>answer / judge</li>
+            <li>hybrid_retrieve + rerank</li>
+            <li>judge_retrieval</li>
+            <li>필요 시 14B 승격</li>
+            <li>answer_draft 생성</li>
+            <li>judge_answer</li>
+            <li>약하면 answer_revise 1회</li>
+            <li>final judge 저장</li>
           </ol>
           <ul>
-            <li>목표는 reranker 앞단 recall 개선</li>
-            <li>round3는 hybrid retrieval 추가 효과를 보는 구조</li>
-            <li>답변 포맷도 직답형으로 바꿔 judged score 회복을 노림</li>
+            <li>retrieval 문제와 answer formatting 문제를 분리해서 본다</li>
+            <li>round4는 retrieval judge / answer judge 분리 효과를 보는 구조</li>
           </ul>
         </article>
       </div>
@@ -377,7 +189,7 @@ def render_run(run: dict[str, Any]) -> str:
           <span class='pill'>initial route: {html.escape(run['route_decision'].upper())}</span>
           <span class='pill'>final model: {html.escape(run['final_model'].upper())}</span>
           <span class='pill'>restarts: {run['restart_count']}</span>
-          <span class='pill'>hybrid retrieval</span>
+          <span class='pill'>answer regenerations: {run['answer_regeneration_count']}</span>
           <span class='pill'>total: {run['total_ms']:.2f} ms</span>
         </div>
       </div>
@@ -395,7 +207,7 @@ def render_run(run: dict[str, Any]) -> str:
           <pre>{html.escape(run['expected_answer'])}</pre>
           <h3>Judge score</h3>
           <pre>{html.escape(json.dumps(run['evaluation'], ensure_ascii=False, indent=2))}</pre>
-          <h3>Quality gate</h3>
+          <h3>Retrieval judge</h3>
           <pre>{html.escape(json.dumps(run['quality'], ensure_ascii=False, indent=2))}</pre>
         </article>
       </div>
@@ -427,7 +239,7 @@ def render_report(payload: dict[str, Any]) -> str:
 <head>
   <meta charset='utf-8' />
   <meta name='viewport' content='width=device-width, initial-scale=1' />
-  <title>Round3 KO · AWS RAG 문서 실험</title>
+  <title>Round4 KO · AWS RAG 문서 실험</title>
   <style>
     :root {{ --bg:#09101d; --panel:#121933; --panel2:#172243; --text:#eef3ff; --muted:#a9b6d3; --line:#2a3768; --accent:#7cc9ff; --ok:#8effc8; --warn:#ffd479; }}
     * {{ box-sizing:border-box; }}
@@ -462,25 +274,25 @@ def render_report(payload: dict[str, Any]) -> str:
 <body>
   <main class='wrap'>
     <section class='hero'>
-      <div class='eyebrow'>round3 · qwen3 routed rag · ko</div>
-      <h1>Hybrid retrieval을 추가한 AWS 한국어 RAG round3</h1>
-      <p>이번 round3는 round2의 reranker는 유지하면서, 그 앞단 후보군을 <strong>lexical + semantic hybrid retrieval</strong>로 넓힌 실험이다. 실백엔드는 여전히 없어서 mock 실험이지만, 실제 AWS 한국어 원문 청크를 다시 가져와 후보 수집·RRF 결합·재정렬·품질 게이트·채점까지 전부 새로 실행했다.</p>
+      <div class='eyebrow'>round4 · qwen3 routed rag · ko</div>
+      <h1>Retrieval judge / answer judge를 분리한 AWS 한국어 RAG round4</h1>
+      <p>이번 round4는 round3의 hybrid retrieval과 reranker를 유지하면서, <strong>judge_retrieval</strong>과 <strong>judge_answer</strong>를 분리했다. 검색 품질과 답변 형식 문제를 따로 보고, 답변 judge가 약하다고 판단하면 한 번 더 정리해서 내보내는 구조다. 실백엔드는 없어서 mock 실험이지만, 실제 AWS 한국어 원문 청크를 다시 가져와 새 라운드를 실행했다.</p>
       <div class='pillrow'>
         <span class='pill'>provider: mock</span>
         <span class='pill'>router: qwen3:8b</span>
         <span class='pill'>large: qwen3:14b</span>
         <span class='pill'>doc: <a href='{html.escape(summary['doc_url'])}' target='_blank'>{html.escape(summary['doc_title'])}</a></span>
-        <span class='pill'>retrieval: lexical + semantic + RRF</span>
+        <span class='pill'>retrieval judge + answer judge</span>
       </div>
       <div class='stats'>
         <article class='panel'><strong>{summary['question_count']}</strong><span>questions</span></article>
         <article class='panel'><strong>{summary['routes']['8b']}</strong><span>initial 8B routes</span></article>
         <article class='panel'><strong>{summary['routes']['14b']}</strong><span>initial 14B routes</span></article>
         <article class='panel'><strong>{summary['total_restarts']}</strong><span>total restarts</span></article>
+        <article class='panel'><strong>{summary['answer_regenerations']}</strong><span>answer regenerations</span></article>
         <article class='panel'><strong>{summary['avg_total_ms']:.2f} ms</strong><span>avg end-to-end time</span></article>
         <article class='panel'><strong>{summary['avg_judge_score']:.1f}</strong><span>avg judge score</span></article>
         <article class='panel'><strong>{summary['avg_rerank_lift']:.2f}</strong><span>avg rerank lift</span></article>
-        <article class='panel'><strong>{summary['hybrid_win_rate']:.0%}</strong><span>hybrid-only top chunk rate</span></article>
       </div>
     </section>
     {render_structure_section()}
@@ -515,7 +327,7 @@ def run_one(question_item: dict[str, Any], chunks: list[Any]) -> dict[str, Any]:
     final_chunks: list[dict[str, Any]] = []
     final_quality: dict[str, Any] = {}
     rerank_lifts: list[float] = []
-    hybrid_top_from_semantic_only = False
+    answer_regeneration_count = 0
 
     while True:
         attempt_counts[current_model] += 1
@@ -525,9 +337,6 @@ def run_one(question_item: dict[str, Any], chunks: list[Any]) -> dict[str, Any]:
         initial_candidates, base_stats = hybrid_retrieve(chunks, question, query, current_model)
         retrieval_elapsed = round((time.perf_counter() - t0) * 1000, 2)
         flow.append(f"hybrid_retrieve_{current_model}")
-        if initial_candidates:
-            top_candidate = initial_candidates[0]
-            hybrid_top_from_semantic_only = top_candidate.get("lexical_rank") is None and top_candidate.get("semantic_rank") is not None
         logs.append({
             "node": f"hybrid_retrieve_{current_model}",
             "message": f"{current_model.upper()} hybrid retrieval 후보 수집 완료",
@@ -557,7 +366,7 @@ def run_one(question_item: dict[str, Any], chunks: list[Any]) -> dict[str, Any]:
             "chunks": reranked_chunks,
         })
         explanation.append(
-            f"hybrid retrieval이 lexical/semantic 후보를 합쳐 {', '.join(item['chunk_id'] for item in initial_candidates[:4]) or '청크 없음'} 순으로 만들었고, rerank_{current_model}가 그중 {', '.join(item['chunk_id'] for item in reranked_chunks[:4]) or '청크 없음'}을 상위에 올렸다."
+            f"hybrid retrieval이 후보를 모으고 rerank_{current_model}가 {', '.join(item['chunk_id'] for item in reranked_chunks[:4]) or '청크 없음'} 순으로 정렬했다."
         )
 
         grade_stats = {
@@ -568,10 +377,10 @@ def run_one(question_item: dict[str, Any], chunks: list[Any]) -> dict[str, Any]:
         action, quality, message = grade_search(question, reranked_chunks, grade_stats, current_model)
         grade_elapsed = round((time.perf_counter() - t0) * 1000, 2)
         final_quality = quality
-        flow.append(f"grade_results → {action}")
-        logs.append({"node": "grade_results", "message": message, "payload": {"action": action, "quality": quality, "elapsed_ms": grade_elapsed}})
-        node_timings.append({"node": "grade_results", "elapsed_ms": grade_elapsed, "details": {"action": action, "quality": quality}})
-        explanation.append(f"grade_results가 hybrid+rereank 결과를 보고 '{quality['reason']}'로 판단해 {action}을 선택했다.")
+        flow.append(f"judge_retrieval → {action}")
+        logs.append({"node": "judge_retrieval", "message": message, "payload": {"action": action, "quality": quality, "elapsed_ms": grade_elapsed}})
+        node_timings.append({"node": "judge_retrieval", "elapsed_ms": grade_elapsed, "details": {"action": action, "quality": quality}})
+        explanation.append(f"judge_retrieval이 '{quality['reason']}'로 판단해 {action}을 선택했다.")
 
         if action == "answer":
             break
@@ -580,22 +389,49 @@ def run_one(question_item: dict[str, Any], chunks: list[Any]) -> dict[str, Any]:
             retry_reason = quality["reason"]
             current_model = "14b"
             flow.append("route_upgrade 8b→14b")
-            logs.append({"node": "route_upgrade", "message": "품질 게이트가 14B 승격을 요청함", "payload": {"reason": retry_reason}})
+            logs.append({"node": "route_upgrade", "message": "retrieval judge가 14B 승격을 요청함", "payload": {"reason": retry_reason}})
             node_timings.append({"node": "route_upgrade", "elapsed_ms": 0.0, "details": {"from": "8b", "to": "14b", "reason": retry_reason}})
-            explanation.append("8B hybrid retrieval 결과가 부족해서 14B hybrid retrieval+rereank 경로로 승격했다.")
+            explanation.append("retrieval judge가 8B 검색 근거가 얕다고 봐서 14B 경로로 올렸다.")
             continue
         break
 
     t0 = time.perf_counter()
-    final_answer = build_answer(question_item, current_model, final_chunks, final_quality)
+    draft_answer = build_answer(question_item, current_model, final_chunks, final_quality, mode="draft")
     answer_elapsed = round((time.perf_counter() - t0) * 1000, 2)
-    evaluation = evaluate_run(question_item, final_answer, final_chunks, final_quality)
-    flow.append("answer")
-    logs.append({"node": "answer", "message": "최종 답변 생성", "payload": {"final_model": current_model, "elapsed_ms": answer_elapsed, "answer_preview": textwrap.shorten(final_answer, width=240, placeholder='…')}})
-    logs.append({"node": "judge", "message": "미리 정한 정답 기준으로 응답 평가 완료", "payload": evaluation})
-    node_timings.append({"node": "answer", "elapsed_ms": answer_elapsed, "details": {"final_model": current_model}})
-    explanation.append(f"마지막에는 {current_model.upper()} answer 단계가 hybrid retrieval로 뽑힌 근거 청크를 직답형으로 정리했다.")
-    explanation.append(evaluation["judge_comment"])
+    flow.append("answer_draft")
+    logs.append({"node": "answer_draft", "message": "초안 답변 생성", "payload": {"final_model": current_model, "elapsed_ms": answer_elapsed, "answer_preview": textwrap.shorten(draft_answer, width=240, placeholder='…')}})
+    node_timings.append({"node": "answer_draft", "elapsed_ms": answer_elapsed, "details": {"final_model": current_model}})
+
+    t0 = time.perf_counter()
+    answer_action, draft_evaluation, answer_message = judge_answer(question_item, draft_answer, final_chunks, final_quality)
+    answer_judge_elapsed = round((time.perf_counter() - t0) * 1000, 2)
+    flow.append(f"judge_answer → {answer_action}")
+    logs.append({"node": "judge_answer", "message": answer_message, "payload": {"action": answer_action, "evaluation": draft_evaluation, "elapsed_ms": answer_judge_elapsed}})
+    node_timings.append({"node": "judge_answer", "elapsed_ms": answer_judge_elapsed, "details": {"action": answer_action, "evaluation": draft_evaluation}})
+    explanation.append(f"judge_answer가 초안 답변을 보고 {answer_action}을 결정했다.")
+
+    final_answer = draft_answer
+    final_evaluation = draft_evaluation
+    if answer_action == "regenerate_once":
+        answer_regeneration_count = 1
+        t0 = time.perf_counter()
+        final_answer = build_answer(question_item, current_model, final_chunks, final_quality, mode="revised")
+        revise_elapsed = round((time.perf_counter() - t0) * 1000, 2)
+        flow.append("answer_revise")
+        logs.append({"node": "answer_revise", "message": "answer judge 요청으로 답변을 한 번 더 정리함", "payload": {"elapsed_ms": revise_elapsed, "answer_preview": textwrap.shorten(final_answer, width=240, placeholder='…')}})
+        node_timings.append({"node": "answer_revise", "elapsed_ms": revise_elapsed, "details": {"regeneration": 1}})
+
+        t0 = time.perf_counter()
+        final_evaluation = evaluate_run(question_item, final_answer, final_chunks, final_quality)
+        final_judge_elapsed = round((time.perf_counter() - t0) * 1000, 2)
+        flow.append("judge_answer_final")
+        logs.append({"node": "judge_answer_final", "message": "재생성 후 최종 채점 완료", "payload": {"evaluation": final_evaluation, "elapsed_ms": final_judge_elapsed}})
+        node_timings.append({"node": "judge_answer_final", "elapsed_ms": final_judge_elapsed, "details": final_evaluation})
+        explanation.append("초안 점수가 낮아 answer를 한 번 더 직답형으로 정리한 뒤 최종 judge를 다시 기록했다.")
+
+    logs.append({"node": "judge", "message": "미리 정한 정답 기준으로 최종 응답 평가 완료", "payload": final_evaluation})
+    explanation.append(f"마지막에는 {current_model.upper()} answer 단계 결과를 최종 judge에 저장했다.")
+    explanation.append(final_evaluation["judge_comment"])
 
     return {
         "label": question_item["label"],
@@ -609,17 +445,17 @@ def run_one(question_item: dict[str, Any], chunks: list[Any]) -> dict[str, Any]:
         "search_attempts": search_attempts,
         "top_chunks": final_chunks,
         "restart_count": restart_count,
+        "answer_regeneration_count": answer_regeneration_count,
         "final_model": current_model,
         "quality": final_quality,
-        "expected_answer": evaluation["gold_answer"],
-        "evaluation": evaluation,
+        "expected_answer": final_evaluation["gold_answer"],
+        "evaluation": final_evaluation,
         "final_answer": final_answer,
         "logs": logs,
         "node_timings": node_timings,
         "flow": flow,
         "explanation": explanation,
         "rerank_lift_avg": round(sum(rerank_lifts) / max(len(rerank_lifts), 1), 3),
-        "hybrid_top_from_semantic_only": hybrid_top_from_semantic_only,
         "total_ms": round((time.perf_counter() - run_start) * 1000, 2),
     }
 
@@ -637,7 +473,7 @@ def main() -> None:
 
     runs = [run_one(item, chunks) for item in QUESTIONS]
     summary = {
-        "round": "round3-ko",
+        "round": "round4-ko",
         "doc_title": SOURCE_TITLE,
         "doc_url": doc_url,
         "chunk_count": len(chunks),
@@ -647,10 +483,10 @@ def main() -> None:
         "question_count": len(runs),
         "routes": {"8b": sum(1 for run in runs if run['route_decision'] == '8b'), "14b": sum(1 for run in runs if run['route_decision'] == '14b')},
         "total_restarts": sum(run['restart_count'] for run in runs),
+        "answer_regenerations": sum(run['answer_regeneration_count'] for run in runs),
         "avg_total_ms": round(sum(run['total_ms'] for run in runs) / max(len(runs), 1), 2),
         "avg_judge_score": round(sum(run['evaluation']['total_score'] for run in runs) / max(len(runs), 1), 1),
         "avg_rerank_lift": round(sum(run['rerank_lift_avg'] for run in runs) / max(len(runs), 1), 2),
-        "hybrid_win_rate": round(sum(1 for run in runs if run['hybrid_top_from_semantic_only']) / max(len(runs), 1), 3),
         "score_bands": {
             "good": sum(1 for run in runs if run['evaluation']['verdict'] == '좋음'),
             "okay": sum(1 for run in runs if run['evaluation']['verdict'] == '무난'),

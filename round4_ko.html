@@ -3,7 +3,7 @@
 <head>
   <meta charset='utf-8' />
   <meta name='viewport' content='width=device-width, initial-scale=1' />
-  <title>Round3 KO · AWS RAG 문서 실험</title>
+  <title>Round4 KO · AWS RAG 문서 실험</title>
   <style>
     :root { --bg:#09101d; --panel:#121933; --panel2:#172243; --text:#eef3ff; --muted:#a9b6d3; --line:#2a3768; --accent:#7cc9ff; --ok:#8effc8; --warn:#ffd479; }
     * { box-sizing:border-box; }
@@ -38,62 +38,62 @@
 <body>
   <main class='wrap'>
     <section class='hero'>
-      <div class='eyebrow'>round3 · qwen3 routed rag · ko</div>
-      <h1>Hybrid retrieval을 추가한 AWS 한국어 RAG round3</h1>
-      <p>이번 round3는 round2의 reranker는 유지하면서, 그 앞단 후보군을 <strong>lexical + semantic hybrid retrieval</strong>로 넓힌 실험이다. 실백엔드는 여전히 없어서 mock 실험이지만, 실제 AWS 한국어 원문 청크를 다시 가져와 후보 수집·RRF 결합·재정렬·품질 게이트·채점까지 전부 새로 실행했다.</p>
+      <div class='eyebrow'>round4 · qwen3 routed rag · ko</div>
+      <h1>Retrieval judge / answer judge를 분리한 AWS 한국어 RAG round4</h1>
+      <p>이번 round4는 round3의 hybrid retrieval과 reranker를 유지하면서, <strong>judge_retrieval</strong>과 <strong>judge_answer</strong>를 분리했다. 검색 품질과 답변 형식 문제를 따로 보고, 답변 judge가 약하다고 판단하면 한 번 더 정리해서 내보내는 구조다. 실백엔드는 없어서 mock 실험이지만, 실제 AWS 한국어 원문 청크를 다시 가져와 새 라운드를 실행했다.</p>
       <div class='pillrow'>
         <span class='pill'>provider: mock</span>
         <span class='pill'>router: qwen3:8b</span>
         <span class='pill'>large: qwen3:14b</span>
         <span class='pill'>doc: <a href='https://aws.amazon.com/ko/what-is/retrieval-augmented-generation/' target='_blank'>RAG란? - 검색 증강 생성 AI 설명 - AWS</a></span>
-        <span class='pill'>retrieval: lexical + semantic + RRF</span>
+        <span class='pill'>retrieval judge + answer judge</span>
       </div>
       <div class='stats'>
         <article class='panel'><strong>10</strong><span>questions</span></article>
         <article class='panel'><strong>7</strong><span>initial 8B routes</span></article>
         <article class='panel'><strong>3</strong><span>initial 14B routes</span></article>
         <article class='panel'><strong>1</strong><span>total restarts</span></article>
-        <article class='panel'><strong>2.88 ms</strong><span>avg end-to-end time</span></article>
-        <article class='panel'><strong>64.3</strong><span>avg judge score</span></article>
+        <article class='panel'><strong>5</strong><span>answer regenerations</span></article>
+        <article class='panel'><strong>3.22 ms</strong><span>avg end-to-end time</span></article>
+        <article class='panel'><strong>67.5</strong><span>avg judge score</span></article>
         <article class='panel'><strong>8.87</strong><span>avg rerank lift</span></article>
-        <article class='panel'><strong>0%</strong><span>hybrid-only top chunk rate</span></article>
       </div>
     </section>
     
     <section class='card run'>
-      <div class='eyebrow'>structure · round2 vs round3</div>
-      <h2>Round2 / Round3 구조 비교</h2>
+      <div class='eyebrow'>structure · round3 vs round4</div>
+      <h2>Round3 / Round4 구조 비교</h2>
       <div class='grid two'>
         <article class='panel'>
-          <h3>Round2</h3>
+          <h3>Round3</h3>
           <ol>
             <li>classify_8b</li>
-            <li>lexical retrieval로 후보 수집</li>
-            <li>section-aware reranker</li>
+            <li>hybrid retrieval</li>
+            <li>reranker</li>
             <li>grade_results</li>
             <li>필요 시 14B 승격</li>
             <li>answer / judge</li>
           </ol>
           <ul>
-            <li>후보군 recall은 lexical retrieval에 많이 의존</li>
-            <li>reranker는 좋아졌지만 후보 자체가 약하면 한계가 있음</li>
+            <li>retrieval quality와 answer quality가 한 덩어리로 보임</li>
+            <li>답변 형식이 약해도 retrieval 문제처럼 보일 수 있음</li>
           </ul>
         </article>
         <article class='panel'>
-          <h3>Round3</h3>
+          <h3>Round4</h3>
           <ol>
             <li>classify_8b</li>
-            <li>hybrid_retrieve: lexical + semantic 후보 수집</li>
-            <li>RRF fusion으로 후보군 결합</li>
-            <li>rerank_{model}: 질문 overlap + section-aware 재정렬</li>
-            <li>grade_results</li>
-            <li>필요 시 14B 승격 후 hybrid retrieve 반복</li>
-            <li>answer / judge</li>
+            <li>hybrid_retrieve + rerank</li>
+            <li>judge_retrieval</li>
+            <li>필요 시 14B 승격</li>
+            <li>answer_draft 생성</li>
+            <li>judge_answer</li>
+            <li>약하면 answer_revise 1회</li>
+            <li>final judge 저장</li>
           </ol>
           <ul>
-            <li>목표는 reranker 앞단 recall 개선</li>
-            <li>round3는 hybrid retrieval 추가 효과를 보는 구조</li>
-            <li>답변 포맷도 직답형으로 바꿔 judged score 회복을 노림</li>
+            <li>retrieval 문제와 answer formatting 문제를 분리해서 본다</li>
+            <li>round4는 retrieval judge / answer judge 분리 효과를 보는 구조</li>
           </ul>
         </article>
       </div>
@@ -110,27 +110,29 @@
           <span class='pill'>initial route: 8B</span>
           <span class='pill'>final model: 8B</span>
           <span class='pill'>restarts: 0</span>
-          <span class='pill'>hybrid retrieval</span>
-          <span class='pill'>total: 4.04 ms</span>
+          <span class='pill'>answer regenerations: 1</span>
+          <span class='pill'>total: 5.03 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 8b</li><li>hybrid_retrieve_8b</li><li>rerank_8b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 8b</li><li>hybrid_retrieve_8b</li><li>rerank_8b</li><li>judge_retrieval → answer</li><li>answer_draft</li><li>judge_answer → regenerate_once</li><li>answer_revise</li><li>judge_answer_final</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid retrieval이 lexical/semantic 후보를 합쳐 K14, K10, K01, K09 순으로 만들었고, rerank_8b가 그중 K14, K10, K01, K09을 상위에 올렸다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 hybrid retrieval로 뽑힌 근거 청크를 직답형으로 정리했다.</li><li>미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 69.6점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid retrieval이 후보를 모으고 rerank_8b가 K14, K10, K01, K09 순으로 정렬했다.</li><li>judge_retrieval이 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>judge_answer가 초안 답변을 보고 regenerate_once을 결정했다.</li><li>초안 점수가 낮아 answer를 한 번 더 직답형으로 정리한 뒤 최종 judge를 다시 기록했다.</li><li>마지막에는 8B answer 단계 결과를 최종 judge에 저장했다.</li><li>미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 69.6점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
-          <pre>결론: RAG는 외부의 신뢰 가능한 지식을 검색해 프롬프트에 붙인 뒤 응답을 생성함으로써, 모델 재학습 없이 정확성과 최신성을 높이는 접근이다.
+          <pre>직답: RAG는 응답 생성 전에 외부의 신뢰할 수 있는 지식 소스를 참조하도록 LLM 출력을 최적화하는 방식이며, 모델 재학습 없이 정확성과 유용성을 높이는 접근이다.
+왜 이렇게 말하나: 핵심은 외부 지식을 참조한다는 점과, 모델 재학습 없이도 특정 도메인 정보를 붙일 수 있다는 점이다.
 질문: 검색 증강 생성(RAG)을 AWS 문서는 어떻게 정의하나요?
 근거 청크: K14, K10, K01
-모드: mock-8B | quality_ok=True | coverage=0.714
-핵심 근거:
-- 근거 1: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
-- 근거 2: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.
-- 근거 3: 검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의 작업에서 독창적인 결과를 생성합니다.</pre>
+모드: revised-8B | quality_ok=True | coverage=0.714
+핵심 포인트:
+- 포인트 1: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
+- 포인트 2: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.
+- 포인트 3: 검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의 작업에서 독창적인 결과를 생성합니다.
+한계: 이번 round는 실백엔드가 아니라 mock 파이프라인이므로 모델 추론 성능 자체를 뜻하지는 않는다.</pre>
           <h3>Expected answer</h3>
           <pre>RAG는 응답 생성 전에 외부의 신뢰할 수 있는 지식 소스를 참조하도록 LLM 출력을 최적화하는 방식이며, 모델 재학습 없이 특정 도메인 지식을 붙여 정확성과 유용성을 높이는 접근이다.</pre>
           <h3>Judge score</h3>
@@ -145,7 +147,7 @@
     &quot;정확성&quot;
   ],
   &quot;keyword_hits&quot;: [
-    &quot;신뢰&quot;,
+    &quot;외부&quot;,
     &quot;지식&quot;,
     &quot;재학습&quot;
   ],
@@ -164,7 +166,7 @@
   &quot;verdict&quot;: &quot;아쉬움&quot;,
   &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 69.6점으로 평가했다.&quot;
 }</pre>
-          <h3>Quality gate</h3>
+          <h3>Retrieval judge</h3>
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.714,
@@ -180,7 +182,7 @@
             <article class='attempt'>
               <div class='attempt-head'>
                 <strong>hybrid_retrieve_8b+rerank_8b</strong>
-                <span>3.37 ms</span>
+                <span>3.89 ms</span>
               </div>
               <div class='query'>검색 증강 생성 rag aws 문서는 정의하나요</div>
               <h4>hybrid retrieval candidates</h4>
@@ -202,7 +204,7 @@
   &quot;complexity_score&quot;: 2,
   &quot;reason&quot;: &quot;direct factual retrieval&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>hybrid_retrieve_8b</td><td>3.13 ms</td><td><pre>{
+}</pre></td></tr><tr><td>hybrid_retrieve_8b</td><td>3.63 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;검색 증강 생성 rag aws 문서는 정의하나요&quot;,
   &quot;strategy&quot;: &quot;hybrid lexical + semantic with RRF fusion&quot;,
@@ -243,13 +245,13 @@
     &quot;증강&quot;,
     &quot;청크&quot;
   ]
-}</pre></td></tr><tr><td>rerank_8b</td><td>0.24 ms</td><td><pre>{
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.26 ms</td><td><pre>{
   &quot;candidate_count&quot;: 6,
   &quot;selected_count&quot;: 4,
   &quot;top_rerank_score&quot;: 47.117,
   &quot;rerank_strategy&quot;: &quot;hybrid candidate reranker: overlap + section-aware heuristic&quot;,
   &quot;top_rerank_lift&quot;: 14.329999999999998
-}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.01 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
@@ -258,8 +260,70 @@
     &quot;distinct_sections&quot;: 4,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.39 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer_draft</td><td>0.39 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;8b&quot;
+}</pre></td></tr><tr><td>judge_answer</td><td>0.07 ms</td><td><pre>{
+  &quot;action&quot;: &quot;regenerate_once&quot;,
+  &quot;evaluation&quot;: {
+    &quot;gold_answer&quot;: &quot;RAG는 응답 생성 전에 외부의 신뢰할 수 있는 지식 소스를 참조하도록 LLM 출력을 최적화하는 방식이며, 모델 재학습 없이 특정 도메인 지식을 붙여 정확성과 유용성을 높이는 접근이다.&quot;,
+    &quot;rubric_keywords&quot;: [
+      &quot;외부&quot;,
+      &quot;신뢰&quot;,
+      &quot;지식&quot;,
+      &quot;참조&quot;,
+      &quot;재학습&quot;,
+      &quot;정확성&quot;
+    ],
+    &quot;keyword_hits&quot;: [
+      &quot;지식&quot;,
+      &quot;재학습&quot;
+    ],
+    &quot;support_chunks_expected&quot;: [
+      &quot;K01&quot;
+    ],
+    &quot;support_chunks_hit&quot;: [
+      &quot;K01&quot;
+    ],
+    &quot;score_breakdown&quot;: {
+      &quot;keyword_score&quot;: 18.3,
+      &quot;support_score&quot;: 25.0,
+      &quot;quality_score&quot;: 17.1
+    },
+    &quot;total_score&quot;: 60.4,
+    &quot;verdict&quot;: &quot;아쉬움&quot;,
+    &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/6, 핵심 청크 1/1개를 잡아서 총점 60.4점으로 평가했다.&quot;
+  }
+}</pre></td></tr><tr><td>answer_revise</td><td>0.22 ms</td><td><pre>{
+  &quot;regeneration&quot;: 1
+}</pre></td></tr><tr><td>judge_answer_final</td><td>0.07 ms</td><td><pre>{
+  &quot;gold_answer&quot;: &quot;RAG는 응답 생성 전에 외부의 신뢰할 수 있는 지식 소스를 참조하도록 LLM 출력을 최적화하는 방식이며, 모델 재학습 없이 특정 도메인 지식을 붙여 정확성과 유용성을 높이는 접근이다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;외부&quot;,
+    &quot;신뢰&quot;,
+    &quot;지식&quot;,
+    &quot;참조&quot;,
+    &quot;재학습&quot;,
+    &quot;정확성&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;외부&quot;,
+    &quot;지식&quot;,
+    &quot;재학습&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K01&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K01&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 27.5,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 17.1
+  },
+  &quot;total_score&quot;: 69.6,
+  &quot;verdict&quot;: &quot;아쉬움&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 69.6점으로 평가했다.&quot;
 }</pre></td></tr></tbody>
         </table>
       </article>
@@ -336,7 +400,7 @@
         &quot;K03&quot;,
         &quot;K13&quot;
       ],
-      &quot;elapsed_ms&quot;: 3.13
+      &quot;elapsed_ms&quot;: 3.63
     }
   },
   {
@@ -356,11 +420,11 @@
         &quot;K09&quot;
       ],
       &quot;top_rerank_lift&quot;: 14.329999999999998,
-      &quot;elapsed_ms&quot;: 0.24
+      &quot;elapsed_ms&quot;: 0.26
     }
   },
   {
-    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;node&quot;: &quot;judge_retrieval&quot;,
     &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
     &quot;payload&quot;: {
       &quot;action&quot;: &quot;answer&quot;,
@@ -375,17 +439,99 @@
     }
   },
   {
-    &quot;node&quot;: &quot;answer&quot;,
-    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;node&quot;: &quot;answer_draft&quot;,
+    &quot;message&quot;: &quot;초안 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;8b&quot;,
       &quot;elapsed_ms&quot;: 0.39,
-      &quot;answer_preview&quot;: &quot;결론: RAG는 외부의 신뢰 가능한 지식을 검색해 프롬프트에 붙인 뒤 응답을 생성함으로써, 모델 재학습 없이 정확성과 최신성을 높이는 접근이다. 질문: 검색 증강 생성(RAG)을 AWS 문서는 어떻게 정의하나요? 근거 청크: K14, K10, K01 모드: mock-8B | quality_ok=True | coverage=0.714 핵심 근거: - 근거 1: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및…&quot;
+      &quot;answer_preview&quot;: &quot;결론: RAG는 응답 생성 전에 외부의 신뢰할 수 있는 지식 소스를 참조하도록 LLM 출력을 최적화하는 방식이며, 모델 재학습 없이 정확성과 유용성을 높이는 접근이다. 질문: 검색 증강 생성(RAG)을 AWS 문서는 어떻게 정의하나요? 근거 청크: K14, K10, K01 모드: draft-8B | quality_ok=True | coverage=0.714 핵심 근거: - 근거 1: Amazon Bedrock 은 개발을…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge_answer&quot;,
+    &quot;message&quot;: &quot;answer judge가 응답 형식/키워드 충족이 약하다고 판단해 한 번 더 생성함.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;regenerate_once&quot;,
+      &quot;evaluation&quot;: {
+        &quot;gold_answer&quot;: &quot;RAG는 응답 생성 전에 외부의 신뢰할 수 있는 지식 소스를 참조하도록 LLM 출력을 최적화하는 방식이며, 모델 재학습 없이 특정 도메인 지식을 붙여 정확성과 유용성을 높이는 접근이다.&quot;,
+        &quot;rubric_keywords&quot;: [
+          &quot;외부&quot;,
+          &quot;신뢰&quot;,
+          &quot;지식&quot;,
+          &quot;참조&quot;,
+          &quot;재학습&quot;,
+          &quot;정확성&quot;
+        ],
+        &quot;keyword_hits&quot;: [
+          &quot;지식&quot;,
+          &quot;재학습&quot;
+        ],
+        &quot;support_chunks_expected&quot;: [
+          &quot;K01&quot;
+        ],
+        &quot;support_chunks_hit&quot;: [
+          &quot;K01&quot;
+        ],
+        &quot;score_breakdown&quot;: {
+          &quot;keyword_score&quot;: 18.3,
+          &quot;support_score&quot;: 25.0,
+          &quot;quality_score&quot;: 17.1
+        },
+        &quot;total_score&quot;: 60.4,
+        &quot;verdict&quot;: &quot;아쉬움&quot;,
+        &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/6, 핵심 청크 1/1개를 잡아서 총점 60.4점으로 평가했다.&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.07
+    }
+  },
+  {
+    &quot;node&quot;: &quot;answer_revise&quot;,
+    &quot;message&quot;: &quot;answer judge 요청으로 답변을 한 번 더 정리함&quot;,
+    &quot;payload&quot;: {
+      &quot;elapsed_ms&quot;: 0.22,
+      &quot;answer_preview&quot;: &quot;직답: RAG는 응답 생성 전에 외부의 신뢰할 수 있는 지식 소스를 참조하도록 LLM 출력을 최적화하는 방식이며, 모델 재학습 없이 정확성과 유용성을 높이는 접근이다. 왜 이렇게 말하나: 핵심은 외부 지식을 참조한다는 점과, 모델 재학습 없이도 특정 도메인 정보를 붙일 수 있다는 점이다. 질문: 검색 증강 생성(RAG)을 AWS 문서는 어떻게 정의하나요? 근거 청크: K14, K10, K01 모드: revised-8B |…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge_answer_final&quot;,
+    &quot;message&quot;: &quot;재생성 후 최종 채점 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;evaluation&quot;: {
+        &quot;gold_answer&quot;: &quot;RAG는 응답 생성 전에 외부의 신뢰할 수 있는 지식 소스를 참조하도록 LLM 출력을 최적화하는 방식이며, 모델 재학습 없이 특정 도메인 지식을 붙여 정확성과 유용성을 높이는 접근이다.&quot;,
+        &quot;rubric_keywords&quot;: [
+          &quot;외부&quot;,
+          &quot;신뢰&quot;,
+          &quot;지식&quot;,
+          &quot;참조&quot;,
+          &quot;재학습&quot;,
+          &quot;정확성&quot;
+        ],
+        &quot;keyword_hits&quot;: [
+          &quot;외부&quot;,
+          &quot;지식&quot;,
+          &quot;재학습&quot;
+        ],
+        &quot;support_chunks_expected&quot;: [
+          &quot;K01&quot;
+        ],
+        &quot;support_chunks_hit&quot;: [
+          &quot;K01&quot;
+        ],
+        &quot;score_breakdown&quot;: {
+          &quot;keyword_score&quot;: 27.5,
+          &quot;support_score&quot;: 25.0,
+          &quot;quality_score&quot;: 17.1
+        },
+        &quot;total_score&quot;: 69.6,
+        &quot;verdict&quot;: &quot;아쉬움&quot;,
+        &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 69.6점으로 평가했다.&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.07
     }
   },
   {
     &quot;node&quot;: &quot;judge&quot;,
-    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 최종 응답 평가 완료&quot;,
     &quot;payload&quot;: {
       &quot;gold_answer&quot;: &quot;RAG는 응답 생성 전에 외부의 신뢰할 수 있는 지식 소스를 참조하도록 LLM 출력을 최적화하는 방식이며, 모델 재학습 없이 특정 도메인 지식을 붙여 정확성과 유용성을 높이는 접근이다.&quot;,
       &quot;rubric_keywords&quot;: [
@@ -397,7 +543,7 @@
         &quot;정확성&quot;
       ],
       &quot;keyword_hits&quot;: [
-        &quot;신뢰&quot;,
+        &quot;외부&quot;,
         &quot;지식&quot;,
         &quot;재학습&quot;
       ],
@@ -432,27 +578,29 @@
           <span class='pill'>initial route: 8B</span>
           <span class='pill'>final model: 8B</span>
           <span class='pill'>restarts: 0</span>
-          <span class='pill'>hybrid retrieval</span>
-          <span class='pill'>total: 3.03 ms</span>
+          <span class='pill'>answer regenerations: 1</span>
+          <span class='pill'>total: 3.30 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 8b</li><li>hybrid_retrieve_8b</li><li>rerank_8b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 8b</li><li>hybrid_retrieve_8b</li><li>rerank_8b</li><li>judge_retrieval → answer</li><li>answer_draft</li><li>judge_answer → regenerate_once</li><li>answer_revise</li><li>judge_answer_final</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid retrieval이 lexical/semantic 후보를 합쳐 K15, K16, K07, K05 순으로 만들었고, rerank_8b가 그중 K07, K15, K16, K05을 상위에 올렸다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 hybrid retrieval로 뽑힌 근거 청크를 직답형으로 정리했다.</li><li>미리 정한 정답 기준 키워드 1/6, 핵심 청크 0/1개를 잡아서 총점 16.4점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid retrieval이 후보를 모으고 rerank_8b가 K07, K15, K16, K05 순으로 정렬했다.</li><li>judge_retrieval이 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>judge_answer가 초안 답변을 보고 regenerate_once을 결정했다.</li><li>초안 점수가 낮아 answer를 한 번 더 직답형으로 정리한 뒤 최종 judge를 다시 기록했다.</li><li>마지막에는 8B answer 단계 결과를 최종 judge에 저장했다.</li><li>미리 정한 정답 기준 키워드 2/6, 핵심 청크 0/1개를 잡아서 총점 25.5점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
-          <pre>결론: AWS 문서 기준 RAG의 필요성은 LLM의 허위정보·오래된 정보·근거 불분명 문제를 줄이고 더 통제된 답변을 만들기 위해서다.
+          <pre>직답: AWS 문서 기준 RAG의 필요성은 LLM의 허위정보, 오래된 정보, 신뢰하기 어려운 출처 문제를 줄이고 더 통제된 답변을 만들기 위해서다.
+왜 이렇게 말하나: 즉 RAG는 허위정보, 오래된 정보, 불분명한 출처 문제를 줄이면서 최신성과 통제력을 보강한다.
 질문: AWS 문서가 말하는 RAG의 필요성은 무엇이며, LLM의 어떤 문제를 줄이려 하나요?
 근거 청크: K07, K15, K16
-모드: mock-8B | quality_ok=True | coverage=0.3
-핵심 근거:
-- 근거 1: 개발자는 RAG를 사용하여 채팅 애플리케이션을 보다 변화하는 요구 사항 또는 부서 간 사용에 맞게 LLM의 정보 소스를 제어하고 변경할 수 있습니다.
-- 근거 2: AWS 프리 티어에 즉시 액세스할 수 있습니다.
-- 근거 3: AWS Management Console에서 구축을 시작하세요.</pre>
+모드: revised-8B | quality_ok=True | coverage=0.3
+핵심 포인트:
+- 포인트 1: 개발자는 RAG를 사용하여 채팅 애플리케이션을 보다 변화하는 요구 사항 또는 부서 간 사용에 맞게 LLM의 정보 소스를 제어하고 변경할 수 있습니다.
+- 포인트 2: AWS 프리 티어에 즉시 액세스할 수 있습니다.
+- 포인트 3: AWS Management Console에서 구축을 시작하세요.
+한계: 이번 round는 실백엔드가 아니라 mock 파이프라인이므로 모델 추론 성능 자체를 뜻하지는 않는다.</pre>
           <h3>Expected answer</h3>
           <pre>RAG는 LLM의 허위정보, 오래된 정보, 신뢰할 수 없는 출처, 용어 혼동 같은 문제를 줄이고, 신뢰 가능한 지식 소스를 검색해 답변의 통제력과 최신성을 높이기 위해 필요하다.</pre>
           <h3>Judge score</h3>
@@ -467,22 +615,23 @@
     &quot;통제&quot;
   ],
   &quot;keyword_hits&quot;: [
-    &quot;오래된&quot;
+    &quot;오래된&quot;,
+    &quot;출처&quot;
   ],
   &quot;support_chunks_expected&quot;: [
     &quot;K02&quot;
   ],
   &quot;support_chunks_hit&quot;: [],
   &quot;score_breakdown&quot;: {
-    &quot;keyword_score&quot;: 9.2,
+    &quot;keyword_score&quot;: 18.3,
     &quot;support_score&quot;: 0.0,
     &quot;quality_score&quot;: 7.2
   },
-  &quot;total_score&quot;: 16.4,
+  &quot;total_score&quot;: 25.5,
   &quot;verdict&quot;: &quot;미흡&quot;,
-  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 1/6, 핵심 청크 0/1개를 잡아서 총점 16.4점으로 평가했다.&quot;
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/6, 핵심 청크 0/1개를 잡아서 총점 25.5점으로 평가했다.&quot;
 }</pre>
-          <h3>Quality gate</h3>
+          <h3>Retrieval judge</h3>
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.3,
@@ -498,7 +647,7 @@
             <article class='attempt'>
               <div class='attempt-head'>
                 <strong>hybrid_retrieve_8b+rerank_8b</strong>
-                <span>2.79 ms</span>
+                <span>2.82 ms</span>
               </div>
               <div class='query'>aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤</div>
               <h4>hybrid retrieval candidates</h4>
@@ -518,7 +667,7 @@
   &quot;complexity_score&quot;: 2,
   &quot;reason&quot;: &quot;direct factual retrieval&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>hybrid_retrieve_8b</td><td>2.59 ms</td><td><pre>{
+}</pre></td></tr><tr><td>hybrid_retrieve_8b</td><td>2.61 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤&quot;,
   &quot;strategy&quot;: &quot;hybrid lexical + semantic with RRF fusion&quot;,
@@ -552,13 +701,13 @@
     &quot;줄이려&quot;,
     &quot;필요성은&quot;
   ]
-}</pre></td></tr><tr><td>rerank_8b</td><td>0.20 ms</td><td><pre>{
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.21 ms</td><td><pre>{
   &quot;candidate_count&quot;: 6,
   &quot;selected_count&quot;: 4,
   &quot;top_rerank_score&quot;: 35.83,
   &quot;rerank_strategy&quot;: &quot;hybrid candidate reranker: overlap + section-aware heuristic&quot;,
   &quot;top_rerank_lift&quot;: 4.819999999999997
-}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.01 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
@@ -567,8 +716,65 @@
     &quot;distinct_sections&quot;: 4,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.08 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer_draft</td><td>0.08 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;8b&quot;
+}</pre></td></tr><tr><td>judge_answer</td><td>0.04 ms</td><td><pre>{
+  &quot;action&quot;: &quot;regenerate_once&quot;,
+  &quot;evaluation&quot;: {
+    &quot;gold_answer&quot;: &quot;RAG는 LLM의 허위정보, 오래된 정보, 신뢰할 수 없는 출처, 용어 혼동 같은 문제를 줄이고, 신뢰 가능한 지식 소스를 검색해 답변의 통제력과 최신성을 높이기 위해 필요하다.&quot;,
+    &quot;rubric_keywords&quot;: [
+      &quot;허위&quot;,
+      &quot;오래된&quot;,
+      &quot;신뢰&quot;,
+      &quot;출처&quot;,
+      &quot;혼동&quot;,
+      &quot;통제&quot;
+    ],
+    &quot;keyword_hits&quot;: [
+      &quot;오래된&quot;,
+      &quot;출처&quot;
+    ],
+    &quot;support_chunks_expected&quot;: [
+      &quot;K02&quot;
+    ],
+    &quot;support_chunks_hit&quot;: [],
+    &quot;score_breakdown&quot;: {
+      &quot;keyword_score&quot;: 18.3,
+      &quot;support_score&quot;: 0.0,
+      &quot;quality_score&quot;: 7.2
+    },
+    &quot;total_score&quot;: 25.5,
+    &quot;verdict&quot;: &quot;미흡&quot;,
+    &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/6, 핵심 청크 0/1개를 잡아서 총점 25.5점으로 평가했다.&quot;
+  }
+}</pre></td></tr><tr><td>answer_revise</td><td>0.07 ms</td><td><pre>{
+  &quot;regeneration&quot;: 1
+}</pre></td></tr><tr><td>judge_answer_final</td><td>0.05 ms</td><td><pre>{
+  &quot;gold_answer&quot;: &quot;RAG는 LLM의 허위정보, 오래된 정보, 신뢰할 수 없는 출처, 용어 혼동 같은 문제를 줄이고, 신뢰 가능한 지식 소스를 검색해 답변의 통제력과 최신성을 높이기 위해 필요하다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;허위&quot;,
+    &quot;오래된&quot;,
+    &quot;신뢰&quot;,
+    &quot;출처&quot;,
+    &quot;혼동&quot;,
+    &quot;통제&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;오래된&quot;,
+    &quot;출처&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K02&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 18.3,
+    &quot;support_score&quot;: 0.0,
+    &quot;quality_score&quot;: 7.2
+  },
+  &quot;total_score&quot;: 25.5,
+  &quot;verdict&quot;: &quot;미흡&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/6, 핵심 청크 0/1개를 잡아서 총점 25.5점으로 평가했다.&quot;
 }</pre></td></tr></tbody>
         </table>
       </article>
@@ -636,7 +842,7 @@
         &quot;K14&quot;,
         &quot;K02&quot;
       ],
-      &quot;elapsed_ms&quot;: 2.59
+      &quot;elapsed_ms&quot;: 2.61
     }
   },
   {
@@ -656,11 +862,11 @@
         &quot;K05&quot;
       ],
       &quot;top_rerank_lift&quot;: 4.819999999999997,
-      &quot;elapsed_ms&quot;: 0.2
+      &quot;elapsed_ms&quot;: 0.21
     }
   },
   {
-    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;node&quot;: &quot;judge_retrieval&quot;,
     &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
     &quot;payload&quot;: {
       &quot;action&quot;: &quot;answer&quot;,
@@ -675,17 +881,94 @@
     }
   },
   {
-    &quot;node&quot;: &quot;answer&quot;,
-    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;node&quot;: &quot;answer_draft&quot;,
+    &quot;message&quot;: &quot;초안 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;8b&quot;,
       &quot;elapsed_ms&quot;: 0.08,
-      &quot;answer_preview&quot;: &quot;결론: AWS 문서 기준 RAG의 필요성은 LLM의 허위정보·오래된 정보·근거 불분명 문제를 줄이고 더 통제된 답변을 만들기 위해서다. 질문: AWS 문서가 말하는 RAG의 필요성은 무엇이며, LLM의 어떤 문제를 줄이려 하나요? 근거 청크: K07, K15, K16 모드: mock-8B | quality_ok=True | coverage=0.3 핵심 근거: - 근거 1: 개발자는 RAG를 사용하여 채팅 애플리케이션을 보다…&quot;
+      &quot;answer_preview&quot;: &quot;결론: AWS 문서 기준 RAG의 필요성은 LLM의 허위정보, 오래된 정보, 신뢰하기 어려운 출처 문제를 줄이고 더 통제된 답변을 만들기 위해서다. 질문: AWS 문서가 말하는 RAG의 필요성은 무엇이며, LLM의 어떤 문제를 줄이려 하나요? 근거 청크: K07, K15, K16 모드: draft-8B | quality_ok=True | coverage=0.3 핵심 근거: - 근거 1: 개발자는 RAG를 사용하여 채팅…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge_answer&quot;,
+    &quot;message&quot;: &quot;answer judge가 응답 형식/키워드 충족이 약하다고 판단해 한 번 더 생성함.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;regenerate_once&quot;,
+      &quot;evaluation&quot;: {
+        &quot;gold_answer&quot;: &quot;RAG는 LLM의 허위정보, 오래된 정보, 신뢰할 수 없는 출처, 용어 혼동 같은 문제를 줄이고, 신뢰 가능한 지식 소스를 검색해 답변의 통제력과 최신성을 높이기 위해 필요하다.&quot;,
+        &quot;rubric_keywords&quot;: [
+          &quot;허위&quot;,
+          &quot;오래된&quot;,
+          &quot;신뢰&quot;,
+          &quot;출처&quot;,
+          &quot;혼동&quot;,
+          &quot;통제&quot;
+        ],
+        &quot;keyword_hits&quot;: [
+          &quot;오래된&quot;,
+          &quot;출처&quot;
+        ],
+        &quot;support_chunks_expected&quot;: [
+          &quot;K02&quot;
+        ],
+        &quot;support_chunks_hit&quot;: [],
+        &quot;score_breakdown&quot;: {
+          &quot;keyword_score&quot;: 18.3,
+          &quot;support_score&quot;: 0.0,
+          &quot;quality_score&quot;: 7.2
+        },
+        &quot;total_score&quot;: 25.5,
+        &quot;verdict&quot;: &quot;미흡&quot;,
+        &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/6, 핵심 청크 0/1개를 잡아서 총점 25.5점으로 평가했다.&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.04
+    }
+  },
+  {
+    &quot;node&quot;: &quot;answer_revise&quot;,
+    &quot;message&quot;: &quot;answer judge 요청으로 답변을 한 번 더 정리함&quot;,
+    &quot;payload&quot;: {
+      &quot;elapsed_ms&quot;: 0.07,
+      &quot;answer_preview&quot;: &quot;직답: AWS 문서 기준 RAG의 필요성은 LLM의 허위정보, 오래된 정보, 신뢰하기 어려운 출처 문제를 줄이고 더 통제된 답변을 만들기 위해서다. 왜 이렇게 말하나: 즉 RAG는 허위정보, 오래된 정보, 불분명한 출처 문제를 줄이면서 최신성과 통제력을 보강한다. 질문: AWS 문서가 말하는 RAG의 필요성은 무엇이며, LLM의 어떤 문제를 줄이려 하나요? 근거 청크: K07, K15, K16 모드: revised-8B |…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge_answer_final&quot;,
+    &quot;message&quot;: &quot;재생성 후 최종 채점 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;evaluation&quot;: {
+        &quot;gold_answer&quot;: &quot;RAG는 LLM의 허위정보, 오래된 정보, 신뢰할 수 없는 출처, 용어 혼동 같은 문제를 줄이고, 신뢰 가능한 지식 소스를 검색해 답변의 통제력과 최신성을 높이기 위해 필요하다.&quot;,
+        &quot;rubric_keywords&quot;: [
+          &quot;허위&quot;,
+          &quot;오래된&quot;,
+          &quot;신뢰&quot;,
+          &quot;출처&quot;,
+          &quot;혼동&quot;,
+          &quot;통제&quot;
+        ],
+        &quot;keyword_hits&quot;: [
+          &quot;오래된&quot;,
+          &quot;출처&quot;
+        ],
+        &quot;support_chunks_expected&quot;: [
+          &quot;K02&quot;
+        ],
+        &quot;support_chunks_hit&quot;: [],
+        &quot;score_breakdown&quot;: {
+          &quot;keyword_score&quot;: 18.3,
+          &quot;support_score&quot;: 0.0,
+          &quot;quality_score&quot;: 7.2
+        },
+        &quot;total_score&quot;: 25.5,
+        &quot;verdict&quot;: &quot;미흡&quot;,
+        &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/6, 핵심 청크 0/1개를 잡아서 총점 25.5점으로 평가했다.&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.05
     }
   },
   {
     &quot;node&quot;: &quot;judge&quot;,
-    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 최종 응답 평가 완료&quot;,
     &quot;payload&quot;: {
       &quot;gold_answer&quot;: &quot;RAG는 LLM의 허위정보, 오래된 정보, 신뢰할 수 없는 출처, 용어 혼동 같은 문제를 줄이고, 신뢰 가능한 지식 소스를 검색해 답변의 통제력과 최신성을 높이기 위해 필요하다.&quot;,
       &quot;rubric_keywords&quot;: [
@@ -697,20 +980,21 @@
         &quot;통제&quot;
       ],
       &quot;keyword_hits&quot;: [
-        &quot;오래된&quot;
+        &quot;오래된&quot;,
+        &quot;출처&quot;
       ],
       &quot;support_chunks_expected&quot;: [
         &quot;K02&quot;
       ],
       &quot;support_chunks_hit&quot;: [],
       &quot;score_breakdown&quot;: {
-        &quot;keyword_score&quot;: 9.2,
+        &quot;keyword_score&quot;: 18.3,
         &quot;support_score&quot;: 0.0,
         &quot;quality_score&quot;: 7.2
       },
-      &quot;total_score&quot;: 16.4,
+      &quot;total_score&quot;: 25.5,
       &quot;verdict&quot;: &quot;미흡&quot;,
-      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 1/6, 핵심 청크 0/1개를 잡아서 총점 16.4점으로 평가했다.&quot;
+      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/6, 핵심 청크 0/1개를 잡아서 총점 25.5점으로 평가했다.&quot;
     }
   }
 ]</pre>
@@ -728,23 +1012,23 @@
           <span class='pill'>initial route: 8B</span>
           <span class='pill'>final model: 8B</span>
           <span class='pill'>restarts: 0</span>
-          <span class='pill'>hybrid retrieval</span>
-          <span class='pill'>total: 3.07 ms</span>
+          <span class='pill'>answer regenerations: 0</span>
+          <span class='pill'>total: 3.13 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 8b</li><li>hybrid_retrieve_8b</li><li>rerank_8b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 8b</li><li>hybrid_retrieve_8b</li><li>rerank_8b</li><li>judge_retrieval → answer</li><li>answer_draft</li><li>judge_answer → finish</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid retrieval이 lexical/semantic 후보를 합쳐 K13, K09, K14, K03 순으로 만들었고, rerank_8b가 그중 K13, K14, K03, K09을 상위에 올렸다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 hybrid retrieval로 뽑힌 근거 청크를 직답형으로 정리했다.</li><li>미리 정한 정답 기준 키워드 4/4, 핵심 청크 1/5개를 잡아서 총점 76.0점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid retrieval이 후보를 모으고 rerank_8b가 K13, K14, K03, K09 순으로 정렬했다.</li><li>judge_retrieval이 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>judge_answer가 초안 답변을 보고 finish을 결정했다.</li><li>마지막에는 8B answer 단계 결과를 최종 judge에 저장했다.</li><li>미리 정한 정답 기준 키워드 4/4, 핵심 청크 1/5개를 잡아서 총점 76.0점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
-          <pre>결론: 핵심 이점은 비용 효율성, 최신 정보 반영, 사용자 신뢰 강화, 개발자 제어 강화다.
+          <pre>결론: 문서 기준 핵심 이점은 비용 효율적인 구현, 최신 정보 반영, 사용자 신뢰 강화, 개발자 제어 강화다.
 질문: RAG의 주요 이점을 문서 기준으로 정리해줘.
 근거 청크: K13, K14, K03
-모드: mock-8B | quality_ok=True | coverage=0.667
+모드: draft-8B | quality_ok=True | coverage=0.667
 핵심 근거:
 - 근거 1: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.
 - 근거 2: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
@@ -785,7 +1069,7 @@
   &quot;verdict&quot;: &quot;무난&quot;,
   &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/4, 핵심 청크 1/5개를 잡아서 총점 76.0점으로 평가했다.&quot;
 }</pre>
-          <h3>Quality gate</h3>
+          <h3>Retrieval judge</h3>
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.667,
@@ -801,7 +1085,7 @@
             <article class='attempt'>
               <div class='attempt-head'>
                 <strong>hybrid_retrieve_8b+rerank_8b</strong>
-                <span>2.71 ms</span>
+                <span>2.76 ms</span>
               </div>
               <div class='query'>rag의 주요 이점을 문서 기준으로 정리해줘</div>
               <h4>hybrid retrieval candidates</h4>
@@ -823,7 +1107,7 @@
   &quot;complexity_score&quot;: 1,
   &quot;reason&quot;: &quot;direct factual retrieval&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>hybrid_retrieve_8b</td><td>2.50 ms</td><td><pre>{
+}</pre></td></tr><tr><td>hybrid_retrieve_8b</td><td>2.55 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;rag의 주요 이점을 문서 기준으로 정리해줘&quot;,
   &quot;strategy&quot;: &quot;hybrid lexical + semantic with RRF fusion&quot;,
@@ -861,7 +1145,7 @@
   &quot;top_rerank_score&quot;: 39.008,
   &quot;rerank_strategy&quot;: &quot;hybrid candidate reranker: overlap + section-aware heuristic&quot;,
   &quot;top_rerank_lift&quot;: 7.230000000000004
-}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.01 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
@@ -870,8 +1154,43 @@
     &quot;distinct_sections&quot;: 4,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.18 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer_draft</td><td>0.18 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;8b&quot;
+}</pre></td></tr><tr><td>judge_answer</td><td>0.05 ms</td><td><pre>{
+  &quot;action&quot;: &quot;finish&quot;,
+  &quot;evaluation&quot;: {
+    &quot;gold_answer&quot;: &quot;문서 기준 핵심 이점은 비용 효율적인 구현, 최신 정보 반영, 사용자 신뢰 강화, 개발자 제어 강화다.&quot;,
+    &quot;rubric_keywords&quot;: [
+      &quot;비용&quot;,
+      &quot;최신&quot;,
+      &quot;신뢰&quot;,
+      &quot;제어&quot;
+    ],
+    &quot;keyword_hits&quot;: [
+      &quot;비용&quot;,
+      &quot;최신&quot;,
+      &quot;신뢰&quot;,
+      &quot;제어&quot;
+    ],
+    &quot;support_chunks_expected&quot;: [
+      &quot;K03&quot;,
+      &quot;K04&quot;,
+      &quot;K05&quot;,
+      &quot;K06&quot;,
+      &quot;K07&quot;
+    ],
+    &quot;support_chunks_hit&quot;: [
+      &quot;K03&quot;
+    ],
+    &quot;score_breakdown&quot;: {
+      &quot;keyword_score&quot;: 55.0,
+      &quot;support_score&quot;: 5.0,
+      &quot;quality_score&quot;: 16.0
+    },
+    &quot;total_score&quot;: 76.0,
+    &quot;verdict&quot;: &quot;무난&quot;,
+    &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/4, 핵심 청크 1/5개를 잡아서 총점 76.0점으로 평가했다.&quot;
+  }
 }</pre></td></tr></tbody>
         </table>
       </article>
@@ -939,7 +1258,7 @@
         &quot;K10&quot;,
         &quot;K02&quot;
       ],
-      &quot;elapsed_ms&quot;: 2.5
+      &quot;elapsed_ms&quot;: 2.55
     }
   },
   {
@@ -963,7 +1282,7 @@
     }
   },
   {
-    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;node&quot;: &quot;judge_retrieval&quot;,
     &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
     &quot;payload&quot;: {
       &quot;action&quot;: &quot;answer&quot;,
@@ -978,17 +1297,58 @@
     }
   },
   {
-    &quot;node&quot;: &quot;answer&quot;,
-    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;node&quot;: &quot;answer_draft&quot;,
+    &quot;message&quot;: &quot;초안 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;8b&quot;,
       &quot;elapsed_ms&quot;: 0.18,
-      &quot;answer_preview&quot;: &quot;결론: 핵심 이점은 비용 효율성, 최신 정보 반영, 사용자 신뢰 강화, 개발자 제어 강화다. 질문: RAG의 주요 이점을 문서 기준으로 정리해줘. 근거 청크: K13, K14, K03 모드: mock-8B | quality_ok=True | coverage=0.667 핵심 근거: - 근거 1: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은…&quot;
+      &quot;answer_preview&quot;: &quot;결론: 문서 기준 핵심 이점은 비용 효율적인 구현, 최신 정보 반영, 사용자 신뢰 강화, 개발자 제어 강화다. 질문: RAG의 주요 이점을 문서 기준으로 정리해줘. 근거 청크: K13, K14, K03 모드: draft-8B | quality_ok=True | coverage=0.667 핵심 근거: - 근거 1: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다.…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge_answer&quot;,
+    &quot;message&quot;: &quot;answer judge 통과: 응답이 정답 기준을 충분히 충족함.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;finish&quot;,
+      &quot;evaluation&quot;: {
+        &quot;gold_answer&quot;: &quot;문서 기준 핵심 이점은 비용 효율적인 구현, 최신 정보 반영, 사용자 신뢰 강화, 개발자 제어 강화다.&quot;,
+        &quot;rubric_keywords&quot;: [
+          &quot;비용&quot;,
+          &quot;최신&quot;,
+          &quot;신뢰&quot;,
+          &quot;제어&quot;
+        ],
+        &quot;keyword_hits&quot;: [
+          &quot;비용&quot;,
+          &quot;최신&quot;,
+          &quot;신뢰&quot;,
+          &quot;제어&quot;
+        ],
+        &quot;support_chunks_expected&quot;: [
+          &quot;K03&quot;,
+          &quot;K04&quot;,
+          &quot;K05&quot;,
+          &quot;K06&quot;,
+          &quot;K07&quot;
+        ],
+        &quot;support_chunks_hit&quot;: [
+          &quot;K03&quot;
+        ],
+        &quot;score_breakdown&quot;: {
+          &quot;keyword_score&quot;: 55.0,
+          &quot;support_score&quot;: 5.0,
+          &quot;quality_score&quot;: 16.0
+        },
+        &quot;total_score&quot;: 76.0,
+        &quot;verdict&quot;: &quot;무난&quot;,
+        &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/4, 핵심 청크 1/5개를 잡아서 총점 76.0점으로 평가했다.&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.05
     }
   },
   {
     &quot;node&quot;: &quot;judge&quot;,
-    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 최종 응답 평가 완료&quot;,
     &quot;payload&quot;: {
       &quot;gold_answer&quot;: &quot;문서 기준 핵심 이점은 비용 효율적인 구현, 최신 정보 반영, 사용자 신뢰 강화, 개발자 제어 강화다.&quot;,
       &quot;rubric_keywords&quot;: [
@@ -1038,23 +1398,23 @@
           <span class='pill'>initial route: 14B</span>
           <span class='pill'>final model: 14B</span>
           <span class='pill'>restarts: 0</span>
-          <span class='pill'>hybrid retrieval</span>
-          <span class='pill'>total: 2.67 ms</span>
+          <span class='pill'>answer regenerations: 0</span>
+          <span class='pill'>total: 2.75 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 14b</li><li>hybrid_retrieve_14b</li><li>rerank_14b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 14b</li><li>hybrid_retrieve_14b</li><li>rerank_14b</li><li>judge_retrieval → answer</li><li>answer_draft</li><li>judge_answer → finish</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 14B 경로로 분류했다. 이유: multi-step/comparison</li><li>hybrid retrieval이 lexical/semantic 후보를 합쳐 K14, K04, K05, K01 순으로 만들었고, rerank_14b가 그중 K04, K14, K01, K05을 상위에 올렸다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 14B answer 단계가 hybrid retrieval로 뽑힌 근거 청크를 직답형으로 정리했다.</li><li>미리 정한 정답 기준 키워드 6/6, 핵심 청크 1/2개를 잡아서 총점 82.5점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 14B 경로로 분류했다. 이유: multi-step/comparison</li><li>hybrid retrieval이 후보를 모으고 rerank_14b가 K04, K14, K01, K05 순으로 정렬했다.</li><li>judge_retrieval이 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>judge_answer가 초안 답변을 보고 finish을 결정했다.</li><li>마지막에는 14B answer 단계 결과를 최종 judge에 저장했다.</li><li>미리 정한 정답 기준 키워드 5/6, 핵심 청크 1/2개를 잡아서 총점 73.3점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
-          <pre>결론: 문서는 RAG가 별도 재학습 대신 외부 지식을 연결하므로 컴퓨팅·재정 비용을 줄이는 방식이라고 본다.
+          <pre>결론: AWS 문서는 파운데이션 모델을 다시 학습시키는 대신 외부 지식을 연결해 새 데이터를 주입하므로 컴퓨팅 및 재정 비용을 크게 줄일 수 있다고 본다.
 질문: 왜 AWS 문서는 RAG를 비용 효율적인 구현 방식이라고 설명하나요?
 근거 청크: K04, K14, K01
-모드: mock-14B | quality_ok=True | coverage=0.625
+모드: draft-14B | quality_ok=True | coverage=0.625
 핵심 근거:
 - 근거 1: 챗봇 개발은 일반적으로 파운데이션 모델 을 사용하여 시작됩니다. 파운데이션 모델(FM)은 광범위한 일반화 데이터와 레이블이 지정되지 않은 데이터에 대해 훈련된 API 액세스 가능 LLM입니다.
 - 근거 2: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
@@ -1073,7 +1433,6 @@
     &quot;비용&quot;
   ],
   &quot;keyword_hits&quot;: [
-    &quot;재학습&quot;,
     &quot;외부&quot;,
     &quot;새 데이터&quot;,
     &quot;컴퓨팅&quot;,
@@ -1088,15 +1447,15 @@
     &quot;K01&quot;
   ],
   &quot;score_breakdown&quot;: {
-    &quot;keyword_score&quot;: 55.0,
+    &quot;keyword_score&quot;: 45.8,
     &quot;support_score&quot;: 12.5,
     &quot;quality_score&quot;: 15.0
   },
-  &quot;total_score&quot;: 82.5,
+  &quot;total_score&quot;: 73.3,
   &quot;verdict&quot;: &quot;무난&quot;,
-  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 6/6, 핵심 청크 1/2개를 잡아서 총점 82.5점으로 평가했다.&quot;
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 5/6, 핵심 청크 1/2개를 잡아서 총점 73.3점으로 평가했다.&quot;
 }</pre>
-          <h3>Quality gate</h3>
+          <h3>Retrieval judge</h3>
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.625,
@@ -1112,7 +1471,7 @@
             <article class='attempt'>
               <div class='attempt-head'>
                 <strong>hybrid_retrieve_14b+rerank_14b</strong>
-                <span>2.26 ms</span>
+                <span>2.28 ms</span>
               </div>
               <div class='query'>aws 문서는 rag를 비용 효율적인 구현 방식이라고 설명하나요 bedrock kendra sagemaker</div>
               <h4>hybrid retrieval candidates</h4>
@@ -1134,7 +1493,7 @@
   &quot;complexity_score&quot;: 4,
   &quot;reason&quot;: &quot;multi-step/comparison&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>hybrid_retrieve_14b</td><td>2.07 ms</td><td><pre>{
+}</pre></td></tr><tr><td>hybrid_retrieve_14b</td><td>2.09 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;aws 문서는 rag를 비용 효율적인 구현 방식이라고 설명하나요 bedrock kendra sagemaker&quot;,
   &quot;strategy&quot;: &quot;hybrid lexical + semantic with RRF fusion&quot;,
@@ -1179,7 +1538,7 @@
   &quot;top_rerank_score&quot;: 42.268,
   &quot;rerank_strategy&quot;: &quot;hybrid candidate reranker: overlap + section-aware heuristic&quot;,
   &quot;top_rerank_lift&quot;: 10.009999999999998
-}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.01 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
@@ -1188,8 +1547,43 @@
     &quot;distinct_sections&quot;: 6,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.19 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer_draft</td><td>0.24 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;14b&quot;
+}</pre></td></tr><tr><td>judge_answer</td><td>0.06 ms</td><td><pre>{
+  &quot;action&quot;: &quot;finish&quot;,
+  &quot;evaluation&quot;: {
+    &quot;gold_answer&quot;: &quot;파운데이션 모델을 조직 데이터에 맞게 다시 학습시키는 대신, RAG는 외부 지식 소스를 연결해 새 데이터를 주입하므로 컴퓨팅 및 재정 비용을 크게 줄일 수 있기 때문이다.&quot;,
+    &quot;rubric_keywords&quot;: [
+      &quot;재학습&quot;,
+      &quot;외부&quot;,
+      &quot;새 데이터&quot;,
+      &quot;컴퓨팅&quot;,
+      &quot;재정&quot;,
+      &quot;비용&quot;
+    ],
+    &quot;keyword_hits&quot;: [
+      &quot;외부&quot;,
+      &quot;새 데이터&quot;,
+      &quot;컴퓨팅&quot;,
+      &quot;재정&quot;,
+      &quot;비용&quot;
+    ],
+    &quot;support_chunks_expected&quot;: [
+      &quot;K03&quot;,
+      &quot;K01&quot;
+    ],
+    &quot;support_chunks_hit&quot;: [
+      &quot;K01&quot;
+    ],
+    &quot;score_breakdown&quot;: {
+      &quot;keyword_score&quot;: 45.8,
+      &quot;support_score&quot;: 12.5,
+      &quot;quality_score&quot;: 15.0
+    },
+    &quot;total_score&quot;: 73.3,
+    &quot;verdict&quot;: &quot;무난&quot;,
+    &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 5/6, 핵심 청크 1/2개를 잡아서 총점 73.3점으로 평가했다.&quot;
+  }
 }</pre></td></tr></tbody>
         </table>
       </article>
@@ -1266,7 +1660,7 @@
         &quot;K07&quot;,
         &quot;K10&quot;
       ],
-      &quot;elapsed_ms&quot;: 2.07
+      &quot;elapsed_ms&quot;: 2.09
     }
   },
   {
@@ -1292,7 +1686,7 @@
     }
   },
   {
-    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;node&quot;: &quot;judge_retrieval&quot;,
     &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
     &quot;payload&quot;: {
       &quot;action&quot;: &quot;answer&quot;,
@@ -1307,17 +1701,58 @@
     }
   },
   {
-    &quot;node&quot;: &quot;answer&quot;,
-    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;node&quot;: &quot;answer_draft&quot;,
+    &quot;message&quot;: &quot;초안 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;14b&quot;,
-      &quot;elapsed_ms&quot;: 0.19,
-      &quot;answer_preview&quot;: &quot;결론: 문서는 RAG가 별도 재학습 대신 외부 지식을 연결하므로 컴퓨팅·재정 비용을 줄이는 방식이라고 본다. 질문: 왜 AWS 문서는 RAG를 비용 효율적인 구현 방식이라고 설명하나요? 근거 청크: K04, K14, K01 모드: mock-14B | quality_ok=True | coverage=0.625 핵심 근거: - 근거 1: 챗봇 개발은 일반적으로 파운데이션 모델 을 사용하여 시작됩니다. 파운데이션 모델(FM)은…&quot;
+      &quot;elapsed_ms&quot;: 0.24,
+      &quot;answer_preview&quot;: &quot;결론: AWS 문서는 파운데이션 모델을 다시 학습시키는 대신 외부 지식을 연결해 새 데이터를 주입하므로 컴퓨팅 및 재정 비용을 크게 줄일 수 있다고 본다. 질문: 왜 AWS 문서는 RAG를 비용 효율적인 구현 방식이라고 설명하나요? 근거 청크: K04, K14, K01 모드: draft-14B | quality_ok=True | coverage=0.625 핵심 근거: - 근거 1: 챗봇 개발은 일반적으로 파운데이션 모델 을…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge_answer&quot;,
+    &quot;message&quot;: &quot;answer judge 통과: 응답이 정답 기준을 충분히 충족함.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;finish&quot;,
+      &quot;evaluation&quot;: {
+        &quot;gold_answer&quot;: &quot;파운데이션 모델을 조직 데이터에 맞게 다시 학습시키는 대신, RAG는 외부 지식 소스를 연결해 새 데이터를 주입하므로 컴퓨팅 및 재정 비용을 크게 줄일 수 있기 때문이다.&quot;,
+        &quot;rubric_keywords&quot;: [
+          &quot;재학습&quot;,
+          &quot;외부&quot;,
+          &quot;새 데이터&quot;,
+          &quot;컴퓨팅&quot;,
+          &quot;재정&quot;,
+          &quot;비용&quot;
+        ],
+        &quot;keyword_hits&quot;: [
+          &quot;외부&quot;,
+          &quot;새 데이터&quot;,
+          &quot;컴퓨팅&quot;,
+          &quot;재정&quot;,
+          &quot;비용&quot;
+        ],
+        &quot;support_chunks_expected&quot;: [
+          &quot;K03&quot;,
+          &quot;K01&quot;
+        ],
+        &quot;support_chunks_hit&quot;: [
+          &quot;K01&quot;
+        ],
+        &quot;score_breakdown&quot;: {
+          &quot;keyword_score&quot;: 45.8,
+          &quot;support_score&quot;: 12.5,
+          &quot;quality_score&quot;: 15.0
+        },
+        &quot;total_score&quot;: 73.3,
+        &quot;verdict&quot;: &quot;무난&quot;,
+        &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 5/6, 핵심 청크 1/2개를 잡아서 총점 73.3점으로 평가했다.&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.06
     }
   },
   {
     &quot;node&quot;: &quot;judge&quot;,
-    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 최종 응답 평가 완료&quot;,
     &quot;payload&quot;: {
       &quot;gold_answer&quot;: &quot;파운데이션 모델을 조직 데이터에 맞게 다시 학습시키는 대신, RAG는 외부 지식 소스를 연결해 새 데이터를 주입하므로 컴퓨팅 및 재정 비용을 크게 줄일 수 있기 때문이다.&quot;,
       &quot;rubric_keywords&quot;: [
@@ -1329,7 +1764,6 @@
         &quot;비용&quot;
       ],
       &quot;keyword_hits&quot;: [
-        &quot;재학습&quot;,
         &quot;외부&quot;,
         &quot;새 데이터&quot;,
         &quot;컴퓨팅&quot;,
@@ -1344,13 +1778,13 @@
         &quot;K01&quot;
       ],
       &quot;score_breakdown&quot;: {
-        &quot;keyword_score&quot;: 55.0,
+        &quot;keyword_score&quot;: 45.8,
         &quot;support_score&quot;: 12.5,
         &quot;quality_score&quot;: 15.0
       },
-      &quot;total_score&quot;: 82.5,
+      &quot;total_score&quot;: 73.3,
       &quot;verdict&quot;: &quot;무난&quot;,
-      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 6/6, 핵심 청크 1/2개를 잡아서 총점 82.5점으로 평가했다.&quot;
+      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 5/6, 핵심 청크 1/2개를 잡아서 총점 73.3점으로 평가했다.&quot;
     }
   }
 ]</pre>
@@ -1368,27 +1802,29 @@
           <span class='pill'>initial route: 8B</span>
           <span class='pill'>final model: 8B</span>
           <span class='pill'>restarts: 0</span>
-          <span class='pill'>hybrid retrieval</span>
-          <span class='pill'>total: 2.31 ms</span>
+          <span class='pill'>answer regenerations: 1</span>
+          <span class='pill'>total: 3.07 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 8b</li><li>hybrid_retrieve_8b</li><li>rerank_8b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 8b</li><li>hybrid_retrieve_8b</li><li>rerank_8b</li><li>judge_retrieval → answer</li><li>answer_draft</li><li>judge_answer → regenerate_once</li><li>answer_revise</li><li>judge_answer_final</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid retrieval이 lexical/semantic 후보를 합쳐 K02, K06, K11, K08 순으로 만들었고, rerank_8b가 그중 K02, K06, K11, K08을 상위에 올렸다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 hybrid retrieval로 뽑힌 근거 청크를 직답형으로 정리했다.</li><li>미리 정한 정답 기준 키워드 2/6, 핵심 청크 0/1개를 잡아서 총점 27.9점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid retrieval이 후보를 모으고 rerank_8b가 K02, K06, K11, K08 순으로 정렬했다.</li><li>judge_retrieval이 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>judge_answer가 초안 답변을 보고 regenerate_once을 결정했다.</li><li>초안 점수가 낮아 answer를 한 번 더 직답형으로 정리한 뒤 최종 judge를 다시 기록했다.</li><li>마지막에는 8B answer 단계 결과를 최종 judge에 저장했다.</li><li>미리 정한 정답 기준 키워드 2/6, 핵심 청크 0/1개를 잡아서 총점 27.9점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
-          <pre>결론: RAG는 출처와 원문 확인 가능성을 제공해 사용자 신뢰와 확신을 높인다.
+          <pre>직답: RAG는 정확한 정보를 출처와 함께 제시하고 사용자가 원문을 직접 확인할 수 있게 해 신뢰와 확신을 높인다.
+왜 이렇게 말하나: 사용자는 출처와 원문 확인 경로가 있어 결과를 검증할 수 있다.
 질문: RAG는 사용자 신뢰를 어떻게 강화한다고 설명하나요?
 근거 청크: K02, K06, K11
-모드: mock-8B | quality_ok=True | coverage=0.4
-핵심 근거:
-- 근거 1: LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다.
-- 근거 2: RAG은 LLM이 소스의 저작자 표시를 통해 정확한 정보를 제공할 수 있게 합니다. 출력에는 소스에 대한 인용 또는 참조가 포함될 수 있습니다.
-- 근거 3: 다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다.</pre>
+모드: revised-8B | quality_ok=True | coverage=0.4
+핵심 포인트:
+- 포인트 1: LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다.
+- 포인트 2: RAG은 LLM이 소스의 저작자 표시를 통해 정확한 정보를 제공할 수 있게 합니다. 출력에는 소스에 대한 인용 또는 참조가 포함될 수 있습니다.
+- 포인트 3: 다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다.
+한계: 이번 round는 실백엔드가 아니라 mock 파이프라인이므로 모델 추론 성능 자체를 뜻하지는 않는다.</pre>
           <h3>Expected answer</h3>
           <pre>RAG는 정확한 정보를 출처와 함께 제시하고, 사용자가 원문을 직접 확인할 수 있게 해 생성형 AI 결과에 대한 신뢰와 확신을 높인다.</pre>
           <h3>Judge score</h3>
@@ -1419,7 +1855,7 @@
   &quot;verdict&quot;: &quot;미흡&quot;,
   &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/6, 핵심 청크 0/1개를 잡아서 총점 27.9점으로 평가했다.&quot;
 }</pre>
-          <h3>Quality gate</h3>
+          <h3>Retrieval judge</h3>
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.4,
@@ -1435,7 +1871,7 @@
             <article class='attempt'>
               <div class='attempt-head'>
                 <strong>hybrid_retrieve_8b+rerank_8b</strong>
-                <span>2.04 ms</span>
+                <span>2.41 ms</span>
               </div>
               <div class='query'>rag는 사용자 신뢰를 강화한다고 설명하나요</div>
               <h4>hybrid retrieval candidates</h4>
@@ -1458,7 +1894,7 @@
   &quot;complexity_score&quot;: 3,
   &quot;reason&quot;: &quot;direct factual retrieval&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>hybrid_retrieve_8b</td><td>1.88 ms</td><td><pre>{
+}</pre></td></tr><tr><td>hybrid_retrieve_8b</td><td>2.21 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;rag는 사용자 신뢰를 강화한다고 설명하나요&quot;,
   &quot;strategy&quot;: &quot;hybrid lexical + semantic with RRF fusion&quot;,
@@ -1481,13 +1917,13 @@
     &quot;설명하나요&quot;,
     &quot;신뢰를&quot;
   ]
-}</pre></td></tr><tr><td>rerank_8b</td><td>0.16 ms</td><td><pre>{
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.20 ms</td><td><pre>{
   &quot;candidate_count&quot;: 6,
   &quot;selected_count&quot;: 4,
   &quot;top_rerank_score&quot;: 37.767,
   &quot;rerank_strategy&quot;: &quot;hybrid candidate reranker: overlap + section-aware heuristic&quot;,
   &quot;top_rerank_lift&quot;: 4.980000000000004
-}</pre></td></tr><tr><td>grade_results</td><td>0.00 ms</td><td><pre>{
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.01 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
@@ -1496,8 +1932,62 @@
     &quot;distinct_sections&quot;: 4,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.12 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer_draft</td><td>0.15 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;8b&quot;
+}</pre></td></tr><tr><td>judge_answer</td><td>0.05 ms</td><td><pre>{
+  &quot;action&quot;: &quot;regenerate_once&quot;,
+  &quot;evaluation&quot;: {
+    &quot;gold_answer&quot;: &quot;RAG는 정확한 정보를 출처와 함께 제시하고, 사용자가 원문을 직접 확인할 수 있게 해 생성형 AI 결과에 대한 신뢰와 확신을 높인다.&quot;,
+    &quot;rubric_keywords&quot;: [
+      &quot;출처&quot;,
+      &quot;정확&quot;,
+      &quot;원문&quot;,
+      &quot;확인&quot;,
+      &quot;신뢰&quot;,
+      &quot;확신&quot;
+    ],
+    &quot;keyword_hits&quot;: [],
+    &quot;support_chunks_expected&quot;: [
+      &quot;K05&quot;
+    ],
+    &quot;support_chunks_hit&quot;: [],
+    &quot;score_breakdown&quot;: {
+      &quot;keyword_score&quot;: 0.0,
+      &quot;support_score&quot;: 0.0,
+      &quot;quality_score&quot;: 9.6
+    },
+    &quot;total_score&quot;: 9.6,
+    &quot;verdict&quot;: &quot;미흡&quot;,
+    &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 0/6, 핵심 청크 0/1개를 잡아서 총점 9.6점으로 평가했다.&quot;
+  }
+}</pre></td></tr><tr><td>answer_revise</td><td>0.14 ms</td><td><pre>{
+  &quot;regeneration&quot;: 1
+}</pre></td></tr><tr><td>judge_answer_final</td><td>0.06 ms</td><td><pre>{
+  &quot;gold_answer&quot;: &quot;RAG는 정확한 정보를 출처와 함께 제시하고, 사용자가 원문을 직접 확인할 수 있게 해 생성형 AI 결과에 대한 신뢰와 확신을 높인다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;출처&quot;,
+    &quot;정확&quot;,
+    &quot;원문&quot;,
+    &quot;확인&quot;,
+    &quot;신뢰&quot;,
+    &quot;확신&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;원문&quot;,
+    &quot;확인&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K05&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 18.3,
+    &quot;support_score&quot;: 0.0,
+    &quot;quality_score&quot;: 9.6
+  },
+  &quot;total_score&quot;: 27.9,
+  &quot;verdict&quot;: &quot;미흡&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/6, 핵심 청크 0/1개를 잡아서 총점 27.9점으로 평가했다.&quot;
 }</pre></td></tr></tbody>
         </table>
       </article>
@@ -1557,7 +2047,7 @@
         &quot;K10&quot;,
         &quot;K14&quot;
       ],
-      &quot;elapsed_ms&quot;: 1.88
+      &quot;elapsed_ms&quot;: 2.21
     }
   },
   {
@@ -1577,11 +2067,11 @@
         &quot;K08&quot;
       ],
       &quot;top_rerank_lift&quot;: 4.980000000000004,
-      &quot;elapsed_ms&quot;: 0.16
+      &quot;elapsed_ms&quot;: 0.2
     }
   },
   {
-    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;node&quot;: &quot;judge_retrieval&quot;,
     &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
     &quot;payload&quot;: {
       &quot;action&quot;: &quot;answer&quot;,
@@ -1592,21 +2082,95 @@
         &quot;distinct_sections&quot;: 4,
         &quot;reason&quot;: &quot;retrieval looks grounded&quot;
       },
-      &quot;elapsed_ms&quot;: 0.0
+      &quot;elapsed_ms&quot;: 0.01
     }
   },
   {
-    &quot;node&quot;: &quot;answer&quot;,
-    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;node&quot;: &quot;answer_draft&quot;,
+    &quot;message&quot;: &quot;초안 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;8b&quot;,
-      &quot;elapsed_ms&quot;: 0.12,
-      &quot;answer_preview&quot;: &quot;결론: RAG는 출처와 원문 확인 가능성을 제공해 사용자 신뢰와 확신을 높인다. 질문: RAG는 사용자 신뢰를 어떻게 강화한다고 설명하나요? 근거 청크: K02, K06, K11 모드: mock-8B | quality_ok=True | coverage=0.4 핵심 근거: - 근거 1: LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를…&quot;
+      &quot;elapsed_ms&quot;: 0.15,
+      &quot;answer_preview&quot;: &quot;결론: RAG는 정확한 정보를 출처와 함께 제시하고 사용자가 원문을 직접 확인할 수 있게 해 신뢰와 확신을 높인다. 질문: RAG는 사용자 신뢰를 어떻게 강화한다고 설명하나요? 근거 청크: K02, K06, K11 모드: draft-8B | quality_ok=True | coverage=0.4 핵심 근거: - 근거 1: LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI)…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge_answer&quot;,
+    &quot;message&quot;: &quot;answer judge가 응답 형식/키워드 충족이 약하다고 판단해 한 번 더 생성함.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;regenerate_once&quot;,
+      &quot;evaluation&quot;: {
+        &quot;gold_answer&quot;: &quot;RAG는 정확한 정보를 출처와 함께 제시하고, 사용자가 원문을 직접 확인할 수 있게 해 생성형 AI 결과에 대한 신뢰와 확신을 높인다.&quot;,
+        &quot;rubric_keywords&quot;: [
+          &quot;출처&quot;,
+          &quot;정확&quot;,
+          &quot;원문&quot;,
+          &quot;확인&quot;,
+          &quot;신뢰&quot;,
+          &quot;확신&quot;
+        ],
+        &quot;keyword_hits&quot;: [],
+        &quot;support_chunks_expected&quot;: [
+          &quot;K05&quot;
+        ],
+        &quot;support_chunks_hit&quot;: [],
+        &quot;score_breakdown&quot;: {
+          &quot;keyword_score&quot;: 0.0,
+          &quot;support_score&quot;: 0.0,
+          &quot;quality_score&quot;: 9.6
+        },
+        &quot;total_score&quot;: 9.6,
+        &quot;verdict&quot;: &quot;미흡&quot;,
+        &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 0/6, 핵심 청크 0/1개를 잡아서 총점 9.6점으로 평가했다.&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.05
+    }
+  },
+  {
+    &quot;node&quot;: &quot;answer_revise&quot;,
+    &quot;message&quot;: &quot;answer judge 요청으로 답변을 한 번 더 정리함&quot;,
+    &quot;payload&quot;: {
+      &quot;elapsed_ms&quot;: 0.14,
+      &quot;answer_preview&quot;: &quot;직답: RAG는 정확한 정보를 출처와 함께 제시하고 사용자가 원문을 직접 확인할 수 있게 해 신뢰와 확신을 높인다. 왜 이렇게 말하나: 사용자는 출처와 원문 확인 경로가 있어 결과를 검증할 수 있다. 질문: RAG는 사용자 신뢰를 어떻게 강화한다고 설명하나요? 근거 청크: K02, K06, K11 모드: revised-8B | quality_ok=True | coverage=0.4 핵심 포인트: - 포인트 1: LLM은…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge_answer_final&quot;,
+    &quot;message&quot;: &quot;재생성 후 최종 채점 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;evaluation&quot;: {
+        &quot;gold_answer&quot;: &quot;RAG는 정확한 정보를 출처와 함께 제시하고, 사용자가 원문을 직접 확인할 수 있게 해 생성형 AI 결과에 대한 신뢰와 확신을 높인다.&quot;,
+        &quot;rubric_keywords&quot;: [
+          &quot;출처&quot;,
+          &quot;정확&quot;,
+          &quot;원문&quot;,
+          &quot;확인&quot;,
+          &quot;신뢰&quot;,
+          &quot;확신&quot;
+        ],
+        &quot;keyword_hits&quot;: [
+          &quot;원문&quot;,
+          &quot;확인&quot;
+        ],
+        &quot;support_chunks_expected&quot;: [
+          &quot;K05&quot;
+        ],
+        &quot;support_chunks_hit&quot;: [],
+        &quot;score_breakdown&quot;: {
+          &quot;keyword_score&quot;: 18.3,
+          &quot;support_score&quot;: 0.0,
+          &quot;quality_score&quot;: 9.6
+        },
+        &quot;total_score&quot;: 27.9,
+        &quot;verdict&quot;: &quot;미흡&quot;,
+        &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/6, 핵심 청크 0/1개를 잡아서 총점 27.9점으로 평가했다.&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.06
     }
   },
   {
     &quot;node&quot;: &quot;judge&quot;,
-    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 최종 응답 평가 완료&quot;,
     &quot;payload&quot;: {
       &quot;gold_answer&quot;: &quot;RAG는 정확한 정보를 출처와 함께 제시하고, 사용자가 원문을 직접 확인할 수 있게 해 생성형 AI 결과에 대한 신뢰와 확신을 높인다.&quot;,
       &quot;rubric_keywords&quot;: [
@@ -1650,23 +2214,23 @@
           <span class='pill'>initial route: 8B</span>
           <span class='pill'>final model: 14B</span>
           <span class='pill'>restarts: 1</span>
-          <span class='pill'>hybrid retrieval</span>
-          <span class='pill'>total: 4.42 ms</span>
+          <span class='pill'>answer regenerations: 0</span>
+          <span class='pill'>total: 4.72 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 8b</li><li>hybrid_retrieve_8b</li><li>rerank_8b</li><li>grade_results → escalate_to_14b</li><li>route_upgrade 8b→14b</li><li>hybrid_retrieve_14b</li><li>rerank_14b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 8b</li><li>hybrid_retrieve_8b</li><li>rerank_8b</li><li>judge_retrieval → escalate_to_14b</li><li>route_upgrade 8b→14b</li><li>hybrid_retrieve_14b</li><li>rerank_14b</li><li>judge_retrieval → answer</li><li>answer_draft</li><li>judge_answer → finish</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid retrieval이 lexical/semantic 후보를 합쳐 K08, K11, K09, K10 순으로 만들었고, rerank_8b가 그중 K08, K11, K09, K10을 상위에 올렸다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;8B retrieval looked shallow; escalate to 14B&#x27;로 판단해 escalate_to_14b을 선택했다.</li><li>8B hybrid retrieval 결과가 부족해서 14B hybrid retrieval+rereank 경로로 승격했다.</li><li>hybrid retrieval이 lexical/semantic 후보를 합쳐 K11, K10, K12, K08 순으로 만들었고, rerank_14b가 그중 K11, K10, K12, K08을 상위에 올렸다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 14B answer 단계가 hybrid retrieval로 뽑힌 근거 청크를 직답형으로 정리했다.</li><li>미리 정한 정답 기준 키워드 3/4, 핵심 청크 5/5개를 잡아서 총점 75.8점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid retrieval이 후보를 모으고 rerank_8b가 K08, K11, K09, K10 순으로 정렬했다.</li><li>judge_retrieval이 &#x27;8B retrieval looked shallow; escalate to 14B&#x27;로 판단해 escalate_to_14b을 선택했다.</li><li>retrieval judge가 8B 검색 근거가 얕다고 봐서 14B 경로로 올렸다.</li><li>hybrid retrieval이 후보를 모으고 rerank_14b가 K11, K10, K12, K08 순으로 정렬했다.</li><li>judge_retrieval이 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>judge_answer가 초안 답변을 보고 finish을 결정했다.</li><li>마지막에는 14B answer 단계 결과를 최종 judge에 저장했다.</li><li>미리 정한 정답 기준 키워드 4/4, 핵심 청크 5/5개를 잡아서 총점 89.6점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
-          <pre>결론: 전체 흐름은 외부 데이터 준비 → 관련 정보 검색 → 프롬프트 확장 → 응답 생성/업데이트로 요약된다.
+          <pre>결론: 문서는 외부 데이터 생성, 관련 정보 검색, LLM 프롬프트 확장, 외부 데이터 업데이트 흐름으로 RAG 작동 방식을 설명한다.
 질문: RAG는 전체적으로 어떤 단계로 작동하나요?
 근거 청크: K11, K10, K12
-모드: mock-14B | quality_ok=True | coverage=0.4
+모드: draft-14B | quality_ok=True | coverage=0.4
 핵심 근거:
 - 근거 1: 다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다.
 - 근거 2: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.
@@ -1685,7 +2249,8 @@
   &quot;keyword_hits&quot;: [
     &quot;외부 데이터&quot;,
     &quot;검색&quot;,
-    &quot;프롬프트&quot;
+    &quot;프롬프트&quot;,
+    &quot;업데이트&quot;
   ],
   &quot;support_chunks_expected&quot;: [
     &quot;K08&quot;,
@@ -1702,15 +2267,15 @@
     &quot;K12&quot;
   ],
   &quot;score_breakdown&quot;: {
-    &quot;keyword_score&quot;: 41.2,
+    &quot;keyword_score&quot;: 55.0,
     &quot;support_score&quot;: 25.0,
     &quot;quality_score&quot;: 9.6
   },
-  &quot;total_score&quot;: 75.8,
-  &quot;verdict&quot;: &quot;무난&quot;,
-  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 3/4, 핵심 청크 5/5개를 잡아서 총점 75.8점으로 평가했다.&quot;
+  &quot;total_score&quot;: 89.6,
+  &quot;verdict&quot;: &quot;좋음&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/4, 핵심 청크 5/5개를 잡아서 총점 89.6점으로 평가했다.&quot;
 }</pre>
-          <h3>Quality gate</h3>
+          <h3>Retrieval judge</h3>
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.4,
@@ -1726,7 +2291,7 @@
             <article class='attempt'>
               <div class='attempt-head'>
                 <strong>hybrid_retrieve_8b+rerank_8b</strong>
-                <span>1.79 ms</span>
+                <span>1.91 ms</span>
               </div>
               <div class='query'>rag는 전체적으로 어떤 단계로 작동하나요</div>
               <h4>hybrid retrieval candidates</h4>
@@ -1739,7 +2304,7 @@
             <article class='attempt'>
               <div class='attempt-head'>
                 <strong>hybrid_retrieve_14b+rerank_14b</strong>
-                <span>2.39 ms</span>
+                <span>2.54 ms</span>
               </div>
               <div class='query'>rag는 전체적으로 어떤 단계로 작동하나요 작동 단계 검색 프롬프트 업데이트 8b retrieval looked shallow escalate 14b</div>
               <h4>hybrid retrieval candidates</h4>
@@ -1761,7 +2326,7 @@
   &quot;complexity_score&quot;: 2,
   &quot;reason&quot;: &quot;direct factual retrieval&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>hybrid_retrieve_8b</td><td>1.68 ms</td><td><pre>{
+}</pre></td></tr><tr><td>hybrid_retrieve_8b</td><td>1.79 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;rag는 전체적으로 어떤 단계로 작동하나요&quot;,
   &quot;strategy&quot;: &quot;hybrid lexical + semantic with RRF fusion&quot;,
@@ -1784,13 +2349,13 @@
     &quot;작동하나요&quot;,
     &quot;전체적으로&quot;
   ]
-}</pre></td></tr><tr><td>rerank_8b</td><td>0.11 ms</td><td><pre>{
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.12 ms</td><td><pre>{
   &quot;candidate_count&quot;: 6,
   &quot;selected_count&quot;: 4,
   &quot;top_rerank_score&quot;: 35.252,
   &quot;rerank_strategy&quot;: &quot;hybrid candidate reranker: overlap + section-aware heuristic&quot;,
   &quot;top_rerank_lift&quot;: 2.730000000000004
-}</pre></td></tr><tr><td>grade_results</td><td>0.00 ms</td><td><pre>{
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.00 ms</td><td><pre>{
   &quot;action&quot;: &quot;escalate_to_14b&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: false,
@@ -1803,7 +2368,7 @@
   &quot;from&quot;: &quot;8b&quot;,
   &quot;to&quot;: &quot;14b&quot;,
   &quot;reason&quot;: &quot;8B retrieval looked shallow; escalate to 14B&quot;
-}</pre></td></tr><tr><td>hybrid_retrieve_14b</td><td>2.18 ms</td><td><pre>{
+}</pre></td></tr><tr><td>hybrid_retrieve_14b</td><td>2.40 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;rag는 전체적으로 어떤 단계로 작동하나요 작동 단계 검색 프롬프트 업데이트 8b retrieval looked shallow escalate 14b&quot;,
   &quot;strategy&quot;: &quot;hybrid lexical + semantic with RRF fusion&quot;,
@@ -1872,13 +2437,13 @@
     &quot;확장&quot;,
     &quot;흐름&quot;
   ]
-}</pre></td></tr><tr><td>rerank_14b</td><td>0.21 ms</td><td><pre>{
+}</pre></td></tr><tr><td>rerank_14b</td><td>0.14 ms</td><td><pre>{
   &quot;candidate_count&quot;: 8,
   &quot;selected_count&quot;: 6,
   &quot;top_rerank_score&quot;: 35.677,
   &quot;rerank_strategy&quot;: &quot;hybrid candidate reranker: overlap + section-aware heuristic&quot;,
   &quot;top_rerank_lift&quot;: 2.8900000000000006
-}</pre></td></tr><tr><td>grade_results</td><td>0.00 ms</td><td><pre>{
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.01 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
@@ -1887,8 +2452,47 @@
     &quot;distinct_sections&quot;: 6,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.09 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer_draft</td><td>0.10 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;14b&quot;
+}</pre></td></tr><tr><td>judge_answer</td><td>0.04 ms</td><td><pre>{
+  &quot;action&quot;: &quot;finish&quot;,
+  &quot;evaluation&quot;: {
+    &quot;gold_answer&quot;: &quot;문서는 외부 데이터 생성, 관련 정보 검색, LLM 프롬프트 확장, 외부 데이터 업데이트의 흐름으로 설명한다.&quot;,
+    &quot;rubric_keywords&quot;: [
+      &quot;외부 데이터&quot;,
+      &quot;검색&quot;,
+      &quot;프롬프트&quot;,
+      &quot;업데이트&quot;
+    ],
+    &quot;keyword_hits&quot;: [
+      &quot;외부 데이터&quot;,
+      &quot;검색&quot;,
+      &quot;프롬프트&quot;,
+      &quot;업데이트&quot;
+    ],
+    &quot;support_chunks_expected&quot;: [
+      &quot;K08&quot;,
+      &quot;K09&quot;,
+      &quot;K10&quot;,
+      &quot;K11&quot;,
+      &quot;K12&quot;
+    ],
+    &quot;support_chunks_hit&quot;: [
+      &quot;K08&quot;,
+      &quot;K09&quot;,
+      &quot;K10&quot;,
+      &quot;K11&quot;,
+      &quot;K12&quot;
+    ],
+    &quot;score_breakdown&quot;: {
+      &quot;keyword_score&quot;: 55.0,
+      &quot;support_score&quot;: 25.0,
+      &quot;quality_score&quot;: 9.6
+    },
+    &quot;total_score&quot;: 89.6,
+    &quot;verdict&quot;: &quot;좋음&quot;,
+    &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/4, 핵심 청크 5/5개를 잡아서 총점 89.6점으로 평가했다.&quot;
+  }
 }</pre></td></tr></tbody>
         </table>
       </article>
@@ -1947,7 +2551,7 @@
         &quot;K12&quot;,
         &quot;K01&quot;
       ],
-      &quot;elapsed_ms&quot;: 1.68
+      &quot;elapsed_ms&quot;: 1.79
     }
   },
   {
@@ -1967,11 +2571,11 @@
         &quot;K10&quot;
       ],
       &quot;top_rerank_lift&quot;: 2.730000000000004,
-      &quot;elapsed_ms&quot;: 0.11
+      &quot;elapsed_ms&quot;: 0.12
     }
   },
   {
-    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;node&quot;: &quot;judge_retrieval&quot;,
     &quot;message&quot;: &quot;품질 게이트가 8B 검색을 얕다고 판단해 14B로 승격함.&quot;,
     &quot;payload&quot;: {
       &quot;action&quot;: &quot;escalate_to_14b&quot;,
@@ -1987,7 +2591,7 @@
   },
   {
     &quot;node&quot;: &quot;route_upgrade&quot;,
-    &quot;message&quot;: &quot;품질 게이트가 14B 승격을 요청함&quot;,
+    &quot;message&quot;: &quot;retrieval judge가 14B 승격을 요청함&quot;,
     &quot;payload&quot;: {
       &quot;reason&quot;: &quot;8B retrieval looked shallow; escalate to 14B&quot;
     }
@@ -2076,7 +2680,7 @@
         &quot;K03&quot;,
         &quot;K02&quot;
       ],
-      &quot;elapsed_ms&quot;: 2.18
+      &quot;elapsed_ms&quot;: 2.4
     }
   },
   {
@@ -2098,11 +2702,11 @@
         &quot;K01&quot;
       ],
       &quot;top_rerank_lift&quot;: 2.8900000000000006,
-      &quot;elapsed_ms&quot;: 0.21
+      &quot;elapsed_ms&quot;: 0.14
     }
   },
   {
-    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;node&quot;: &quot;judge_retrieval&quot;,
     &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
     &quot;payload&quot;: {
       &quot;action&quot;: &quot;answer&quot;,
@@ -2113,21 +2717,66 @@
         &quot;distinct_sections&quot;: 6,
         &quot;reason&quot;: &quot;retrieval looks grounded&quot;
       },
-      &quot;elapsed_ms&quot;: 0.0
+      &quot;elapsed_ms&quot;: 0.01
     }
   },
   {
-    &quot;node&quot;: &quot;answer&quot;,
-    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;node&quot;: &quot;answer_draft&quot;,
+    &quot;message&quot;: &quot;초안 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;14b&quot;,
-      &quot;elapsed_ms&quot;: 0.09,
-      &quot;answer_preview&quot;: &quot;결론: 전체 흐름은 외부 데이터 준비 → 관련 정보 검색 → 프롬프트 확장 → 응답 생성/업데이트로 요약된다. 질문: RAG는 전체적으로 어떤 단계로 작동하나요? 근거 청크: K11, K10, K12 모드: mock-14B | quality_ok=True | coverage=0.4 핵심 근거: - 근거 1: 다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이…&quot;
+      &quot;elapsed_ms&quot;: 0.1,
+      &quot;answer_preview&quot;: &quot;결론: 문서는 외부 데이터 생성, 관련 정보 검색, LLM 프롬프트 확장, 외부 데이터 업데이트 흐름으로 RAG 작동 방식을 설명한다. 질문: RAG는 전체적으로 어떤 단계로 작동하나요? 근거 청크: K11, K10, K12 모드: draft-14B | quality_ok=True | coverage=0.4 핵심 근거: - 근거 1: 다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge_answer&quot;,
+    &quot;message&quot;: &quot;answer judge 통과: 응답이 정답 기준을 충분히 충족함.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;finish&quot;,
+      &quot;evaluation&quot;: {
+        &quot;gold_answer&quot;: &quot;문서는 외부 데이터 생성, 관련 정보 검색, LLM 프롬프트 확장, 외부 데이터 업데이트의 흐름으로 설명한다.&quot;,
+        &quot;rubric_keywords&quot;: [
+          &quot;외부 데이터&quot;,
+          &quot;검색&quot;,
+          &quot;프롬프트&quot;,
+          &quot;업데이트&quot;
+        ],
+        &quot;keyword_hits&quot;: [
+          &quot;외부 데이터&quot;,
+          &quot;검색&quot;,
+          &quot;프롬프트&quot;,
+          &quot;업데이트&quot;
+        ],
+        &quot;support_chunks_expected&quot;: [
+          &quot;K08&quot;,
+          &quot;K09&quot;,
+          &quot;K10&quot;,
+          &quot;K11&quot;,
+          &quot;K12&quot;
+        ],
+        &quot;support_chunks_hit&quot;: [
+          &quot;K08&quot;,
+          &quot;K09&quot;,
+          &quot;K10&quot;,
+          &quot;K11&quot;,
+          &quot;K12&quot;
+        ],
+        &quot;score_breakdown&quot;: {
+          &quot;keyword_score&quot;: 55.0,
+          &quot;support_score&quot;: 25.0,
+          &quot;quality_score&quot;: 9.6
+        },
+        &quot;total_score&quot;: 89.6,
+        &quot;verdict&quot;: &quot;좋음&quot;,
+        &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/4, 핵심 청크 5/5개를 잡아서 총점 89.6점으로 평가했다.&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.04
     }
   },
   {
     &quot;node&quot;: &quot;judge&quot;,
-    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 최종 응답 평가 완료&quot;,
     &quot;payload&quot;: {
       &quot;gold_answer&quot;: &quot;문서는 외부 데이터 생성, 관련 정보 검색, LLM 프롬프트 확장, 외부 데이터 업데이트의 흐름으로 설명한다.&quot;,
       &quot;rubric_keywords&quot;: [
@@ -2139,7 +2788,8 @@
       &quot;keyword_hits&quot;: [
         &quot;외부 데이터&quot;,
         &quot;검색&quot;,
-        &quot;프롬프트&quot;
+        &quot;프롬프트&quot;,
+        &quot;업데이트&quot;
       ],
       &quot;support_chunks_expected&quot;: [
         &quot;K08&quot;,
@@ -2156,13 +2806,13 @@
         &quot;K12&quot;
       ],
       &quot;score_breakdown&quot;: {
-        &quot;keyword_score&quot;: 41.2,
+        &quot;keyword_score&quot;: 55.0,
         &quot;support_score&quot;: 25.0,
         &quot;quality_score&quot;: 9.6
       },
-      &quot;total_score&quot;: 75.8,
-      &quot;verdict&quot;: &quot;무난&quot;,
-      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 3/4, 핵심 청크 5/5개를 잡아서 총점 75.8점으로 평가했다.&quot;
+      &quot;total_score&quot;: 89.6,
+      &quot;verdict&quot;: &quot;좋음&quot;,
+      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/4, 핵심 청크 5/5개를 잡아서 총점 89.6점으로 평가했다.&quot;
     }
   }
 ]</pre>
@@ -2180,27 +2830,29 @@
           <span class='pill'>initial route: 8B</span>
           <span class='pill'>final model: 8B</span>
           <span class='pill'>restarts: 0</span>
-          <span class='pill'>hybrid retrieval</span>
-          <span class='pill'>total: 2.44 ms</span>
+          <span class='pill'>answer regenerations: 1</span>
+          <span class='pill'>total: 2.81 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 8b</li><li>hybrid_retrieve_8b</li><li>rerank_8b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 8b</li><li>hybrid_retrieve_8b</li><li>rerank_8b</li><li>judge_retrieval → answer</li><li>answer_draft</li><li>judge_answer → regenerate_once</li><li>answer_revise</li><li>judge_answer_final</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid retrieval이 lexical/semantic 후보를 합쳐 K10, K08, K13, K03 순으로 만들었고, rerank_8b가 그중 K10, K08, K13, K03을 상위에 올렸다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 hybrid retrieval로 뽑힌 근거 청크를 직답형으로 정리했다.</li><li>미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 63.2점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid retrieval이 후보를 모으고 rerank_8b가 K10, K08, K13, K03 순으로 정렬했다.</li><li>judge_retrieval이 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>judge_answer가 초안 답변을 보고 regenerate_once을 결정했다.</li><li>초안 점수가 낮아 answer를 한 번 더 직답형으로 정리한 뒤 최종 judge를 다시 기록했다.</li><li>마지막에는 8B answer 단계 결과를 최종 judge에 저장했다.</li><li>미리 정한 정답 기준 키워드 4/6, 핵심 청크 1/1개를 잡아서 총점 72.4점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
-          <pre>결론: 관련 정보 검색 단계에서는 사용자 쿼리를 벡터화하고 벡터 데이터베이스에서 연관성 높은 문서·구절을 찾는다.
+          <pre>직답: 관련 정보 검색 단계에서는 사용자 쿼리를 벡터 표현으로 바꾸고 벡터 데이터베이스와 매칭해 연관성 높은 문서나 구절을 찾는다.
+왜 이렇게 말하나: 여기서 핵심은 벡터화와 벡터 데이터베이스 매칭으로 연관성 높은 구절을 찾는 점이다.
 질문: 문서에서 말하는 관련 정보 검색 단계는 어떤 식으로 이뤄지나요?
 근거 청크: K10, K08, K13
-모드: mock-8B | quality_ok=True | coverage=0.444
-핵심 근거:
-- 근거 1: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.
-- 근거 2: RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다.
-- 근거 3: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.</pre>
+모드: revised-8B | quality_ok=True | coverage=0.444
+핵심 포인트:
+- 포인트 1: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.
+- 포인트 2: RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다.
+- 포인트 3: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.
+한계: 이번 round는 실백엔드가 아니라 mock 파이프라인이므로 모델 추론 성능 자체를 뜻하지는 않는다.</pre>
           <h3>Expected answer</h3>
           <pre>사용자 쿼리를 벡터 표현으로 바꾸고 벡터 데이터베이스와 매칭해, 연관성이 높은 문서나 구절을 검색하는 방식으로 이뤄진다.</pre>
           <h3>Judge score</h3>
@@ -2216,6 +2868,7 @@
   ],
   &quot;keyword_hits&quot;: [
     &quot;벡터&quot;,
+    &quot;데이터베이스&quot;,
     &quot;연관성&quot;,
     &quot;문서&quot;
   ],
@@ -2226,15 +2879,15 @@
     &quot;K10&quot;
   ],
   &quot;score_breakdown&quot;: {
-    &quot;keyword_score&quot;: 27.5,
+    &quot;keyword_score&quot;: 36.7,
     &quot;support_score&quot;: 25.0,
     &quot;quality_score&quot;: 10.7
   },
-  &quot;total_score&quot;: 63.2,
-  &quot;verdict&quot;: &quot;아쉬움&quot;,
-  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 63.2점으로 평가했다.&quot;
+  &quot;total_score&quot;: 72.4,
+  &quot;verdict&quot;: &quot;무난&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/6, 핵심 청크 1/1개를 잡아서 총점 72.4점으로 평가했다.&quot;
 }</pre>
-          <h3>Quality gate</h3>
+          <h3>Retrieval judge</h3>
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.444,
@@ -2250,7 +2903,7 @@
             <article class='attempt'>
               <div class='attempt-head'>
                 <strong>hybrid_retrieve_8b+rerank_8b</strong>
-                <span>2.18 ms</span>
+                <span>2.21 ms</span>
               </div>
               <div class='query'>문서에서 말하는 관련 정보 검색 단계는 어떤 식으로</div>
               <h4>hybrid retrieval candidates</h4>
@@ -2270,7 +2923,7 @@
   &quot;complexity_score&quot;: 2,
   &quot;reason&quot;: &quot;direct factual retrieval&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>hybrid_retrieve_8b</td><td>2.06 ms</td><td><pre>{
+}</pre></td></tr><tr><td>hybrid_retrieve_8b</td><td>2.09 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;문서에서 말하는 관련 정보 검색 단계는 어떤 식으로&quot;,
   &quot;strategy&quot;: &quot;hybrid lexical + semantic with RRF fusion&quot;,
@@ -2318,7 +2971,7 @@
   &quot;top_rerank_score&quot;: 45.967,
   &quot;rerank_strategy&quot;: &quot;hybrid candidate reranker: overlap + section-aware heuristic&quot;,
   &quot;top_rerank_lift&quot;: 13.18
-}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.01 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
@@ -2327,8 +2980,72 @@
     &quot;distinct_sections&quot;: 4,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.12 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer_draft</td><td>0.13 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;8b&quot;
+}</pre></td></tr><tr><td>judge_answer</td><td>0.04 ms</td><td><pre>{
+  &quot;action&quot;: &quot;regenerate_once&quot;,
+  &quot;evaluation&quot;: {
+    &quot;gold_answer&quot;: &quot;사용자 쿼리를 벡터 표현으로 바꾸고 벡터 데이터베이스와 매칭해, 연관성이 높은 문서나 구절을 검색하는 방식으로 이뤄진다.&quot;,
+    &quot;rubric_keywords&quot;: [
+      &quot;벡터&quot;,
+      &quot;데이터베이스&quot;,
+      &quot;매칭&quot;,
+      &quot;연관성&quot;,
+      &quot;문서&quot;,
+      &quot;구절&quot;
+    ],
+    &quot;keyword_hits&quot;: [
+      &quot;벡터&quot;,
+      &quot;연관성&quot;,
+      &quot;문서&quot;
+    ],
+    &quot;support_chunks_expected&quot;: [
+      &quot;K10&quot;
+    ],
+    &quot;support_chunks_hit&quot;: [
+      &quot;K10&quot;
+    ],
+    &quot;score_breakdown&quot;: {
+      &quot;keyword_score&quot;: 27.5,
+      &quot;support_score&quot;: 25.0,
+      &quot;quality_score&quot;: 10.7
+    },
+    &quot;total_score&quot;: 63.2,
+    &quot;verdict&quot;: &quot;아쉬움&quot;,
+    &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 63.2점으로 평가했다.&quot;
+  }
+}</pre></td></tr><tr><td>answer_revise</td><td>0.18 ms</td><td><pre>{
+  &quot;regeneration&quot;: 1
+}</pre></td></tr><tr><td>judge_answer_final</td><td>0.04 ms</td><td><pre>{
+  &quot;gold_answer&quot;: &quot;사용자 쿼리를 벡터 표현으로 바꾸고 벡터 데이터베이스와 매칭해, 연관성이 높은 문서나 구절을 검색하는 방식으로 이뤄진다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;벡터&quot;,
+    &quot;데이터베이스&quot;,
+    &quot;매칭&quot;,
+    &quot;연관성&quot;,
+    &quot;문서&quot;,
+    &quot;구절&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;벡터&quot;,
+    &quot;데이터베이스&quot;,
+    &quot;연관성&quot;,
+    &quot;문서&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K10&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K10&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 36.7,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 10.7
+  },
+  &quot;total_score&quot;: 72.4,
+  &quot;verdict&quot;: &quot;무난&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/6, 핵심 청크 1/1개를 잡아서 총점 72.4점으로 평가했다.&quot;
 }</pre></td></tr></tbody>
         </table>
       </article>
@@ -2404,7 +3121,7 @@
         &quot;K05&quot;,
         &quot;K09&quot;
       ],
-      &quot;elapsed_ms&quot;: 2.06
+      &quot;elapsed_ms&quot;: 2.09
     }
   },
   {
@@ -2428,7 +3145,7 @@
     }
   },
   {
-    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;node&quot;: &quot;judge_retrieval&quot;,
     &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
     &quot;payload&quot;: {
       &quot;action&quot;: &quot;answer&quot;,
@@ -2443,17 +3160,101 @@
     }
   },
   {
-    &quot;node&quot;: &quot;answer&quot;,
-    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;node&quot;: &quot;answer_draft&quot;,
+    &quot;message&quot;: &quot;초안 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;8b&quot;,
-      &quot;elapsed_ms&quot;: 0.12,
-      &quot;answer_preview&quot;: &quot;결론: 관련 정보 검색 단계에서는 사용자 쿼리를 벡터화하고 벡터 데이터베이스에서 연관성 높은 문서·구절을 찾는다. 질문: 문서에서 말하는 관련 정보 검색 단계는 어떤 식으로 이뤄지나요? 근거 청크: K10, K08, K13 모드: mock-8B | quality_ok=True | coverage=0.444 핵심 근거: - 근거 1: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터…&quot;
+      &quot;elapsed_ms&quot;: 0.13,
+      &quot;answer_preview&quot;: &quot;결론: 관련 정보 검색 단계에서는 사용자 쿼리를 벡터 표현으로 바꾸고 벡터 데이터베이스와 매칭해 연관성 높은 문서나 구절을 찾는다. 질문: 문서에서 말하는 관련 정보 검색 단계는 어떤 식으로 이뤄지나요? 근거 청크: K10, K08, K13 모드: draft-8B | quality_ok=True | coverage=0.444 핵심 근거: - 근거 1: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge_answer&quot;,
+    &quot;message&quot;: &quot;answer judge가 응답 형식/키워드 충족이 약하다고 판단해 한 번 더 생성함.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;regenerate_once&quot;,
+      &quot;evaluation&quot;: {
+        &quot;gold_answer&quot;: &quot;사용자 쿼리를 벡터 표현으로 바꾸고 벡터 데이터베이스와 매칭해, 연관성이 높은 문서나 구절을 검색하는 방식으로 이뤄진다.&quot;,
+        &quot;rubric_keywords&quot;: [
+          &quot;벡터&quot;,
+          &quot;데이터베이스&quot;,
+          &quot;매칭&quot;,
+          &quot;연관성&quot;,
+          &quot;문서&quot;,
+          &quot;구절&quot;
+        ],
+        &quot;keyword_hits&quot;: [
+          &quot;벡터&quot;,
+          &quot;연관성&quot;,
+          &quot;문서&quot;
+        ],
+        &quot;support_chunks_expected&quot;: [
+          &quot;K10&quot;
+        ],
+        &quot;support_chunks_hit&quot;: [
+          &quot;K10&quot;
+        ],
+        &quot;score_breakdown&quot;: {
+          &quot;keyword_score&quot;: 27.5,
+          &quot;support_score&quot;: 25.0,
+          &quot;quality_score&quot;: 10.7
+        },
+        &quot;total_score&quot;: 63.2,
+        &quot;verdict&quot;: &quot;아쉬움&quot;,
+        &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 63.2점으로 평가했다.&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.04
+    }
+  },
+  {
+    &quot;node&quot;: &quot;answer_revise&quot;,
+    &quot;message&quot;: &quot;answer judge 요청으로 답변을 한 번 더 정리함&quot;,
+    &quot;payload&quot;: {
+      &quot;elapsed_ms&quot;: 0.18,
+      &quot;answer_preview&quot;: &quot;직답: 관련 정보 검색 단계에서는 사용자 쿼리를 벡터 표현으로 바꾸고 벡터 데이터베이스와 매칭해 연관성 높은 문서나 구절을 찾는다. 왜 이렇게 말하나: 여기서 핵심은 벡터화와 벡터 데이터베이스 매칭으로 연관성 높은 구절을 찾는 점이다. 질문: 문서에서 말하는 관련 정보 검색 단계는 어떤 식으로 이뤄지나요? 근거 청크: K10, K08, K13 모드: revised-8B | quality_ok=True |…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge_answer_final&quot;,
+    &quot;message&quot;: &quot;재생성 후 최종 채점 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;evaluation&quot;: {
+        &quot;gold_answer&quot;: &quot;사용자 쿼리를 벡터 표현으로 바꾸고 벡터 데이터베이스와 매칭해, 연관성이 높은 문서나 구절을 검색하는 방식으로 이뤄진다.&quot;,
+        &quot;rubric_keywords&quot;: [
+          &quot;벡터&quot;,
+          &quot;데이터베이스&quot;,
+          &quot;매칭&quot;,
+          &quot;연관성&quot;,
+          &quot;문서&quot;,
+          &quot;구절&quot;
+        ],
+        &quot;keyword_hits&quot;: [
+          &quot;벡터&quot;,
+          &quot;데이터베이스&quot;,
+          &quot;연관성&quot;,
+          &quot;문서&quot;
+        ],
+        &quot;support_chunks_expected&quot;: [
+          &quot;K10&quot;
+        ],
+        &quot;support_chunks_hit&quot;: [
+          &quot;K10&quot;
+        ],
+        &quot;score_breakdown&quot;: {
+          &quot;keyword_score&quot;: 36.7,
+          &quot;support_score&quot;: 25.0,
+          &quot;quality_score&quot;: 10.7
+        },
+        &quot;total_score&quot;: 72.4,
+        &quot;verdict&quot;: &quot;무난&quot;,
+        &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/6, 핵심 청크 1/1개를 잡아서 총점 72.4점으로 평가했다.&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.04
     }
   },
   {
     &quot;node&quot;: &quot;judge&quot;,
-    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 최종 응답 평가 완료&quot;,
     &quot;payload&quot;: {
       &quot;gold_answer&quot;: &quot;사용자 쿼리를 벡터 표현으로 바꾸고 벡터 데이터베이스와 매칭해, 연관성이 높은 문서나 구절을 검색하는 방식으로 이뤄진다.&quot;,
       &quot;rubric_keywords&quot;: [
@@ -2466,6 +3267,7 @@
       ],
       &quot;keyword_hits&quot;: [
         &quot;벡터&quot;,
+        &quot;데이터베이스&quot;,
         &quot;연관성&quot;,
         &quot;문서&quot;
       ],
@@ -2476,13 +3278,13 @@
         &quot;K10&quot;
       ],
       &quot;score_breakdown&quot;: {
-        &quot;keyword_score&quot;: 27.5,
+        &quot;keyword_score&quot;: 36.7,
         &quot;support_score&quot;: 25.0,
         &quot;quality_score&quot;: 10.7
       },
-      &quot;total_score&quot;: 63.2,
-      &quot;verdict&quot;: &quot;아쉬움&quot;,
-      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 63.2점으로 평가했다.&quot;
+      &quot;total_score&quot;: 72.4,
+      &quot;verdict&quot;: &quot;무난&quot;,
+      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/6, 핵심 청크 1/1개를 잡아서 총점 72.4점으로 평가했다.&quot;
     }
   }
 ]</pre>
@@ -2500,23 +3302,23 @@
           <span class='pill'>initial route: 8B</span>
           <span class='pill'>final model: 8B</span>
           <span class='pill'>restarts: 0</span>
-          <span class='pill'>hybrid retrieval</span>
-          <span class='pill'>total: 1.89 ms</span>
+          <span class='pill'>answer regenerations: 0</span>
+          <span class='pill'>total: 1.95 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 8b</li><li>hybrid_retrieve_8b</li><li>rerank_8b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 8b</li><li>hybrid_retrieve_8b</li><li>rerank_8b</li><li>judge_retrieval → answer</li><li>answer_draft</li><li>judge_answer → finish</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid retrieval이 lexical/semantic 후보를 합쳐 K11, K10, K01, K02 순으로 만들었고, rerank_8b가 그중 K11, K10, K01, K02을 상위에 올렸다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 hybrid retrieval로 뽑힌 근거 청크를 직답형으로 정리했다.</li><li>미리 정한 정답 기준 키워드 5/6, 핵심 청크 1/1개를 잡아서 총점 84.5점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid retrieval이 후보를 모으고 rerank_8b가 K11, K10, K01, K02 순으로 정렬했다.</li><li>judge_retrieval이 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>judge_answer가 초안 답변을 보고 finish을 결정했다.</li><li>마지막에는 8B answer 단계 결과를 최종 judge에 저장했다.</li><li>미리 정한 정답 기준 키워드 5/6, 핵심 청크 1/1개를 잡아서 총점 84.5점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
-          <pre>결론: 프롬프트 확장은 검색된 관련 데이터를 사용자 입력에 덧붙여 더 정확하고 근거 있는 답변을 만들기 위해 필요하다.
+          <pre>결론: 프롬프트 확장 단계는 검색된 관련 데이터를 사용자 입력에 덧붙여 LLM이 더 정확하고 근거 있는 답변을 생성하게 하기 위해 필요하다.
 질문: LLM 프롬프트 확장 단계는 왜 필요하고 무엇을 추가하나요?
 근거 청크: K11, K10, K01
-모드: mock-8B | quality_ok=True | coverage=0.571
+모드: draft-8B | quality_ok=True | coverage=0.571
 핵심 근거:
 - 근거 1: 다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다.
 - 근거 2: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.
@@ -2556,7 +3358,7 @@
   &quot;verdict&quot;: &quot;무난&quot;,
   &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 5/6, 핵심 청크 1/1개를 잡아서 총점 84.5점으로 평가했다.&quot;
 }</pre>
-          <h3>Quality gate</h3>
+          <h3>Retrieval judge</h3>
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.571,
@@ -2572,7 +3374,7 @@
             <article class='attempt'>
               <div class='attempt-head'>
                 <strong>hybrid_retrieve_8b+rerank_8b</strong>
-                <span>1.63 ms</span>
+                <span>1.68 ms</span>
               </div>
               <div class='query'>llm 프롬프트 확장 단계는 필요하고 무엇을 추가하나요</div>
               <h4>hybrid retrieval candidates</h4>
@@ -2594,7 +3396,7 @@
   &quot;complexity_score&quot;: 2,
   &quot;reason&quot;: &quot;direct factual retrieval&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>hybrid_retrieve_8b</td><td>1.50 ms</td><td><pre>{
+}</pre></td></tr><tr><td>hybrid_retrieve_8b</td><td>1.54 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;llm 프롬프트 확장 단계는 필요하고 무엇을 추가하나요&quot;,
   &quot;strategy&quot;: &quot;hybrid lexical + semantic with RRF fusion&quot;,
@@ -2624,13 +3426,13 @@
     &quot;필요하고&quot;,
     &quot;확장&quot;
   ]
-}</pre></td></tr><tr><td>rerank_8b</td><td>0.13 ms</td><td><pre>{
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.14 ms</td><td><pre>{
   &quot;candidate_count&quot;: 6,
   &quot;selected_count&quot;: 4,
   &quot;top_rerank_score&quot;: 43.267,
   &quot;rerank_strategy&quot;: &quot;hybrid candidate reranker: overlap + section-aware heuristic&quot;,
   &quot;top_rerank_lift&quot;: 10.480000000000004
-}</pre></td></tr><tr><td>grade_results</td><td>0.00 ms</td><td><pre>{
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.00 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
@@ -2639,8 +3441,42 @@
     &quot;distinct_sections&quot;: 4,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.10 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer_draft</td><td>0.11 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;8b&quot;
+}</pre></td></tr><tr><td>judge_answer</td><td>0.04 ms</td><td><pre>{
+  &quot;action&quot;: &quot;finish&quot;,
+  &quot;evaluation&quot;: {
+    &quot;gold_answer&quot;: &quot;검색된 관련 데이터를 사용자 입력에 붙여 프롬프트를 확장함으로써, LLM이 더 정확하고 근거 있는 답변을 생성하게 하기 위해 필요하다.&quot;,
+    &quot;rubric_keywords&quot;: [
+      &quot;검색된&quot;,
+      &quot;관련 데이터&quot;,
+      &quot;프롬프트&quot;,
+      &quot;확장&quot;,
+      &quot;정확&quot;,
+      &quot;답변&quot;
+    ],
+    &quot;keyword_hits&quot;: [
+      &quot;검색된&quot;,
+      &quot;관련 데이터&quot;,
+      &quot;프롬프트&quot;,
+      &quot;확장&quot;,
+      &quot;답변&quot;
+    ],
+    &quot;support_chunks_expected&quot;: [
+      &quot;K11&quot;
+    ],
+    &quot;support_chunks_hit&quot;: [
+      &quot;K11&quot;
+    ],
+    &quot;score_breakdown&quot;: {
+      &quot;keyword_score&quot;: 45.8,
+      &quot;support_score&quot;: 25.0,
+      &quot;quality_score&quot;: 13.7
+    },
+    &quot;total_score&quot;: 84.5,
+    &quot;verdict&quot;: &quot;무난&quot;,
+    &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 5/6, 핵심 청크 1/1개를 잡아서 총점 84.5점으로 평가했다.&quot;
+  }
 }</pre></td></tr></tbody>
         </table>
       </article>
@@ -2706,7 +3542,7 @@
         &quot;K13&quot;,
         &quot;K03&quot;
       ],
-      &quot;elapsed_ms&quot;: 1.5
+      &quot;elapsed_ms&quot;: 1.54
     }
   },
   {
@@ -2726,11 +3562,11 @@
         &quot;K02&quot;
       ],
       &quot;top_rerank_lift&quot;: 10.480000000000004,
-      &quot;elapsed_ms&quot;: 0.13
+      &quot;elapsed_ms&quot;: 0.14
     }
   },
   {
-    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;node&quot;: &quot;judge_retrieval&quot;,
     &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
     &quot;payload&quot;: {
       &quot;action&quot;: &quot;answer&quot;,
@@ -2745,17 +3581,57 @@
     }
   },
   {
-    &quot;node&quot;: &quot;answer&quot;,
-    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;node&quot;: &quot;answer_draft&quot;,
+    &quot;message&quot;: &quot;초안 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;8b&quot;,
-      &quot;elapsed_ms&quot;: 0.1,
-      &quot;answer_preview&quot;: &quot;결론: 프롬프트 확장은 검색된 관련 데이터를 사용자 입력에 덧붙여 더 정확하고 근거 있는 답변을 만들기 위해 필요하다. 질문: LLM 프롬프트 확장 단계는 왜 필요하고 무엇을 추가하나요? 근거 청크: K11, K10, K01 모드: mock-8B | quality_ok=True | coverage=0.571 핵심 근거: - 근거 1: 다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는…&quot;
+      &quot;elapsed_ms&quot;: 0.11,
+      &quot;answer_preview&quot;: &quot;결론: 프롬프트 확장 단계는 검색된 관련 데이터를 사용자 입력에 덧붙여 LLM이 더 정확하고 근거 있는 답변을 생성하게 하기 위해 필요하다. 질문: LLM 프롬프트 확장 단계는 왜 필요하고 무엇을 추가하나요? 근거 청크: K11, K10, K01 모드: draft-8B | quality_ok=True | coverage=0.571 핵심 근거: - 근거 1: 다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge_answer&quot;,
+    &quot;message&quot;: &quot;answer judge 통과: 응답이 정답 기준을 충분히 충족함.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;finish&quot;,
+      &quot;evaluation&quot;: {
+        &quot;gold_answer&quot;: &quot;검색된 관련 데이터를 사용자 입력에 붙여 프롬프트를 확장함으로써, LLM이 더 정확하고 근거 있는 답변을 생성하게 하기 위해 필요하다.&quot;,
+        &quot;rubric_keywords&quot;: [
+          &quot;검색된&quot;,
+          &quot;관련 데이터&quot;,
+          &quot;프롬프트&quot;,
+          &quot;확장&quot;,
+          &quot;정확&quot;,
+          &quot;답변&quot;
+        ],
+        &quot;keyword_hits&quot;: [
+          &quot;검색된&quot;,
+          &quot;관련 데이터&quot;,
+          &quot;프롬프트&quot;,
+          &quot;확장&quot;,
+          &quot;답변&quot;
+        ],
+        &quot;support_chunks_expected&quot;: [
+          &quot;K11&quot;
+        ],
+        &quot;support_chunks_hit&quot;: [
+          &quot;K11&quot;
+        ],
+        &quot;score_breakdown&quot;: {
+          &quot;keyword_score&quot;: 45.8,
+          &quot;support_score&quot;: 25.0,
+          &quot;quality_score&quot;: 13.7
+        },
+        &quot;total_score&quot;: 84.5,
+        &quot;verdict&quot;: &quot;무난&quot;,
+        &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 5/6, 핵심 청크 1/1개를 잡아서 총점 84.5점으로 평가했다.&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.04
     }
   },
   {
     &quot;node&quot;: &quot;judge&quot;,
-    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 최종 응답 평가 완료&quot;,
     &quot;payload&quot;: {
       &quot;gold_answer&quot;: &quot;검색된 관련 데이터를 사용자 입력에 붙여 프롬프트를 확장함으로써, LLM이 더 정확하고 근거 있는 답변을 생성하게 하기 위해 필요하다.&quot;,
       &quot;rubric_keywords&quot;: [
@@ -2804,27 +3680,29 @@
           <span class='pill'>initial route: 14B</span>
           <span class='pill'>final model: 14B</span>
           <span class='pill'>restarts: 0</span>
-          <span class='pill'>hybrid retrieval</span>
-          <span class='pill'>total: 2.67 ms</span>
+          <span class='pill'>answer regenerations: 1</span>
+          <span class='pill'>total: 3.11 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 14b</li><li>hybrid_retrieve_14b</li><li>rerank_14b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 14b</li><li>hybrid_retrieve_14b</li><li>rerank_14b</li><li>judge_retrieval → answer</li><li>answer_draft</li><li>judge_answer → regenerate_once</li><li>answer_revise</li><li>judge_answer_final</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 14B 경로로 분류했다. 이유: multi-step/comparison</li><li>hybrid retrieval이 lexical/semantic 후보를 합쳐 K14, K13, K10, K09 순으로 만들었고, rerank_14b가 그중 K14, K13, K10, K09을 상위에 올렸다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 14B answer 단계가 hybrid retrieval로 뽑힌 근거 청크를 직답형으로 정리했다.</li><li>미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 64.5점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 14B 경로로 분류했다. 이유: multi-step/comparison</li><li>hybrid retrieval이 후보를 모으고 rerank_14b가 K14, K13, K10, K09 순으로 정렬했다.</li><li>judge_retrieval이 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>judge_answer가 초안 답변을 보고 regenerate_once을 결정했다.</li><li>초안 점수가 낮아 answer를 한 번 더 직답형으로 정리한 뒤 최종 judge를 다시 기록했다.</li><li>마지막에는 14B answer 단계 결과를 최종 judge에 저장했다.</li><li>미리 정한 정답 기준 키워드 4/6, 핵심 청크 1/1개를 잡아서 총점 73.7점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
-          <pre>결론: RAG는 외부 지식을 붙여 답변을 생성하는 전체 구조이고, 시맨틱 검색은 그 안에서 관련 구절을 더 잘 찾게 돕는 검색 기술이다.
+          <pre>직답: RAG는 외부 지식을 붙여 답변을 생성하는 전체 접근이고, 시맨틱 검색은 그 성능을 높이기 위해 관련 구절을 더 정확히 찾는 검색 기술이다.
+왜 이렇게 말하나: 그래서 RAG는 상위 아키텍처이고, 시맨틱 검색은 그 안의 retrieval 품질을 끌어올리는 하위 기술이다.
 질문: AWS 문서 기준으로 RAG와 시맨틱 검색의 차이를 비교해줘.
 근거 청크: K14, K13, K10
-모드: mock-14B | quality_ok=True | coverage=0.5
-핵심 근거:
-- 근거 1: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
-- 근거 2: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.
-- 근거 3: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.</pre>
+모드: revised-14B | quality_ok=True | coverage=0.5
+핵심 포인트:
+- 포인트 1: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
+- 포인트 2: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.
+- 포인트 3: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.
+한계: 이번 round는 실백엔드가 아니라 mock 파이프라인이므로 모델 추론 성능 자체를 뜻하지는 않는다.</pre>
           <h3>Expected answer</h3>
           <pre>RAG는 외부 지식을 붙여 답변을 생성하는 전체 접근이고, 시맨틱 검색은 그 RAG 성능을 높이기 위해 대규모 데이터에서 더 정확한 관련 구절을 찾고 지식 준비 작업을 줄여주는 검색 기술이다.</pre>
           <h3>Judge score</h3>
@@ -2841,7 +3719,8 @@
   &quot;keyword_hits&quot;: [
     &quot;전체 접근&quot;,
     &quot;시맨틱 검색&quot;,
-    &quot;관련 구절&quot;
+    &quot;관련 구절&quot;,
+    &quot;성능&quot;
   ],
   &quot;support_chunks_expected&quot;: [
     &quot;K13&quot;
@@ -2850,15 +3729,15 @@
     &quot;K13&quot;
   ],
   &quot;score_breakdown&quot;: {
-    &quot;keyword_score&quot;: 27.5,
+    &quot;keyword_score&quot;: 36.7,
     &quot;support_score&quot;: 25.0,
     &quot;quality_score&quot;: 12.0
   },
-  &quot;total_score&quot;: 64.5,
-  &quot;verdict&quot;: &quot;아쉬움&quot;,
-  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 64.5점으로 평가했다.&quot;
+  &quot;total_score&quot;: 73.7,
+  &quot;verdict&quot;: &quot;무난&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/6, 핵심 청크 1/1개를 잡아서 총점 73.7점으로 평가했다.&quot;
 }</pre>
-          <h3>Quality gate</h3>
+          <h3>Retrieval judge</h3>
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.5,
@@ -2874,7 +3753,7 @@
             <article class='attempt'>
               <div class='attempt-head'>
                 <strong>hybrid_retrieve_14b+rerank_14b</strong>
-                <span>2.37 ms</span>
+                <span>2.47 ms</span>
               </div>
               <div class='query'>aws 문서 기준으로 rag와 시맨틱 검색의 차이를 비교해줘 차이 비교 검색 bedrock kendra sagemaker</div>
               <h4>hybrid retrieval candidates</h4>
@@ -2898,7 +3777,7 @@
   &quot;complexity_score&quot;: 4,
   &quot;reason&quot;: &quot;multi-step/comparison&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>hybrid_retrieve_14b</td><td>2.21 ms</td><td><pre>{
+}</pre></td></tr><tr><td>hybrid_retrieve_14b</td><td>2.28 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;aws 문서 기준으로 rag와 시맨틱 검색의 차이를 비교해줘 차이 비교 검색 bedrock kendra sagemaker&quot;,
   &quot;strategy&quot;: &quot;hybrid lexical + semantic with RRF fusion&quot;,
@@ -2952,13 +3831,13 @@
     &quot;차이를&quot;,
     &quot;청크&quot;
   ]
-}</pre></td></tr><tr><td>rerank_14b</td><td>0.16 ms</td><td><pre>{
+}</pre></td></tr><tr><td>rerank_14b</td><td>0.19 ms</td><td><pre>{
   &quot;candidate_count&quot;: 8,
   &quot;selected_count&quot;: 6,
   &quot;top_rerank_score&quot;: 45.027,
   &quot;rerank_strategy&quot;: &quot;hybrid candidate reranker: overlap + section-aware heuristic&quot;,
   &quot;top_rerank_lift&quot;: 12.240000000000002
-}</pre></td></tr><tr><td>grade_results</td><td>0.00 ms</td><td><pre>{
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.01 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
@@ -2967,8 +3846,72 @@
     &quot;distinct_sections&quot;: 6,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.14 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer_draft</td><td>0.16 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;14b&quot;
+}</pre></td></tr><tr><td>judge_answer</td><td>0.04 ms</td><td><pre>{
+  &quot;action&quot;: &quot;regenerate_once&quot;,
+  &quot;evaluation&quot;: {
+    &quot;gold_answer&quot;: &quot;RAG는 외부 지식을 붙여 답변을 생성하는 전체 접근이고, 시맨틱 검색은 그 RAG 성능을 높이기 위해 대규모 데이터에서 더 정확한 관련 구절을 찾고 지식 준비 작업을 줄여주는 검색 기술이다.&quot;,
+    &quot;rubric_keywords&quot;: [
+      &quot;전체 접근&quot;,
+      &quot;시맨틱 검색&quot;,
+      &quot;관련 구절&quot;,
+      &quot;정확&quot;,
+      &quot;준비 작업&quot;,
+      &quot;성능&quot;
+    ],
+    &quot;keyword_hits&quot;: [
+      &quot;전체 접근&quot;,
+      &quot;시맨틱 검색&quot;,
+      &quot;관련 구절&quot;
+    ],
+    &quot;support_chunks_expected&quot;: [
+      &quot;K13&quot;
+    ],
+    &quot;support_chunks_hit&quot;: [
+      &quot;K13&quot;
+    ],
+    &quot;score_breakdown&quot;: {
+      &quot;keyword_score&quot;: 27.5,
+      &quot;support_score&quot;: 25.0,
+      &quot;quality_score&quot;: 12.0
+    },
+    &quot;total_score&quot;: 64.5,
+    &quot;verdict&quot;: &quot;아쉬움&quot;,
+    &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 64.5점으로 평가했다.&quot;
+  }
+}</pre></td></tr><tr><td>answer_revise</td><td>0.15 ms</td><td><pre>{
+  &quot;regeneration&quot;: 1
+}</pre></td></tr><tr><td>judge_answer_final</td><td>0.05 ms</td><td><pre>{
+  &quot;gold_answer&quot;: &quot;RAG는 외부 지식을 붙여 답변을 생성하는 전체 접근이고, 시맨틱 검색은 그 RAG 성능을 높이기 위해 대규모 데이터에서 더 정확한 관련 구절을 찾고 지식 준비 작업을 줄여주는 검색 기술이다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;전체 접근&quot;,
+    &quot;시맨틱 검색&quot;,
+    &quot;관련 구절&quot;,
+    &quot;정확&quot;,
+    &quot;준비 작업&quot;,
+    &quot;성능&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;전체 접근&quot;,
+    &quot;시맨틱 검색&quot;,
+    &quot;관련 구절&quot;,
+    &quot;성능&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K13&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K13&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 36.7,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 12.0
+  },
+  &quot;total_score&quot;: 73.7,
+  &quot;verdict&quot;: &quot;무난&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/6, 핵심 청크 1/1개를 잡아서 총점 73.7점으로 평가했다.&quot;
 }</pre></td></tr></tbody>
         </table>
       </article>
@@ -3062,7 +4005,7 @@
         &quot;K01&quot;,
         &quot;K11&quot;
       ],
-      &quot;elapsed_ms&quot;: 2.21
+      &quot;elapsed_ms&quot;: 2.28
     }
   },
   {
@@ -3084,11 +4027,11 @@
         &quot;K03&quot;
       ],
       &quot;top_rerank_lift&quot;: 12.240000000000002,
-      &quot;elapsed_ms&quot;: 0.16
+      &quot;elapsed_ms&quot;: 0.19
     }
   },
   {
-    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;node&quot;: &quot;judge_retrieval&quot;,
     &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
     &quot;payload&quot;: {
       &quot;action&quot;: &quot;answer&quot;,
@@ -3099,21 +4042,105 @@
         &quot;distinct_sections&quot;: 6,
         &quot;reason&quot;: &quot;retrieval looks grounded&quot;
       },
-      &quot;elapsed_ms&quot;: 0.0
+      &quot;elapsed_ms&quot;: 0.01
     }
   },
   {
-    &quot;node&quot;: &quot;answer&quot;,
-    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;node&quot;: &quot;answer_draft&quot;,
+    &quot;message&quot;: &quot;초안 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;14b&quot;,
-      &quot;elapsed_ms&quot;: 0.14,
-      &quot;answer_preview&quot;: &quot;결론: RAG는 외부 지식을 붙여 답변을 생성하는 전체 구조이고, 시맨틱 검색은 그 안에서 관련 구절을 더 잘 찾게 돕는 검색 기술이다. 질문: AWS 문서 기준으로 RAG와 시맨틱 검색의 차이를 비교해줘. 근거 청크: K14, K13, K10 모드: mock-14B | quality_ok=True | coverage=0.5 핵심 근거: - 근거 1: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지…&quot;
+      &quot;elapsed_ms&quot;: 0.16,
+      &quot;answer_preview&quot;: &quot;결론: RAG는 외부 지식을 붙여 답변을 생성하는 전체 접근이고, 시맨틱 검색은 그 성능을 높이기 위해 관련 구절을 더 정확히 찾는 검색 기술이다. 질문: AWS 문서 기준으로 RAG와 시맨틱 검색의 차이를 비교해줘. 근거 청크: K14, K13, K10 모드: draft-14B | quality_ok=True | coverage=0.5 핵심 근거: - 근거 1: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge_answer&quot;,
+    &quot;message&quot;: &quot;answer judge가 응답 형식/키워드 충족이 약하다고 판단해 한 번 더 생성함.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;regenerate_once&quot;,
+      &quot;evaluation&quot;: {
+        &quot;gold_answer&quot;: &quot;RAG는 외부 지식을 붙여 답변을 생성하는 전체 접근이고, 시맨틱 검색은 그 RAG 성능을 높이기 위해 대규모 데이터에서 더 정확한 관련 구절을 찾고 지식 준비 작업을 줄여주는 검색 기술이다.&quot;,
+        &quot;rubric_keywords&quot;: [
+          &quot;전체 접근&quot;,
+          &quot;시맨틱 검색&quot;,
+          &quot;관련 구절&quot;,
+          &quot;정확&quot;,
+          &quot;준비 작업&quot;,
+          &quot;성능&quot;
+        ],
+        &quot;keyword_hits&quot;: [
+          &quot;전체 접근&quot;,
+          &quot;시맨틱 검색&quot;,
+          &quot;관련 구절&quot;
+        ],
+        &quot;support_chunks_expected&quot;: [
+          &quot;K13&quot;
+        ],
+        &quot;support_chunks_hit&quot;: [
+          &quot;K13&quot;
+        ],
+        &quot;score_breakdown&quot;: {
+          &quot;keyword_score&quot;: 27.5,
+          &quot;support_score&quot;: 25.0,
+          &quot;quality_score&quot;: 12.0
+        },
+        &quot;total_score&quot;: 64.5,
+        &quot;verdict&quot;: &quot;아쉬움&quot;,
+        &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 64.5점으로 평가했다.&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.04
+    }
+  },
+  {
+    &quot;node&quot;: &quot;answer_revise&quot;,
+    &quot;message&quot;: &quot;answer judge 요청으로 답변을 한 번 더 정리함&quot;,
+    &quot;payload&quot;: {
+      &quot;elapsed_ms&quot;: 0.15,
+      &quot;answer_preview&quot;: &quot;직답: RAG는 외부 지식을 붙여 답변을 생성하는 전체 접근이고, 시맨틱 검색은 그 성능을 높이기 위해 관련 구절을 더 정확히 찾는 검색 기술이다. 왜 이렇게 말하나: 그래서 RAG는 상위 아키텍처이고, 시맨틱 검색은 그 안의 retrieval 품질을 끌어올리는 하위 기술이다. 질문: AWS 문서 기준으로 RAG와 시맨틱 검색의 차이를 비교해줘. 근거 청크: K14, K13, K10 모드: revised-14B |…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge_answer_final&quot;,
+    &quot;message&quot;: &quot;재생성 후 최종 채점 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;evaluation&quot;: {
+        &quot;gold_answer&quot;: &quot;RAG는 외부 지식을 붙여 답변을 생성하는 전체 접근이고, 시맨틱 검색은 그 RAG 성능을 높이기 위해 대규모 데이터에서 더 정확한 관련 구절을 찾고 지식 준비 작업을 줄여주는 검색 기술이다.&quot;,
+        &quot;rubric_keywords&quot;: [
+          &quot;전체 접근&quot;,
+          &quot;시맨틱 검색&quot;,
+          &quot;관련 구절&quot;,
+          &quot;정확&quot;,
+          &quot;준비 작업&quot;,
+          &quot;성능&quot;
+        ],
+        &quot;keyword_hits&quot;: [
+          &quot;전체 접근&quot;,
+          &quot;시맨틱 검색&quot;,
+          &quot;관련 구절&quot;,
+          &quot;성능&quot;
+        ],
+        &quot;support_chunks_expected&quot;: [
+          &quot;K13&quot;
+        ],
+        &quot;support_chunks_hit&quot;: [
+          &quot;K13&quot;
+        ],
+        &quot;score_breakdown&quot;: {
+          &quot;keyword_score&quot;: 36.7,
+          &quot;support_score&quot;: 25.0,
+          &quot;quality_score&quot;: 12.0
+        },
+        &quot;total_score&quot;: 73.7,
+        &quot;verdict&quot;: &quot;무난&quot;,
+        &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/6, 핵심 청크 1/1개를 잡아서 총점 73.7점으로 평가했다.&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.05
     }
   },
   {
     &quot;node&quot;: &quot;judge&quot;,
-    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 최종 응답 평가 완료&quot;,
     &quot;payload&quot;: {
       &quot;gold_answer&quot;: &quot;RAG는 외부 지식을 붙여 답변을 생성하는 전체 접근이고, 시맨틱 검색은 그 RAG 성능을 높이기 위해 대규모 데이터에서 더 정확한 관련 구절을 찾고 지식 준비 작업을 줄여주는 검색 기술이다.&quot;,
       &quot;rubric_keywords&quot;: [
@@ -3127,7 +4154,8 @@
       &quot;keyword_hits&quot;: [
         &quot;전체 접근&quot;,
         &quot;시맨틱 검색&quot;,
-        &quot;관련 구절&quot;
+        &quot;관련 구절&quot;,
+        &quot;성능&quot;
       ],
       &quot;support_chunks_expected&quot;: [
         &quot;K13&quot;
@@ -3136,13 +4164,13 @@
         &quot;K13&quot;
       ],
       &quot;score_breakdown&quot;: {
-        &quot;keyword_score&quot;: 27.5,
+        &quot;keyword_score&quot;: 36.7,
         &quot;support_score&quot;: 25.0,
         &quot;quality_score&quot;: 12.0
       },
-      &quot;total_score&quot;: 64.5,
-      &quot;verdict&quot;: &quot;아쉬움&quot;,
-      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 64.5점으로 평가했다.&quot;
+      &quot;total_score&quot;: 73.7,
+      &quot;verdict&quot;: &quot;무난&quot;,
+      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/6, 핵심 청크 1/1개를 잡아서 총점 73.7점으로 평가했다.&quot;
     }
   }
 ]</pre>
@@ -3160,23 +4188,23 @@
           <span class='pill'>initial route: 14B</span>
           <span class='pill'>final model: 14B</span>
           <span class='pill'>restarts: 0</span>
-          <span class='pill'>hybrid retrieval</span>
-          <span class='pill'>total: 2.31 ms</span>
+          <span class='pill'>answer regenerations: 0</span>
+          <span class='pill'>total: 2.37 ms</span>
         </div>
       </div>
       <div class='grid two'>
         <article class='panel'>
           <h3>LangGraph-style flow</h3>
-          <ol><li>classify_8b → 14b</li><li>hybrid_retrieve_14b</li><li>rerank_14b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <ol><li>classify_8b → 14b</li><li>hybrid_retrieve_14b</li><li>rerank_14b</li><li>judge_retrieval → answer</li><li>answer_draft</li><li>judge_answer → finish</li></ol>
           <h3>왜 이런 결과가 나왔나</h3>
-          <ul><li>처음에는 classify_8b가 질문을 14B 경로로 분류했다. 이유: multi-step/comparison</li><li>hybrid retrieval이 lexical/semantic 후보를 합쳐 K14, K16, K03, K13 순으로 만들었고, rerank_14b가 그중 K14, K13, K03, K16을 상위에 올렸다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 14B answer 단계가 hybrid retrieval로 뽑힌 근거 청크를 직답형으로 정리했다.</li><li>미리 정한 정답 기준 키워드 5/6, 핵심 청크 1/1개를 잡아서 총점 82.8점으로 평가했다.</li></ul>
+          <ul><li>처음에는 classify_8b가 질문을 14B 경로로 분류했다. 이유: multi-step/comparison</li><li>hybrid retrieval이 후보를 모으고 rerank_14b가 K14, K13, K03, K16 순으로 정렬했다.</li><li>judge_retrieval이 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>judge_answer가 초안 답변을 보고 finish을 결정했다.</li><li>마지막에는 14B answer 단계 결과를 최종 judge에 저장했다.</li><li>미리 정한 정답 기준 키워드 5/6, 핵심 청크 1/1개를 잡아서 총점 82.8점으로 평가했다.</li></ul>
         </article>
         <article class='panel'>
           <h3>Final answer</h3>
-          <pre>결론: AWS는 Bedrock, Kendra, SageMaker JumpStart를 통해 지식 연결, 엔터프라이즈 검색, 빠른 배포를 지원한다고 설명한다.
+          <pre>결론: AWS는 Amazon Bedrock 지식 기반, Amazon Kendra, SageMaker JumpStart를 통해 데이터 연결, 엔터프라이즈 검색, 빠른 배포를 지원한다고 설명한다.
 질문: AWS는 RAG 구축을 위해 어떤 서비스들을 어떻게 지원한다고 설명하나요?
 근거 청크: K14, K13, K03
-모드: mock-14B | quality_ok=True | coverage=0.5
+모드: draft-14B | quality_ok=True | coverage=0.5
 핵심 근거:
 - 근거 1: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
 - 근거 2: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.
@@ -3216,7 +4244,7 @@
   &quot;verdict&quot;: &quot;무난&quot;,
   &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 5/6, 핵심 청크 1/1개를 잡아서 총점 82.8점으로 평가했다.&quot;
 }</pre>
-          <h3>Quality gate</h3>
+          <h3>Retrieval judge</h3>
           <pre>{
   &quot;ok&quot;: true,
   &quot;coverage&quot;: 0.5,
@@ -3232,7 +4260,7 @@
             <article class='attempt'>
               <div class='attempt-head'>
                 <strong>hybrid_retrieve_14b+rerank_14b</strong>
-                <span>2.04 ms</span>
+                <span>2.09 ms</span>
               </div>
               <div class='query'>aws는 rag 구축을 위해 어떤 서비스들을 지원한다고 설명하나요 aws bedrock kendra sagemaker</div>
               <h4>hybrid retrieval candidates</h4>
@@ -3254,7 +4282,7 @@
   &quot;complexity_score&quot;: 5,
   &quot;reason&quot;: &quot;multi-step/comparison&quot;,
   &quot;source&quot;: &quot;heuristic-mock&quot;
-}</pre></td></tr><tr><td>hybrid_retrieve_14b</td><td>1.89 ms</td><td><pre>{
+}</pre></td></tr><tr><td>hybrid_retrieve_14b</td><td>1.94 ms</td><td><pre>{
   &quot;attempt&quot;: 1,
   &quot;query&quot;: &quot;aws는 rag 구축을 위해 어떤 서비스들을 지원한다고 설명하나요 aws bedrock kendra sagemaker&quot;,
   &quot;strategy&quot;: &quot;hybrid lexical + semantic with RRF fusion&quot;,
@@ -3303,7 +4331,7 @@
   &quot;top_rerank_score&quot;: 41.427,
   &quot;rerank_strategy&quot;: &quot;hybrid candidate reranker: overlap + section-aware heuristic&quot;,
   &quot;top_rerank_lift&quot;: 8.64
-}</pre></td></tr><tr><td>grade_results</td><td>0.00 ms</td><td><pre>{
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.00 ms</td><td><pre>{
   &quot;action&quot;: &quot;answer&quot;,
   &quot;quality&quot;: {
     &quot;ok&quot;: true,
@@ -3312,8 +4340,42 @@
     &quot;distinct_sections&quot;: 6,
     &quot;reason&quot;: &quot;retrieval looks grounded&quot;
   }
-}</pre></td></tr><tr><td>answer</td><td>0.13 ms</td><td><pre>{
+}</pre></td></tr><tr><td>answer_draft</td><td>0.13 ms</td><td><pre>{
   &quot;final_model&quot;: &quot;14b&quot;
+}</pre></td></tr><tr><td>judge_answer</td><td>0.04 ms</td><td><pre>{
+  &quot;action&quot;: &quot;finish&quot;,
+  &quot;evaluation&quot;: {
+    &quot;gold_answer&quot;: &quot;AWS는 Amazon Bedrock 지식 기반으로 데이터 소스 연결과 생성형 앱 개발을 단순화하고, Amazon Kendra로 엔터프라이즈 검색과 시맨틱 랭킹을 제공하며, SageMaker JumpStart로 빠른 배포와 예시 기반 구현 가속을 지원한다고 설명한다.&quot;,
+    &quot;rubric_keywords&quot;: [
+      &quot;bedrock&quot;,
+      &quot;kendra&quot;,
+      &quot;sagemaker&quot;,
+      &quot;지식 기반&quot;,
+      &quot;검색&quot;,
+      &quot;배포&quot;
+    ],
+    &quot;keyword_hits&quot;: [
+      &quot;bedrock&quot;,
+      &quot;kendra&quot;,
+      &quot;sagemaker&quot;,
+      &quot;지식 기반&quot;,
+      &quot;검색&quot;
+    ],
+    &quot;support_chunks_expected&quot;: [
+      &quot;K14&quot;
+    ],
+    &quot;support_chunks_hit&quot;: [
+      &quot;K14&quot;
+    ],
+    &quot;score_breakdown&quot;: {
+      &quot;keyword_score&quot;: 45.8,
+      &quot;support_score&quot;: 25.0,
+      &quot;quality_score&quot;: 12.0
+    },
+    &quot;total_score&quot;: 82.8,
+    &quot;verdict&quot;: &quot;무난&quot;,
+    &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 5/6, 핵심 청크 1/1개를 잡아서 총점 82.8점으로 평가했다.&quot;
+  }
 }</pre></td></tr></tbody>
         </table>
       </article>
@@ -3394,7 +4456,7 @@
         &quot;K12&quot;,
         &quot;K10&quot;
       ],
-      &quot;elapsed_ms&quot;: 1.89
+      &quot;elapsed_ms&quot;: 1.94
     }
   },
   {
@@ -3420,7 +4482,7 @@
     }
   },
   {
-    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;node&quot;: &quot;judge_retrieval&quot;,
     &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
     &quot;payload&quot;: {
       &quot;action&quot;: &quot;answer&quot;,
@@ -3435,17 +4497,57 @@
     }
   },
   {
-    &quot;node&quot;: &quot;answer&quot;,
-    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;node&quot;: &quot;answer_draft&quot;,
+    &quot;message&quot;: &quot;초안 답변 생성&quot;,
     &quot;payload&quot;: {
       &quot;final_model&quot;: &quot;14b&quot;,
       &quot;elapsed_ms&quot;: 0.13,
-      &quot;answer_preview&quot;: &quot;결론: AWS는 Bedrock, Kendra, SageMaker JumpStart를 통해 지식 연결, 엔터프라이즈 검색, 빠른 배포를 지원한다고 설명한다. 질문: AWS는 RAG 구축을 위해 어떤 서비스들을 어떻게 지원한다고 설명하나요? 근거 청크: K14, K13, K03 모드: mock-14B | quality_ok=True | coverage=0.5 핵심 근거: - 근거 1: Amazon Bedrock 은 개발을…&quot;
+      &quot;answer_preview&quot;: &quot;결론: AWS는 Amazon Bedrock 지식 기반, Amazon Kendra, SageMaker JumpStart를 통해 데이터 연결, 엔터프라이즈 검색, 빠른 배포를 지원한다고 설명한다. 질문: AWS는 RAG 구축을 위해 어떤 서비스들을 어떻게 지원한다고 설명하나요? 근거 청크: K14, K13, K03 모드: draft-14B | quality_ok=True | coverage=0.5 핵심 근거: - 근거 1:…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge_answer&quot;,
+    &quot;message&quot;: &quot;answer judge 통과: 응답이 정답 기준을 충분히 충족함.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;finish&quot;,
+      &quot;evaluation&quot;: {
+        &quot;gold_answer&quot;: &quot;AWS는 Amazon Bedrock 지식 기반으로 데이터 소스 연결과 생성형 앱 개발을 단순화하고, Amazon Kendra로 엔터프라이즈 검색과 시맨틱 랭킹을 제공하며, SageMaker JumpStart로 빠른 배포와 예시 기반 구현 가속을 지원한다고 설명한다.&quot;,
+        &quot;rubric_keywords&quot;: [
+          &quot;bedrock&quot;,
+          &quot;kendra&quot;,
+          &quot;sagemaker&quot;,
+          &quot;지식 기반&quot;,
+          &quot;검색&quot;,
+          &quot;배포&quot;
+        ],
+        &quot;keyword_hits&quot;: [
+          &quot;bedrock&quot;,
+          &quot;kendra&quot;,
+          &quot;sagemaker&quot;,
+          &quot;지식 기반&quot;,
+          &quot;검색&quot;
+        ],
+        &quot;support_chunks_expected&quot;: [
+          &quot;K14&quot;
+        ],
+        &quot;support_chunks_hit&quot;: [
+          &quot;K14&quot;
+        ],
+        &quot;score_breakdown&quot;: {
+          &quot;keyword_score&quot;: 45.8,
+          &quot;support_score&quot;: 25.0,
+          &quot;quality_score&quot;: 12.0
+        },
+        &quot;total_score&quot;: 82.8,
+        &quot;verdict&quot;: &quot;무난&quot;,
+        &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 5/6, 핵심 청크 1/1개를 잡아서 총점 82.8점으로 평가했다.&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.04
     }
   },
   {
     &quot;node&quot;: &quot;judge&quot;,
-    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 최종 응답 평가 완료&quot;,
     &quot;payload&quot;: {
       &quot;gold_answer&quot;: &quot;AWS는 Amazon Bedrock 지식 기반으로 데이터 소스 연결과 생성형 앱 개발을 단순화하고, Amazon Kendra로 엔터프라이즈 검색과 시맨틱 랭킹을 제공하며, SageMaker JumpStart로 빠른 배포와 예시 기반 구현 가속을 지원한다고 설명한다.&quot;,
       &quot;rubric_keywords&quot;: [
