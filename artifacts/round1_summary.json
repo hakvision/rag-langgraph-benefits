@@ -1,0 +1,19 @@
+{
+  "round": "round1",
+  "doc_title": "Build a custom RAG agent with LangGraph",
+  "doc_url": "https://docs.langchain.com/oss/python/langgraph/agentic-rag",
+  "chunk_count": 14,
+  "provider_mode": "mock",
+  "backend_available": false,
+  "models": {
+    "router_8b": "qwen3:8b",
+    "large_14b": "qwen3:14b"
+  },
+  "question_count": 10,
+  "routes": {
+    "8b": 6,
+    "14b": 4
+  },
+  "total_restarts": 4,
+  "avg_total_ms": 1.54
+}

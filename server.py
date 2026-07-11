@@ -32,8 +32,8 @@ class BackendSettings(BaseModel):
     provider_mode: Literal["mock", "openai-compatible"] = "mock"
     base_url: str = "http://127.0.0.1:11434/v1"
     api_key: str | None = None
-    model_8b: str = "qwen2.5:7b-instruct"
-    model_14b: str = "qwen2.5:14b-instruct"
+    model_8b: str = "qwen3:8b"
+    model_14b: str = "qwen3:14b"
     temperature: float = 0.1
     top_k_8b: int = 4
     top_k_14b: int = 6
@@ -154,11 +154,11 @@ def build_ui_html() -> str:
           <div class=\"inline2\">
             <div>
               <label for=\"model_8b\">8B model</label>
-              <input id=\"model_8b\" value=\"qwen2.5:7b-instruct\" />
+              <input id=\"model_8b\" value=\"qwen3:8b\" />
             </div>
             <div>
               <label for=\"model_14b\">14B model</label>
-              <input id=\"model_14b\" value=\"qwen2.5:14b-instruct\" />
+              <input id=\"model_14b\" value=\"qwen3:14b\" />
             </div>
           </div>
           <div>
