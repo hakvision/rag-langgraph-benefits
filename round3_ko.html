@@ -1,0 +1,2812 @@
+<!doctype html>
+<html lang='ko'>
+<head>
+  <meta charset='utf-8' />
+  <meta name='viewport' content='width=device-width, initial-scale=1' />
+  <title>Round3 KO · AWS RAG 문서 실험</title>
+  <style>
+    :root { --bg:#09101d; --panel:#121933; --panel2:#172243; --text:#eef3ff; --muted:#a9b6d3; --line:#2a3768; --accent:#7cc9ff; --ok:#8effc8; --warn:#ffd479; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif; background:linear-gradient(180deg,#09101d 0%,#0b1020 100%); color:var(--text); line-height:1.6; }
+    .wrap { max-width:1280px; margin:0 auto; padding:28px 18px 80px; }
+    .hero,.card,.panel { background:var(--panel); border:1px solid var(--line); border-radius:22px; padding:20px; box-shadow:0 12px 36px rgba(0,0,0,.22); }
+    .hero h1 { margin:0 0 10px; font-size:clamp(30px,4vw,52px); }
+    .hero p,.muted,li { color:var(--muted); }
+    .eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.08em; font-size:12px; margin-bottom:8px; }
+    .pillrow { display:flex; flex-wrap:wrap; gap:8px; }
+    .pill { border:1px solid var(--line); border-radius:999px; padding:7px 12px; font-size:13px; color:var(--muted); background:rgba(255,255,255,.03); }
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-top:18px; }
+    .stats .panel strong { display:block; color:var(--ok); font-size:28px; margin-bottom:6px; }
+    .run { margin-top:18px; }
+    .run-head { display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; align-items:start; }
+    .grid.two { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .attempt { background:var(--panel2); border:1px solid var(--line); border-radius:16px; padding:14px; margin-top:12px; }
+    .attempt-head { display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:8px; }
+    .query { background:#0a0f1d; border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:10px; color:#dbe8ff; font-size:14px; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { border-top:1px solid var(--line); padding:10px; text-align:left; vertical-align:top; }
+    th { color:var(--accent); font-size:13px; }
+    pre { margin:0; white-space:pre-wrap; word-break:break-word; background:#0a0f1d; border:1px solid var(--line); border-radius:14px; padding:12px; color:#dbe8ff; font-size:13px; }
+    h2,h3,h4 { margin:0 0 10px; }
+    ol,ul { margin:0; padding-left:20px; }
+    .score { color:var(--warn); font-size:12px; }
+    .hits { color:var(--accent); font-size:12px; }
+    a { color:var(--accent); }
+    @media (max-width: 980px) { .grid.two { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <main class='wrap'>
+    <section class='hero'>
+      <div class='eyebrow'>round3 · qwen3 routed rag · ko</div>
+      <h1>Hybrid retrieval + reranker를 적용한 AWS 한국어 RAG round3</h1>
+      <p>이번 round3는 round2의 reranker 구조를 유지하되, 앞단 retrieval을 <strong>lexical + semantic-like hybrid</strong>로 바꿨다. 먼저 두 종류의 후보를 만들고 RRF로 합친 다음 reranker를 태워서, 후보군 recall을 넓힌 뒤 순위를 다듬는 구조로 실험했다.</p>
+      <div class='pillrow'>
+        <span class='pill'>provider: mock</span>
+        <span class='pill'>router: qwen3:8b</span>
+        <span class='pill'>large: qwen3:14b</span>
+        <span class='pill'>doc: <a href='https://aws.amazon.com/ko/what-is/retrieval-augmented-generation/' target='_blank'>RAG란? - 검색 증강 생성 AI 설명 - AWS</a></span>
+        <span class='pill'>hybrid: lexical + semantic-like + RRF</span>
+      </div>
+      <div class='stats'>
+        <article class='panel'><strong>10</strong><span>questions</span></article>
+        <article class='panel'><strong>7</strong><span>initial 8B routes</span></article>
+        <article class='panel'><strong>3</strong><span>initial 14B routes</span></article>
+        <article class='panel'><strong>1</strong><span>total restarts</span></article>
+        <article class='panel'><strong>3.06 ms</strong><span>avg end-to-end time</span></article>
+        <article class='panel'><strong>54.3</strong><span>avg judge score</span></article>
+        <article class='panel'><strong>0.0326</strong><span>avg top RRF score</span></article>
+        <article class='panel'><strong>6.57</strong><span>avg rerank lift</span></article>
+      </div>
+    </section>
+    
+    <section class='card run'>
+      <div class='eyebrow'>structure · round2 vs round3</div>
+      <h2>Round2 / Round3 구조 비교</h2>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>Round2</h3>
+          <ol>
+            <li>classify_8b</li>
+            <li>search_8b 또는 search_14b</li>
+            <li>rerank_{model}</li>
+            <li>grade_results</li>
+            <li>answer</li>
+            <li>judge</li>
+          </ol>
+          <ul>
+            <li>retrieval은 한 종류의 lexical scoring에 의존</li>
+            <li>reranker는 잘하지만 후보군 recall ceiling이 낮을 수 있음</li>
+            <li>즉 rerank 전 후보 pool 개선이 다음 병목</li>
+          </ul>
+        </article>
+        <article class='panel'>
+          <h3>Round3</h3>
+          <ol>
+            <li>classify_8b</li>
+            <li>lexical retrieve</li>
+            <li>semantic-like retrieve</li>
+            <li>RRF fusion으로 hybrid candidate pool 생성</li>
+            <li>rerank_{model}</li>
+            <li>grade_results</li>
+            <li>answer</li>
+            <li>judge</li>
+          </ol>
+          <ul>
+            <li>후보군 recall을 먼저 넓히고 그 위에 reranker를 태움</li>
+            <li>hybrid retrieval + reranker의 분업 구조를 실험</li>
+            <li>즉 round3는 reranker 앞단 후보군 품질 개선용 구조</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+    
+    
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q1 · definition</div>
+          <h2>검색 증강 생성(RAG)을 AWS 문서는 어떻게 정의하나요?</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>initial route: 8B</span>
+          <span class='pill'>final model: 8B</span>
+          <span class='pill'>restarts: 0</span>
+          <span class='pill'>hybrid retrieval</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 4.14 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>LangGraph-style flow</h3>
+          <ol><li>classify_8b → 8b</li><li>hybrid_search_8b</li><li>rerank_8b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <h3>왜 이런 결과가 나왔나</h3>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid_search_8b가 lexical/semantic-like 후보를 합친 뒤 RRF로 묶었고, rerank_8b가 그중 K14, K13, K10, K09 순서로 다시 정렬했다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 hybrid+rereanked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 2/6, 핵심 청크 0/1개를 잡아서 총점 35.4점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>Route: 8B | quality_ok=True | coverage=0.714
+질문: 검색 증강 생성(RAG)을 AWS 문서는 어떻게 정의하나요?
+문서 근거 요약:
+- [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
+- [K13] 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요?: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.
+- [K10] 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.
+- [K09] 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성: LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다.</pre>
+          <h3>Expected answer</h3>
+          <pre>RAG는 응답 생성 전에 외부의 신뢰할 수 있는 지식 소스를 참조하도록 LLM 출력을 최적화하는 방식이며, 모델 재학습 없이 특정 도메인 지식을 붙여 정확성과 유용성을 높이는 접근이다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;RAG는 응답 생성 전에 외부의 신뢰할 수 있는 지식 소스를 참조하도록 LLM 출력을 최적화하는 방식이며, 모델 재학습 없이 특정 도메인 지식을 붙여 정확성과 유용성을 높이는 접근이다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;외부&quot;,
+    &quot;신뢰&quot;,
+    &quot;지식&quot;,
+    &quot;참조&quot;,
+    &quot;재학습&quot;,
+    &quot;정확성&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;외부&quot;,
+    &quot;지식&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K01&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 18.3,
+    &quot;support_score&quot;: 0.0,
+    &quot;quality_score&quot;: 17.1
+  },
+  &quot;total_score&quot;: 35.4,
+  &quot;verdict&quot;: &quot;미흡&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/6, 핵심 청크 0/1개를 잡아서 총점 35.4점으로 평가했다.&quot;
+}</pre>
+          <h3>Quality gate</h3>
+          <pre>{
+  &quot;ok&quot;: true,
+  &quot;coverage&quot;: 0.714,
+  &quot;top_score&quot;: 49.75,
+  &quot;distinct_sections&quot;: 4,
+  &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Hybrid retrieval + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>hybrid_search_8b+rerank_8b</strong>
+                <span>3.27 ms</span>
+              </div>
+              <div class='query'>lexical: 검색 증강 생성 rag aws 문서는 정의하나요</div>
+              <div class='query'>semantic: 검색 증강 생성 rag aws 문서는 정의하나요 개념 정의 프로세스 연관성 벡터 데이터베이스 시맨틱 bedrock kendra sagemaker 지식 기반</div>
+              <h4>hybrid fused candidates</h4>
+              <ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rrf 0.0328</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rrf 0.0320</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rrf 0.0312</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>rrf 0.0161</span><br><span class='hits'>sources: lexical</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rrf 0.0159</span><br><span class='hits'>sources: semantic</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rerank 49.75</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>overlap: rag, 검색, 생성, 증강</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 34.37</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>overlap: rag, 검색, 증강</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rerank 28.44</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>overlap: 검색, 문서는, 증강</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rerank 27.63</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>overlap: 검색, 생성, 증강</span></li></ul>
+            </article>
+            
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table>
+          <thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead>
+          <tbody><tr><td>classify_8b</td><td>0.02 ms</td><td><pre>{
+  &quot;token_count&quot;: 7,
+  &quot;matched_hard_terms&quot;: [
+    &quot;어떻게&quot;
+  ],
+  &quot;complexity_score&quot;: 2,
+  &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;
+}</pre></td></tr><tr><td>hybrid_search_8b</td><td>3.02 ms</td><td><pre>{
+  &quot;lexical_query&quot;: &quot;검색 증강 생성 rag aws 문서는 정의하나요&quot;,
+  &quot;semantic_query&quot;: &quot;검색 증강 생성 rag aws 문서는 정의하나요 개념 정의 프로세스 연관성 벡터 데이터베이스 시맨틱 bedrock kendra sagemaker 지식 기반&quot;,
+  &quot;lexical_candidate_count&quot;: 4,
+  &quot;semantic_candidate_count&quot;: 4,
+  &quot;fused_candidate_count&quot;: 5,
+  &quot;top_rrf_score&quot;: 0.0328,
+  &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+  &quot;lexical_top_score&quot;: 20.45,
+  &quot;semantic_top_score&quot;: 40.35
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.25 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 5,
+  &quot;selected_count&quot;: 4,
+  &quot;top_rerank_score&quot;: 49.75,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 9.399999999999999
+}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.714,
+    &quot;top_score&quot;: 49.75,
+    &quot;distinct_sections&quot;: 4,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre></td></tr><tr><td>answer</td><td>0.50 ms</td><td><pre>{
+  &quot;final_model&quot;: &quot;8b&quot;
+}</pre></td></tr></tbody>
+        </table>
+      </article>
+      <article class='panel'>
+        <h3>Raw logs</h3>
+        <pre>[
+  {
+    &quot;node&quot;: &quot;classify_8b&quot;,
+    &quot;message&quot;: &quot;질문 분류 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;analysis&quot;: {
+        &quot;token_count&quot;: 7,
+        &quot;matched_hard_terms&quot;: [
+          &quot;어떻게&quot;
+        ],
+        &quot;complexity_score&quot;: 2,
+        &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+        &quot;source&quot;: &quot;heuristic-mock&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.02
+    }
+  },
+  {
+    &quot;node&quot;: &quot;hybrid_search_8b&quot;,
+    &quot;message&quot;: &quot;8B hybrid retrieval 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;lexical_query&quot;: &quot;검색 증강 생성 rag aws 문서는 정의하나요&quot;,
+      &quot;semantic_query&quot;: &quot;검색 증강 생성 rag aws 문서는 정의하나요 개념 정의 프로세스 연관성 벡터 데이터베이스 시맨틱 bedrock kendra sagemaker 지식 기반&quot;,
+      &quot;lexical_candidate_count&quot;: 4,
+      &quot;semantic_candidate_count&quot;: 4,
+      &quot;fused_candidate_count&quot;: 5,
+      &quot;top_rrf_score&quot;: 0.0328,
+      &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+      &quot;lexical_top_score&quot;: 20.45,
+      &quot;semantic_top_score&quot;: 40.35,
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K14&quot;,
+        &quot;K13&quot;,
+        &quot;K10&quot;,
+        &quot;K01&quot;,
+        &quot;K09&quot;
+      ],
+      &quot;elapsed_ms&quot;: 3.02
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_8b&quot;,
+    &quot;message&quot;: &quot;8B reranker가 hybrid 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 5,
+        &quot;selected_count&quot;: 4,
+        &quot;top_rerank_score&quot;: 49.75,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K14&quot;,
+        &quot;K13&quot;,
+        &quot;K10&quot;,
+        &quot;K09&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 9.399999999999999,
+      &quot;elapsed_ms&quot;: 0.25
+    }
+  },
+  {
+    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;answer&quot;,
+      &quot;quality&quot;: {
+        &quot;ok&quot;: true,
+        &quot;coverage&quot;: 0.714,
+        &quot;top_score&quot;: 49.75,
+        &quot;distinct_sections&quot;: 4,
+        &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;answer&quot;,
+    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;payload&quot;: {
+      &quot;final_model&quot;: &quot;8b&quot;,
+      &quot;elapsed_ms&quot;: 0.5,
+      &quot;answer_preview&quot;: &quot;Route: 8B | quality_ok=True | coverage=0.714 질문: 검색 증강 생성(RAG)을 AWS 문서는 어떻게 정의하나요? 문서 근거 요약: - [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;gold_answer&quot;: &quot;RAG는 응답 생성 전에 외부의 신뢰할 수 있는 지식 소스를 참조하도록 LLM 출력을 최적화하는 방식이며, 모델 재학습 없이 특정 도메인 지식을 붙여 정확성과 유용성을 높이는 접근이다.&quot;,
+      &quot;rubric_keywords&quot;: [
+        &quot;외부&quot;,
+        &quot;신뢰&quot;,
+        &quot;지식&quot;,
+        &quot;참조&quot;,
+        &quot;재학습&quot;,
+        &quot;정확성&quot;
+      ],
+      &quot;keyword_hits&quot;: [
+        &quot;외부&quot;,
+        &quot;지식&quot;
+      ],
+      &quot;support_chunks_expected&quot;: [
+        &quot;K01&quot;
+      ],
+      &quot;support_chunks_hit&quot;: [],
+      &quot;score_breakdown&quot;: {
+        &quot;keyword_score&quot;: 18.3,
+        &quot;support_score&quot;: 0.0,
+        &quot;quality_score&quot;: 17.1
+      },
+      &quot;total_score&quot;: 35.4,
+      &quot;verdict&quot;: &quot;미흡&quot;,
+      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/6, 핵심 청크 0/1개를 잡아서 총점 35.4점으로 평가했다.&quot;
+    }
+  }
+]</pre>
+      </article>
+    </section>
+    
+
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q2 · importance</div>
+          <h2>AWS 문서가 말하는 RAG의 필요성은 무엇이며, LLM의 어떤 문제를 줄이려 하나요?</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>initial route: 8B</span>
+          <span class='pill'>final model: 8B</span>
+          <span class='pill'>restarts: 0</span>
+          <span class='pill'>hybrid retrieval</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 3.80 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>LangGraph-style flow</h3>
+          <ol><li>classify_8b → 8b</li><li>hybrid_search_8b</li><li>rerank_8b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <h3>왜 이런 결과가 나왔나</h3>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid_search_8b가 lexical/semantic-like 후보를 합친 뒤 RRF로 묶었고, rerank_8b가 그중 K14, K13, K02, K05 순서로 다시 정렬했다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 hybrid+rereanked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 0/6, 핵심 청크 1/1개를 잡아서 총점 32.2점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>Route: 8B | quality_ok=True | coverage=0.3
+질문: AWS 문서가 말하는 RAG의 필요성은 무엇이며, LLM의 어떤 문제를 줄이려 하나요?
+문서 근거 요약:
+- [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
+- [K13] 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요?: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.
+- [K02] 검색 증강 생성이 중요한 이유는 무엇인가요?: LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다.
+- [K05] 검색 증강 생성의 이점은 무엇인가요? / 최신 정보: LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다. 개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다.</pre>
+          <h3>Expected answer</h3>
+          <pre>RAG는 LLM의 허위정보, 오래된 정보, 신뢰할 수 없는 출처, 용어 혼동 같은 문제를 줄이고, 신뢰 가능한 지식 소스를 검색해 답변의 통제력과 최신성을 높이기 위해 필요하다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;RAG는 LLM의 허위정보, 오래된 정보, 신뢰할 수 없는 출처, 용어 혼동 같은 문제를 줄이고, 신뢰 가능한 지식 소스를 검색해 답변의 통제력과 최신성을 높이기 위해 필요하다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;허위&quot;,
+    &quot;오래된&quot;,
+    &quot;신뢰&quot;,
+    &quot;출처&quot;,
+    &quot;혼동&quot;,
+    &quot;통제&quot;
+  ],
+  &quot;keyword_hits&quot;: [],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K02&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K02&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 0.0,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 7.2
+  },
+  &quot;total_score&quot;: 32.2,
+  &quot;verdict&quot;: &quot;미흡&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 0/6, 핵심 청크 1/1개를 잡아서 총점 32.2점으로 평가했다.&quot;
+}</pre>
+          <h3>Quality gate</h3>
+          <pre>{
+  &quot;ok&quot;: true,
+  &quot;coverage&quot;: 0.3,
+  &quot;top_score&quot;: 19.77,
+  &quot;distinct_sections&quot;: 4,
+  &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Hybrid retrieval + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>hybrid_search_8b+rerank_8b</strong>
+                <span>2.99 ms</span>
+              </div>
+              <div class='query'>lexical: aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤</div>
+              <div class='query'>semantic: aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤 문제를 줄이려 개념 정의 프로세스 한계 문제 최신 신뢰 bedrock kendra sagemaker 지식 기반</div>
+              <h4>hybrid fused candidates</h4>
+              <ul><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>rrf 0.0320</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>rrf 0.0312</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rrf 0.0164</span><br><span class='hits'>sources: semantic</span></li><li><strong>K15</strong> · AWS에서의 다음 단계 / 무료 계정 가입 <span class='score'>rrf 0.0164</span><br><span class='hits'>sources: lexical</span></li><li><strong>K16</strong> · AWS에서의 다음 단계 / 콘솔에서 구축 시작 <span class='score'>rrf 0.0161</span><br><span class='hits'>sources: lexical</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rrf 0.0159</span><br><span class='hits'>sources: semantic</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rerank 19.77</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>overlap: -</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 17.98</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>overlap: rag의, 문제를</span></li><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>rerank 16.68</span><br>LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다. 안타깝게도 LLM 기술의 특성상 LLM 응답에 대한 예측이 불가능합니다. 또한…<br><span class='hits'>overlap: llm의</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>rerank 11.6</span><br>LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다. 개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다. RAG를 사용하여 LLM을 라이브 소셜 미디어 피드, 뉴스 사이트 또는 기타 자주 업데이트되는 정보 소스에 직접 연결할 수 있습니다.…<br><span class='hits'>overlap: llm의</span></li></ul>
+            </article>
+            
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table>
+          <thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead>
+          <tbody><tr><td>classify_8b</td><td>0.01 ms</td><td><pre>{
+  &quot;token_count&quot;: 10,
+  &quot;matched_hard_terms&quot;: [],
+  &quot;complexity_score&quot;: 2,
+  &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;
+}</pre></td></tr><tr><td>hybrid_search_8b</td><td>2.73 ms</td><td><pre>{
+  &quot;lexical_query&quot;: &quot;aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤&quot;,
+  &quot;semantic_query&quot;: &quot;aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤 문제를 줄이려 개념 정의 프로세스 한계 문제 최신 신뢰 bedrock kendra sagemaker 지식 기반&quot;,
+  &quot;lexical_candidate_count&quot;: 4,
+  &quot;semantic_candidate_count&quot;: 4,
+  &quot;fused_candidate_count&quot;: 6,
+  &quot;top_rrf_score&quot;: 0.032,
+  &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+  &quot;lexical_top_score&quot;: 4.15,
+  &quot;semantic_top_score&quot;: 17.25
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.26 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 6,
+  &quot;selected_count&quot;: 4,
+  &quot;top_rerank_score&quot;: 19.77,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 2.5199999999999996
+}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.3,
+    &quot;top_score&quot;: 19.77,
+    &quot;distinct_sections&quot;: 4,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre></td></tr><tr><td>answer</td><td>0.40 ms</td><td><pre>{
+  &quot;final_model&quot;: &quot;8b&quot;
+}</pre></td></tr></tbody>
+        </table>
+      </article>
+      <article class='panel'>
+        <h3>Raw logs</h3>
+        <pre>[
+  {
+    &quot;node&quot;: &quot;classify_8b&quot;,
+    &quot;message&quot;: &quot;질문 분류 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;analysis&quot;: {
+        &quot;token_count&quot;: 10,
+        &quot;matched_hard_terms&quot;: [],
+        &quot;complexity_score&quot;: 2,
+        &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+        &quot;source&quot;: &quot;heuristic-mock&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;hybrid_search_8b&quot;,
+    &quot;message&quot;: &quot;8B hybrid retrieval 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;lexical_query&quot;: &quot;aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤&quot;,
+      &quot;semantic_query&quot;: &quot;aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤 문제를 줄이려 개념 정의 프로세스 한계 문제 최신 신뢰 bedrock kendra sagemaker 지식 기반&quot;,
+      &quot;lexical_candidate_count&quot;: 4,
+      &quot;semantic_candidate_count&quot;: 4,
+      &quot;fused_candidate_count&quot;: 6,
+      &quot;top_rrf_score&quot;: 0.032,
+      &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+      &quot;lexical_top_score&quot;: 4.15,
+      &quot;semantic_top_score&quot;: 17.25,
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K02&quot;,
+        &quot;K05&quot;,
+        &quot;K14&quot;,
+        &quot;K15&quot;,
+        &quot;K16&quot;,
+        &quot;K13&quot;
+      ],
+      &quot;elapsed_ms&quot;: 2.73
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_8b&quot;,
+    &quot;message&quot;: &quot;8B reranker가 hybrid 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 6,
+        &quot;selected_count&quot;: 4,
+        &quot;top_rerank_score&quot;: 19.77,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K14&quot;,
+        &quot;K13&quot;,
+        &quot;K02&quot;,
+        &quot;K05&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 2.5199999999999996,
+      &quot;elapsed_ms&quot;: 0.26
+    }
+  },
+  {
+    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;answer&quot;,
+      &quot;quality&quot;: {
+        &quot;ok&quot;: true,
+        &quot;coverage&quot;: 0.3,
+        &quot;top_score&quot;: 19.77,
+        &quot;distinct_sections&quot;: 4,
+        &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;answer&quot;,
+    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;payload&quot;: {
+      &quot;final_model&quot;: &quot;8b&quot;,
+      &quot;elapsed_ms&quot;: 0.4,
+      &quot;answer_preview&quot;: &quot;Route: 8B | quality_ok=True | coverage=0.3 질문: AWS 문서가 말하는 RAG의 필요성은 무엇이며, LLM의 어떤 문제를 줄이려 하나요? 문서 근거 요약: - [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;gold_answer&quot;: &quot;RAG는 LLM의 허위정보, 오래된 정보, 신뢰할 수 없는 출처, 용어 혼동 같은 문제를 줄이고, 신뢰 가능한 지식 소스를 검색해 답변의 통제력과 최신성을 높이기 위해 필요하다.&quot;,
+      &quot;rubric_keywords&quot;: [
+        &quot;허위&quot;,
+        &quot;오래된&quot;,
+        &quot;신뢰&quot;,
+        &quot;출처&quot;,
+        &quot;혼동&quot;,
+        &quot;통제&quot;
+      ],
+      &quot;keyword_hits&quot;: [],
+      &quot;support_chunks_expected&quot;: [
+        &quot;K02&quot;
+      ],
+      &quot;support_chunks_hit&quot;: [
+        &quot;K02&quot;
+      ],
+      &quot;score_breakdown&quot;: {
+        &quot;keyword_score&quot;: 0.0,
+        &quot;support_score&quot;: 25.0,
+        &quot;quality_score&quot;: 7.2
+      },
+      &quot;total_score&quot;: 32.2,
+      &quot;verdict&quot;: &quot;미흡&quot;,
+      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 0/6, 핵심 청크 1/1개를 잡아서 총점 32.2점으로 평가했다.&quot;
+    }
+  }
+]</pre>
+      </article>
+    </section>
+    
+
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q3 · benefits</div>
+          <h2>RAG의 주요 이점을 문서 기준으로 정리해줘.</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>initial route: 8B</span>
+          <span class='pill'>final model: 8B</span>
+          <span class='pill'>restarts: 0</span>
+          <span class='pill'>hybrid retrieval</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 3.36 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>LangGraph-style flow</h3>
+          <ol><li>classify_8b → 8b</li><li>hybrid_search_8b</li><li>rerank_8b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <h3>왜 이런 결과가 나왔나</h3>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid_search_8b가 lexical/semantic-like 후보를 합친 뒤 RRF로 묶었고, rerank_8b가 그중 K13, K14, K05, K04 순서로 다시 정렬했다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 hybrid+rereanked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 2/4, 핵심 청크 2/5개를 잡아서 총점 49.5점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>Route: 8B | quality_ok=True | coverage=0.5
+질문: RAG의 주요 이점을 문서 기준으로 정리해줘.
+문서 근거 요약:
+- [K13] 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요?: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.
+- [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
+- [K05] 검색 증강 생성의 이점은 무엇인가요? / 최신 정보: LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다. 개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다.
+- [K04] 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현: 챗봇 개발은 일반적으로 파운데이션 모델 을 사용하여 시작됩니다. 파운데이션 모델(FM)은 광범위한 일반화 데이터와 레이블이 지정되지 않은 데이터에 대해 훈련된 API 액세스 가능 LLM입니다.</pre>
+          <h3>Expected answer</h3>
+          <pre>문서 기준 핵심 이점은 비용 효율적인 구현, 최신 정보 반영, 사용자 신뢰 강화, 개발자 제어 강화다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;문서 기준 핵심 이점은 비용 효율적인 구현, 최신 정보 반영, 사용자 신뢰 강화, 개발자 제어 강화다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;비용&quot;,
+    &quot;최신&quot;,
+    &quot;신뢰&quot;,
+    &quot;제어&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;비용&quot;,
+    &quot;최신&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K03&quot;,
+    &quot;K04&quot;,
+    &quot;K05&quot;,
+    &quot;K06&quot;,
+    &quot;K07&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K04&quot;,
+    &quot;K05&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 27.5,
+    &quot;support_score&quot;: 10.0,
+    &quot;quality_score&quot;: 12.0
+  },
+  &quot;total_score&quot;: 49.5,
+  &quot;verdict&quot;: &quot;미흡&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/4, 핵심 청크 2/5개를 잡아서 총점 49.5점으로 평가했다.&quot;
+}</pre>
+          <h3>Quality gate</h3>
+          <pre>{
+  &quot;ok&quot;: true,
+  &quot;coverage&quot;: 0.5,
+  &quot;top_score&quot;: 11.63,
+  &quot;distinct_sections&quot;: 4,
+  &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Hybrid retrieval + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>hybrid_search_8b+rerank_8b</strong>
+                <span>2.79 ms</span>
+              </div>
+              <div class='query'>lexical: rag의 주요 이점을 문서 기준으로 정리해줘</div>
+              <div class='query'>semantic: rag의 주요 이점을 문서 기준으로 정리해줘 장점 비용 최신 신뢰 제어</div>
+              <h4>hybrid fused candidates</h4>
+              <ul><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rrf 0.0328</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rrf 0.0323</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>rrf 0.0159</span><br><span class='hits'>sources: semantic</span></li><li><strong>K03</strong> · 검색 증강 생성의 이점은 무엇인가요? <span class='score'>rrf 0.0159</span><br><span class='hits'>sources: lexical</span></li><li><strong>K04</strong> · 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현 <span class='score'>rrf 0.0156</span><br><span class='hits'>sources: semantic</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rrf 0.0156</span><br><span class='hits'>sources: lexical</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 11.63</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>overlap: rag의, 문서</span></li><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rerank 9.5</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>overlap: 기준으로, 문서</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>rerank 7.37</span><br>LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다. 개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다. RAG를 사용하여 LLM을 라이브 소셜 미디어 피드, 뉴스 사이트 또는 기타 자주 업데이트되는 정보 소스에 직접 연결할 수 있습니다.…<br><span class='hits'>overlap: -</span></li><li><strong>K04</strong> · 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현 <span class='score'>rerank 6.76</span><br>챗봇 개발은 일반적으로 파운데이션 모델 을 사용하여 시작됩니다. 파운데이션 모델(FM)은 광범위한 일반화 데이터와 레이블이 지정되지 않은 데이터에 대해 훈련된 API 액세스 가능 LLM입니다. 조직 또는 도메인별 정보를 위해 FM을 재교육하는 데 컴퓨팅 및 재정적 비용이 많이 소요됩니다. RAG를 통해 LLM에 새…<br><span class='hits'>overlap: -</span></li></ul>
+            </article>
+            
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table>
+          <thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead>
+          <tbody><tr><td>classify_8b</td><td>0.01 ms</td><td><pre>{
+  &quot;token_count&quot;: 6,
+  &quot;matched_hard_terms&quot;: [
+    &quot;이점&quot;
+  ],
+  &quot;complexity_score&quot;: 1,
+  &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;
+}</pre></td></tr><tr><td>hybrid_search_8b</td><td>2.57 ms</td><td><pre>{
+  &quot;lexical_query&quot;: &quot;rag의 주요 이점을 문서 기준으로 정리해줘&quot;,
+  &quot;semantic_query&quot;: &quot;rag의 주요 이점을 문서 기준으로 정리해줘 장점 비용 최신 신뢰 제어&quot;,
+  &quot;lexical_candidate_count&quot;: 4,
+  &quot;semantic_candidate_count&quot;: 4,
+  &quot;fused_candidate_count&quot;: 6,
+  &quot;top_rrf_score&quot;: 0.0328,
+  &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+  &quot;lexical_top_score&quot;: 6.15,
+  &quot;semantic_top_score&quot;: 6.15
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.22 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 6,
+  &quot;selected_count&quot;: 4,
+  &quot;top_rerank_score&quot;: 11.63,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 5.48
+}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.5,
+    &quot;top_score&quot;: 11.63,
+    &quot;distinct_sections&quot;: 4,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre></td></tr><tr><td>answer</td><td>0.28 ms</td><td><pre>{
+  &quot;final_model&quot;: &quot;8b&quot;
+}</pre></td></tr></tbody>
+        </table>
+      </article>
+      <article class='panel'>
+        <h3>Raw logs</h3>
+        <pre>[
+  {
+    &quot;node&quot;: &quot;classify_8b&quot;,
+    &quot;message&quot;: &quot;질문 분류 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;analysis&quot;: {
+        &quot;token_count&quot;: 6,
+        &quot;matched_hard_terms&quot;: [
+          &quot;이점&quot;
+        ],
+        &quot;complexity_score&quot;: 1,
+        &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+        &quot;source&quot;: &quot;heuristic-mock&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;hybrid_search_8b&quot;,
+    &quot;message&quot;: &quot;8B hybrid retrieval 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;lexical_query&quot;: &quot;rag의 주요 이점을 문서 기준으로 정리해줘&quot;,
+      &quot;semantic_query&quot;: &quot;rag의 주요 이점을 문서 기준으로 정리해줘 장점 비용 최신 신뢰 제어&quot;,
+      &quot;lexical_candidate_count&quot;: 4,
+      &quot;semantic_candidate_count&quot;: 4,
+      &quot;fused_candidate_count&quot;: 6,
+      &quot;top_rrf_score&quot;: 0.0328,
+      &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+      &quot;lexical_top_score&quot;: 6.15,
+      &quot;semantic_top_score&quot;: 6.15,
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K13&quot;,
+        &quot;K14&quot;,
+        &quot;K05&quot;,
+        &quot;K03&quot;,
+        &quot;K04&quot;,
+        &quot;K09&quot;
+      ],
+      &quot;elapsed_ms&quot;: 2.57
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_8b&quot;,
+    &quot;message&quot;: &quot;8B reranker가 hybrid 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 6,
+        &quot;selected_count&quot;: 4,
+        &quot;top_rerank_score&quot;: 11.63,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K13&quot;,
+        &quot;K14&quot;,
+        &quot;K05&quot;,
+        &quot;K04&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 5.48,
+      &quot;elapsed_ms&quot;: 0.22
+    }
+  },
+  {
+    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;answer&quot;,
+      &quot;quality&quot;: {
+        &quot;ok&quot;: true,
+        &quot;coverage&quot;: 0.5,
+        &quot;top_score&quot;: 11.63,
+        &quot;distinct_sections&quot;: 4,
+        &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;answer&quot;,
+    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;payload&quot;: {
+      &quot;final_model&quot;: &quot;8b&quot;,
+      &quot;elapsed_ms&quot;: 0.28,
+      &quot;answer_preview&quot;: &quot;Route: 8B | quality_ok=True | coverage=0.5 질문: RAG의 주요 이점을 문서 기준으로 정리해줘. 문서 근거 요약: - [K13] 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요?: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;gold_answer&quot;: &quot;문서 기준 핵심 이점은 비용 효율적인 구현, 최신 정보 반영, 사용자 신뢰 강화, 개발자 제어 강화다.&quot;,
+      &quot;rubric_keywords&quot;: [
+        &quot;비용&quot;,
+        &quot;최신&quot;,
+        &quot;신뢰&quot;,
+        &quot;제어&quot;
+      ],
+      &quot;keyword_hits&quot;: [
+        &quot;비용&quot;,
+        &quot;최신&quot;
+      ],
+      &quot;support_chunks_expected&quot;: [
+        &quot;K03&quot;,
+        &quot;K04&quot;,
+        &quot;K05&quot;,
+        &quot;K06&quot;,
+        &quot;K07&quot;
+      ],
+      &quot;support_chunks_hit&quot;: [
+        &quot;K04&quot;,
+        &quot;K05&quot;
+      ],
+      &quot;score_breakdown&quot;: {
+        &quot;keyword_score&quot;: 27.5,
+        &quot;support_score&quot;: 10.0,
+        &quot;quality_score&quot;: 12.0
+      },
+      &quot;total_score&quot;: 49.5,
+      &quot;verdict&quot;: &quot;미흡&quot;,
+      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/4, 핵심 청크 2/5개를 잡아서 총점 49.5점으로 평가했다.&quot;
+    }
+  }
+]</pre>
+      </article>
+    </section>
+    
+
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q4 · cost</div>
+          <h2>왜 AWS 문서는 RAG를 비용 효율적인 구현 방식이라고 설명하나요?</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>initial route: 14B</span>
+          <span class='pill'>final model: 14B</span>
+          <span class='pill'>restarts: 0</span>
+          <span class='pill'>hybrid retrieval</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 3.05 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>LangGraph-style flow</h3>
+          <ol><li>classify_8b → 14b</li><li>hybrid_search_14b</li><li>rerank_14b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <h3>왜 이런 결과가 나왔나</h3>
+          <ul><li>처음에는 classify_8b가 질문을 14B 경로로 분류했다. 이유: multi-step/comparison</li><li>hybrid_search_14b가 lexical/semantic-like 후보를 합친 뒤 RRF로 묶었고, rerank_14b가 그중 K14, K04, K01, K13 순서로 다시 정렬했다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 14B answer 단계가 hybrid+rereanked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/2개를 잡아서 총점 55.0점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>Route: 14B | quality_ok=True | coverage=0.625
+질문: 왜 AWS 문서는 RAG를 비용 효율적인 구현 방식이라고 설명하나요?
+문서 근거 요약:
+- [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
+- [K04] 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현: 챗봇 개발은 일반적으로 파운데이션 모델 을 사용하여 시작됩니다. 파운데이션 모델(FM)은 광범위한 일반화 데이터와 레이블이 지정되지 않은 데이터에 대해 훈련된 API 액세스 가능 LLM입니다.
+- [K01] 검색 증강 생성이란 무엇인가요?: 검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의 작업에서 독창적인 결과를 생성합니다.
+- [K13] 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요?: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.</pre>
+          <h3>Expected answer</h3>
+          <pre>파운데이션 모델을 조직 데이터에 맞게 다시 학습시키는 대신, RAG는 외부 지식 소스를 연결해 새 데이터를 주입하므로 컴퓨팅 및 재정 비용을 크게 줄일 수 있기 때문이다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;파운데이션 모델을 조직 데이터에 맞게 다시 학습시키는 대신, RAG는 외부 지식 소스를 연결해 새 데이터를 주입하므로 컴퓨팅 및 재정 비용을 크게 줄일 수 있기 때문이다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;재학습&quot;,
+    &quot;외부&quot;,
+    &quot;새 데이터&quot;,
+    &quot;컴퓨팅&quot;,
+    &quot;재정&quot;,
+    &quot;비용&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;외부&quot;,
+    &quot;새 데이터&quot;,
+    &quot;비용&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K03&quot;,
+    &quot;K01&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K01&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 27.5,
+    &quot;support_score&quot;: 12.5,
+    &quot;quality_score&quot;: 15.0
+  },
+  &quot;total_score&quot;: 55.0,
+  &quot;verdict&quot;: &quot;아쉬움&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/2개를 잡아서 총점 55.0점으로 평가했다.&quot;
+}</pre>
+          <h3>Quality gate</h3>
+          <pre>{
+  &quot;ok&quot;: true,
+  &quot;coverage&quot;: 0.625,
+  &quot;top_score&quot;: 28.71,
+  &quot;distinct_sections&quot;: 6,
+  &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Hybrid retrieval + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>hybrid_search_14b+rerank_14b</strong>
+                <span>2.50 ms</span>
+              </div>
+              <div class='query'>lexical: aws 문서는 rag를 비용 효율적인 구현 방식이라고 설명하나요 bedrock kendra sagemaker</div>
+              <div class='query'>semantic: aws 문서는 rag를 비용 효율적인 구현 방식이라고 설명하나요 bedrock kendra sagemaker 지식 기반</div>
+              <h4>hybrid fused candidates</h4>
+              <ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rrf 0.0328</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K04</strong> · 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현 <span class='score'>rrf 0.0323</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>rrf 0.0315</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K15</strong> · AWS에서의 다음 단계 / 무료 계정 가입 <span class='score'>rrf 0.0310</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K16</strong> · AWS에서의 다음 단계 / 콘솔에서 구축 시작 <span class='score'>rrf 0.0305</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rrf 0.0159</span><br><span class='hits'>sources: semantic</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>rrf 0.0152</span><br><span class='hits'>sources: lexical</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rerank 28.71</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>overlap: rag를, 구현</span></li><li><strong>K04</strong> · 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현 <span class='score'>rerank 24.43</span><br>챗봇 개발은 일반적으로 파운데이션 모델 을 사용하여 시작됩니다. 파운데이션 모델(FM)은 광범위한 일반화 데이터와 레이블이 지정되지 않은 데이터에 대해 훈련된 API 액세스 가능 LLM입니다. 조직 또는 도메인별 정보를 위해 FM을 재교육하는 데 컴퓨팅 및 재정적 비용이 많이 소요됩니다. RAG를 통해 LLM에 새…<br><span class='hits'>overlap: rag를, 구현, 비용, 효율적인</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>rerank 9.1</span><br>검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의…<br><span class='hits'>overlap: 비용, 효율적인</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 6.76</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>overlap: -</span></li><li><strong>K15</strong> · AWS에서의 다음 단계 / 무료 계정 가입 <span class='score'>rerank 6.17</span><br>AWS 프리 티어에 즉시 액세스할 수 있습니다.<br><span class='hits'>overlap: aws</span></li><li><strong>K16</strong> · AWS에서의 다음 단계 / 콘솔에서 구축 시작 <span class='score'>rerank 6.09</span><br>AWS Management Console에서 구축을 시작하세요.<br><span class='hits'>overlap: aws</span></li></ul>
+            </article>
+            
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table>
+          <thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead>
+          <tbody><tr><td>classify_8b</td><td>0.01 ms</td><td><pre>{
+  &quot;token_count&quot;: 8,
+  &quot;matched_hard_terms&quot;: [
+    &quot;왜&quot;
+  ],
+  &quot;complexity_score&quot;: 4,
+  &quot;reason&quot;: &quot;multi-step/comparison&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;
+}</pre></td></tr><tr><td>hybrid_search_14b</td><td>2.31 ms</td><td><pre>{
+  &quot;lexical_query&quot;: &quot;aws 문서는 rag를 비용 효율적인 구현 방식이라고 설명하나요 bedrock kendra sagemaker&quot;,
+  &quot;semantic_query&quot;: &quot;aws 문서는 rag를 비용 효율적인 구현 방식이라고 설명하나요 bedrock kendra sagemaker 지식 기반&quot;,
+  &quot;lexical_candidate_count&quot;: 6,
+  &quot;semantic_candidate_count&quot;: 6,
+  &quot;fused_candidate_count&quot;: 7,
+  &quot;top_rrf_score&quot;: 0.0328,
+  &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+  &quot;lexical_top_score&quot;: 17.25,
+  &quot;semantic_top_score&quot;: 22.55
+}</pre></td></tr><tr><td>rerank_14b</td><td>0.19 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 7,
+  &quot;selected_count&quot;: 6,
+  &quot;top_rerank_score&quot;: 28.71,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 6.16
+}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.625,
+    &quot;top_score&quot;: 28.71,
+    &quot;distinct_sections&quot;: 6,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre></td></tr><tr><td>answer</td><td>0.26 ms</td><td><pre>{
+  &quot;final_model&quot;: &quot;14b&quot;
+}</pre></td></tr></tbody>
+        </table>
+      </article>
+      <article class='panel'>
+        <h3>Raw logs</h3>
+        <pre>[
+  {
+    &quot;node&quot;: &quot;classify_8b&quot;,
+    &quot;message&quot;: &quot;질문 분류 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;analysis&quot;: {
+        &quot;token_count&quot;: 8,
+        &quot;matched_hard_terms&quot;: [
+          &quot;왜&quot;
+        ],
+        &quot;complexity_score&quot;: 4,
+        &quot;reason&quot;: &quot;multi-step/comparison&quot;,
+        &quot;source&quot;: &quot;heuristic-mock&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;hybrid_search_14b&quot;,
+    &quot;message&quot;: &quot;14B hybrid retrieval 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;lexical_query&quot;: &quot;aws 문서는 rag를 비용 효율적인 구현 방식이라고 설명하나요 bedrock kendra sagemaker&quot;,
+      &quot;semantic_query&quot;: &quot;aws 문서는 rag를 비용 효율적인 구현 방식이라고 설명하나요 bedrock kendra sagemaker 지식 기반&quot;,
+      &quot;lexical_candidate_count&quot;: 6,
+      &quot;semantic_candidate_count&quot;: 6,
+      &quot;fused_candidate_count&quot;: 7,
+      &quot;top_rrf_score&quot;: 0.0328,
+      &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+      &quot;lexical_top_score&quot;: 17.25,
+      &quot;semantic_top_score&quot;: 22.55,
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K14&quot;,
+        &quot;K04&quot;,
+        &quot;K01&quot;,
+        &quot;K15&quot;,
+        &quot;K16&quot;,
+        &quot;K13&quot;,
+        &quot;K05&quot;
+      ],
+      &quot;elapsed_ms&quot;: 2.31
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_14b&quot;,
+    &quot;message&quot;: &quot;14B reranker가 hybrid 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 7,
+        &quot;selected_count&quot;: 6,
+        &quot;top_rerank_score&quot;: 28.71,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K14&quot;,
+        &quot;K04&quot;,
+        &quot;K01&quot;,
+        &quot;K13&quot;,
+        &quot;K15&quot;,
+        &quot;K16&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 6.16,
+      &quot;elapsed_ms&quot;: 0.19
+    }
+  },
+  {
+    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;answer&quot;,
+      &quot;quality&quot;: {
+        &quot;ok&quot;: true,
+        &quot;coverage&quot;: 0.625,
+        &quot;top_score&quot;: 28.71,
+        &quot;distinct_sections&quot;: 6,
+        &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;answer&quot;,
+    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;payload&quot;: {
+      &quot;final_model&quot;: &quot;14b&quot;,
+      &quot;elapsed_ms&quot;: 0.26,
+      &quot;answer_preview&quot;: &quot;Route: 14B | quality_ok=True | coverage=0.625 질문: 왜 AWS 문서는 RAG를 비용 효율적인 구현 방식이라고 설명하나요? 문서 근거 요약: - [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;gold_answer&quot;: &quot;파운데이션 모델을 조직 데이터에 맞게 다시 학습시키는 대신, RAG는 외부 지식 소스를 연결해 새 데이터를 주입하므로 컴퓨팅 및 재정 비용을 크게 줄일 수 있기 때문이다.&quot;,
+      &quot;rubric_keywords&quot;: [
+        &quot;재학습&quot;,
+        &quot;외부&quot;,
+        &quot;새 데이터&quot;,
+        &quot;컴퓨팅&quot;,
+        &quot;재정&quot;,
+        &quot;비용&quot;
+      ],
+      &quot;keyword_hits&quot;: [
+        &quot;외부&quot;,
+        &quot;새 데이터&quot;,
+        &quot;비용&quot;
+      ],
+      &quot;support_chunks_expected&quot;: [
+        &quot;K03&quot;,
+        &quot;K01&quot;
+      ],
+      &quot;support_chunks_hit&quot;: [
+        &quot;K01&quot;
+      ],
+      &quot;score_breakdown&quot;: {
+        &quot;keyword_score&quot;: 27.5,
+        &quot;support_score&quot;: 12.5,
+        &quot;quality_score&quot;: 15.0
+      },
+      &quot;total_score&quot;: 55.0,
+      &quot;verdict&quot;: &quot;아쉬움&quot;,
+      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/2개를 잡아서 총점 55.0점으로 평가했다.&quot;
+    }
+  }
+]</pre>
+      </article>
+    </section>
+    
+
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q5 · trust</div>
+          <h2>RAG는 사용자 신뢰를 어떻게 강화한다고 설명하나요?</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>initial route: 8B</span>
+          <span class='pill'>final model: 8B</span>
+          <span class='pill'>restarts: 0</span>
+          <span class='pill'>hybrid retrieval</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 2.48 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>LangGraph-style flow</h3>
+          <ol><li>classify_8b → 8b</li><li>hybrid_search_8b</li><li>rerank_8b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <h3>왜 이런 결과가 나왔나</h3>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid_search_8b가 lexical/semantic-like 후보를 합친 뒤 RRF로 묶었고, rerank_8b가 그중 K02, K06, K08, K11 순서로 다시 정렬했다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 hybrid+rereanked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 1/6, 핵심 청크 0/1개를 잡아서 총점 18.8점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>Route: 8B | quality_ok=True | coverage=0.4
+질문: RAG는 사용자 신뢰를 어떻게 강화한다고 설명하나요?
+문서 근거 요약:
+- [K02] 검색 증강 생성이 중요한 이유는 무엇인가요?: LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다.
+- [K06] 검색 증강 생성의 이점은 무엇인가요? / 사용자 신뢰 강화: RAG은 LLM이 소스의 저작자 표시를 통해 정확한 정보를 제공할 수 있게 합니다. 출력에는 소스에 대한 인용 또는 참조가 포함될 수 있습니다.
+- [K08] 검색 증강 생성은 어떻게 작동하나요?: RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다.
+- [K11] 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장: 다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다.</pre>
+          <h3>Expected answer</h3>
+          <pre>RAG는 정확한 정보를 출처와 함께 제시하고, 사용자가 원문을 직접 확인할 수 있게 해 생성형 AI 결과에 대한 신뢰와 확신을 높인다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;RAG는 정확한 정보를 출처와 함께 제시하고, 사용자가 원문을 직접 확인할 수 있게 해 생성형 AI 결과에 대한 신뢰와 확신을 높인다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;출처&quot;,
+    &quot;정확&quot;,
+    &quot;원문&quot;,
+    &quot;확인&quot;,
+    &quot;신뢰&quot;,
+    &quot;확신&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;신뢰&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K05&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 9.2,
+    &quot;support_score&quot;: 0.0,
+    &quot;quality_score&quot;: 9.6
+  },
+  &quot;total_score&quot;: 18.8,
+  &quot;verdict&quot;: &quot;미흡&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 1/6, 핵심 청크 0/1개를 잡아서 총점 18.8점으로 평가했다.&quot;
+}</pre>
+          <h3>Quality gate</h3>
+          <pre>{
+  &quot;ok&quot;: true,
+  &quot;coverage&quot;: 0.4,
+  &quot;top_score&quot;: 9.87,
+  &quot;distinct_sections&quot;: 4,
+  &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Hybrid retrieval + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>hybrid_search_8b+rerank_8b</strong>
+                <span>2.10 ms</span>
+              </div>
+              <div class='query'>lexical: rag는 사용자 신뢰를 강화한다고 설명하나요</div>
+              <div class='query'>semantic: rag는 사용자 신뢰를 강화한다고 설명하나요</div>
+              <h4>hybrid fused candidates</h4>
+              <ul><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>rrf 0.0328</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K06</strong> · 검색 증강 생성의 이점은 무엇인가요? / 사용자 신뢰 강화 <span class='score'>rrf 0.0323</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>rrf 0.0317</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>rrf 0.0312</span><br><span class='hits'>sources: lexical, semantic</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>rerank 9.87</span><br>LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다. 안타깝게도 LLM 기술의 특성상 LLM 응답에 대한 예측이 불가능합니다. 또한…<br><span class='hits'>overlap: rag는, 사용자</span></li><li><strong>K06</strong> · 검색 증강 생성의 이점은 무엇인가요? / 사용자 신뢰 강화 <span class='score'>rerank 6.49</span><br>RAG은 LLM이 소스의 저작자 표시를 통해 정확한 정보를 제공할 수 있게 합니다. 출력에는 소스에 대한 인용 또는 참조가 포함될 수 있습니다. 추가 설명이나 세부 정보가 필요한 경우 사용자가 소스 문서를 직접 찾아볼 수도 있습니다. 이를 통해 생성형 AI 솔루션에 대한 신뢰와 확신을 높일 수 있습니다.<br><span class='hits'>overlap: 사용자</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>rerank 5.81</span><br>RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다. 사용자 쿼리와 관련 정보가 모두 LLM에 제공됩니다. LLM은 새로운 지식과 학습…<br><span class='hits'>overlap: 사용자</span></li><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>rerank 5.28</span><br>다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다. 확장된 프롬프트를 사용하면 대규모 언어 모델이 사용자 쿼리에 대한 정확한 답변을 생성할 수 있습니다.<br><span class='hits'>overlap: 사용자</span></li></ul>
+            </article>
+            
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table>
+          <thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead>
+          <tbody><tr><td>classify_8b</td><td>0.01 ms</td><td><pre>{
+  &quot;token_count&quot;: 5,
+  &quot;matched_hard_terms&quot;: [
+    &quot;신뢰&quot;,
+    &quot;어떻게&quot;
+  ],
+  &quot;complexity_score&quot;: 3,
+  &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;
+}</pre></td></tr><tr><td>hybrid_search_8b</td><td>1.99 ms</td><td><pre>{
+  &quot;lexical_query&quot;: &quot;rag는 사용자 신뢰를 강화한다고 설명하나요&quot;,
+  &quot;semantic_query&quot;: &quot;rag는 사용자 신뢰를 강화한다고 설명하나요&quot;,
+  &quot;lexical_candidate_count&quot;: 4,
+  &quot;semantic_candidate_count&quot;: 4,
+  &quot;fused_candidate_count&quot;: 4,
+  &quot;top_rrf_score&quot;: 0.0328,
+  &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+  &quot;lexical_top_score&quot;: 6.15,
+  &quot;semantic_top_score&quot;: 6.15
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.11 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 4,
+  &quot;selected_count&quot;: 4,
+  &quot;top_rerank_score&quot;: 9.87,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 3.719999999999999
+}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.4,
+    &quot;top_score&quot;: 9.87,
+    &quot;distinct_sections&quot;: 4,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre></td></tr><tr><td>answer</td><td>0.17 ms</td><td><pre>{
+  &quot;final_model&quot;: &quot;8b&quot;
+}</pre></td></tr></tbody>
+        </table>
+      </article>
+      <article class='panel'>
+        <h3>Raw logs</h3>
+        <pre>[
+  {
+    &quot;node&quot;: &quot;classify_8b&quot;,
+    &quot;message&quot;: &quot;질문 분류 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;analysis&quot;: {
+        &quot;token_count&quot;: 5,
+        &quot;matched_hard_terms&quot;: [
+          &quot;신뢰&quot;,
+          &quot;어떻게&quot;
+        ],
+        &quot;complexity_score&quot;: 3,
+        &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+        &quot;source&quot;: &quot;heuristic-mock&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;hybrid_search_8b&quot;,
+    &quot;message&quot;: &quot;8B hybrid retrieval 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;lexical_query&quot;: &quot;rag는 사용자 신뢰를 강화한다고 설명하나요&quot;,
+      &quot;semantic_query&quot;: &quot;rag는 사용자 신뢰를 강화한다고 설명하나요&quot;,
+      &quot;lexical_candidate_count&quot;: 4,
+      &quot;semantic_candidate_count&quot;: 4,
+      &quot;fused_candidate_count&quot;: 4,
+      &quot;top_rrf_score&quot;: 0.0328,
+      &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+      &quot;lexical_top_score&quot;: 6.15,
+      &quot;semantic_top_score&quot;: 6.15,
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K02&quot;,
+        &quot;K06&quot;,
+        &quot;K08&quot;,
+        &quot;K11&quot;
+      ],
+      &quot;elapsed_ms&quot;: 1.99
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_8b&quot;,
+    &quot;message&quot;: &quot;8B reranker가 hybrid 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 4,
+        &quot;selected_count&quot;: 4,
+        &quot;top_rerank_score&quot;: 9.87,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K02&quot;,
+        &quot;K06&quot;,
+        &quot;K08&quot;,
+        &quot;K11&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 3.719999999999999,
+      &quot;elapsed_ms&quot;: 0.11
+    }
+  },
+  {
+    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;answer&quot;,
+      &quot;quality&quot;: {
+        &quot;ok&quot;: true,
+        &quot;coverage&quot;: 0.4,
+        &quot;top_score&quot;: 9.87,
+        &quot;distinct_sections&quot;: 4,
+        &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;answer&quot;,
+    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;payload&quot;: {
+      &quot;final_model&quot;: &quot;8b&quot;,
+      &quot;elapsed_ms&quot;: 0.17,
+      &quot;answer_preview&quot;: &quot;Route: 8B | quality_ok=True | coverage=0.4 질문: RAG는 사용자 신뢰를 어떻게 강화한다고 설명하나요? 문서 근거 요약: - [K02] 검색 증강 생성이 중요한 이유는 무엇인가요?: LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;gold_answer&quot;: &quot;RAG는 정확한 정보를 출처와 함께 제시하고, 사용자가 원문을 직접 확인할 수 있게 해 생성형 AI 결과에 대한 신뢰와 확신을 높인다.&quot;,
+      &quot;rubric_keywords&quot;: [
+        &quot;출처&quot;,
+        &quot;정확&quot;,
+        &quot;원문&quot;,
+        &quot;확인&quot;,
+        &quot;신뢰&quot;,
+        &quot;확신&quot;
+      ],
+      &quot;keyword_hits&quot;: [
+        &quot;신뢰&quot;
+      ],
+      &quot;support_chunks_expected&quot;: [
+        &quot;K05&quot;
+      ],
+      &quot;support_chunks_hit&quot;: [],
+      &quot;score_breakdown&quot;: {
+        &quot;keyword_score&quot;: 9.2,
+        &quot;support_score&quot;: 0.0,
+        &quot;quality_score&quot;: 9.6
+      },
+      &quot;total_score&quot;: 18.8,
+      &quot;verdict&quot;: &quot;미흡&quot;,
+      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 1/6, 핵심 청크 0/1개를 잡아서 총점 18.8점으로 평가했다.&quot;
+    }
+  }
+]</pre>
+      </article>
+    </section>
+    
+
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q6 · workflow</div>
+          <h2>RAG는 전체적으로 어떤 단계로 작동하나요?</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>initial route: 8B</span>
+          <span class='pill'>final model: 14B</span>
+          <span class='pill'>restarts: 1</span>
+          <span class='pill'>hybrid retrieval</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 4.59 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>LangGraph-style flow</h3>
+          <ol><li>classify_8b → 8b</li><li>hybrid_search_8b</li><li>rerank_8b</li><li>grade_results → escalate_to_14b</li><li>route_upgrade 8b→14b</li><li>hybrid_search_14b</li><li>rerank_14b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <h3>왜 이런 결과가 나왔나</h3>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid_search_8b가 lexical/semantic-like 후보를 합친 뒤 RRF로 묶었고, rerank_8b가 그중 K12, K11, K09, K10 순서로 다시 정렬했다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;8B retrieval looked shallow; escalate to 14B&#x27;로 판단해 escalate_to_14b을 선택했다.</li><li>8B 경로의 hybrid retrieval 결과가 부족해서 14B hybrid+rereank 경로로 승격했다.</li><li>hybrid_search_14b가 lexical/semantic-like 후보를 합친 뒤 RRF로 묶었고, rerank_14b가 그중 K12, K11, K09, K10 순서로 다시 정렬했다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;14B retrieval still partial; answer with current evidence&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 14B answer 단계가 hybrid+rereanked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 4/4, 핵심 청크 5/5개를 잡아서 총점 84.8점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>Route: 14B | quality_ok=False | coverage=0.2
+질문: RAG는 전체적으로 어떤 단계로 작동하나요?
+문서 근거 요약:
+- [K12] 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트: 만약에 외부 데이터가 시간이 경과된 데이터가 된다면 어떻게 될까요? 최신 정보 검색을 유지하기 위해 문서를 비동기적으로 업데이트하고 문서의 임베딩 표현을 업데이트합니다.
+- [K11] 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장: 다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다.
+- [K09] 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성: LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다.
+- [K10] 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.</pre>
+          <h3>Expected answer</h3>
+          <pre>문서는 외부 데이터 생성, 관련 정보 검색, LLM 프롬프트 확장, 외부 데이터 업데이트의 흐름으로 설명한다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;문서는 외부 데이터 생성, 관련 정보 검색, LLM 프롬프트 확장, 외부 데이터 업데이트의 흐름으로 설명한다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;외부 데이터&quot;,
+    &quot;검색&quot;,
+    &quot;프롬프트&quot;,
+    &quot;업데이트&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;외부 데이터&quot;,
+    &quot;검색&quot;,
+    &quot;프롬프트&quot;,
+    &quot;업데이트&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K08&quot;,
+    &quot;K09&quot;,
+    &quot;K10&quot;,
+    &quot;K11&quot;,
+    &quot;K12&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K08&quot;,
+    &quot;K09&quot;,
+    &quot;K10&quot;,
+    &quot;K11&quot;,
+    &quot;K12&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 55.0,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 4.8
+  },
+  &quot;total_score&quot;: 84.8,
+  &quot;verdict&quot;: &quot;무난&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/4, 핵심 청크 5/5개를 잡아서 총점 84.8점으로 평가했다.&quot;
+}</pre>
+          <h3>Quality gate</h3>
+          <pre>{
+  &quot;ok&quot;: false,
+  &quot;coverage&quot;: 0.2,
+  &quot;top_score&quot;: 30.21,
+  &quot;distinct_sections&quot;: 6,
+  &quot;reason&quot;: &quot;14B retrieval still partial; answer with current evidence&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Hybrid retrieval + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>hybrid_search_8b+rerank_8b</strong>
+                <span>2.08 ms</span>
+              </div>
+              <div class='query'>lexical: rag는 전체적으로 어떤 단계로 작동하나요</div>
+              <div class='query'>semantic: rag는 전체적으로 어떤 단계로 작동하나요 외부 데이터 관련 정보 검색 프롬프트 확장 업데이트</div>
+              <h4>hybrid fused candidates</h4>
+              <ul><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rrf 0.0320</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>rrf 0.0318</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rrf 0.0315</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K12</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트 <span class='score'>rrf 0.0164</span><br><span class='hits'>sources: semantic</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>rrf 0.0164</span><br><span class='hits'>sources: lexical</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K12</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트 <span class='score'>rerank 29.81</span><br>만약에 외부 데이터가 시간이 경과된 데이터가 된다면 어떻게 될까요? 최신 정보 검색을 유지하기 위해 문서를 비동기적으로 업데이트하고 문서의 임베딩 표현을 업데이트합니다. 자동화된 실시간 프로세스 또는 주기적 배치 처리를 통해 이 작업을 수행할 수 있습니다. 변경 관리에 다양한 데이터 과학 접근 방식을 사용할 수 있기…<br><span class='hits'>overlap: 작동하나요</span></li><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>rerank 25.37</span><br>다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다. 확장된 프롬프트를 사용하면 대규모 언어 모델이 사용자 쿼리에 대한 정확한 답변을 생성할 수 있습니다.<br><span class='hits'>overlap: 작동하나요</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rerank 23.7</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>overlap: 작동하나요</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rerank 22.64</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>overlap: 작동하나요</span></li></ul>
+            </article>
+            
+
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>hybrid_search_14b+rerank_14b</strong>
+                <span>2.14 ms</span>
+              </div>
+              <div class='query'>lexical: rag는 전체적으로 어떤 단계로 작동하나요 작동 단계 검색 프롬프트 업데이트 8b retrieval looked shallow escalate 14b</div>
+              <div class='query'>semantic: rag는 전체적으로 어떤 단계로 작동하나요 외부 데이터 관련 정보 검색 프롬프트 확장 업데이트</div>
+              <h4>hybrid fused candidates</h4>
+              <ul><li><strong>K12</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트 <span class='score'>rrf 0.0325</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>rrf 0.0325</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rrf 0.0313</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>rrf 0.0313</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rrf 0.0312</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>rrf 0.0152</span><br><span class='hits'>sources: semantic</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>rrf 0.0152</span><br><span class='hits'>sources: lexical</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K12</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트 <span class='score'>rerank 30.21</span><br>만약에 외부 데이터가 시간이 경과된 데이터가 된다면 어떻게 될까요? 최신 정보 검색을 유지하기 위해 문서를 비동기적으로 업데이트하고 문서의 임베딩 표현을 업데이트합니다. 자동화된 실시간 프로세스 또는 주기적 배치 처리를 통해 이 작업을 수행할 수 있습니다. 변경 관리에 다양한 데이터 과학 접근 방식을 사용할 수 있기…<br><span class='hits'>overlap: 작동하나요</span></li><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>rerank 25.53</span><br>다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다. 확장된 프롬프트를 사용하면 대규모 언어 모델이 사용자 쿼리에 대한 정확한 답변을 생성할 수 있습니다.<br><span class='hits'>overlap: 작동하나요</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rerank 23.7</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>overlap: 작동하나요</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rerank 22.64</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>overlap: 작동하나요</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>rerank 22.37</span><br>RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다. 사용자 쿼리와 관련 정보가 모두 LLM에 제공됩니다. LLM은 새로운 지식과 학습…<br><span class='hits'>overlap: 작동하나요</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>rerank 13.16</span><br>LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다. 개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다. RAG를 사용하여 LLM을 라이브 소셜 미디어 피드, 뉴스 사이트 또는 기타 자주 업데이트되는 정보 소스에 직접 연결할 수 있습니다.…<br><span class='hits'>overlap: -</span></li></ul>
+            </article>
+            
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table>
+          <thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead>
+          <tbody><tr><td>classify_8b</td><td>0.01 ms</td><td><pre>{
+  &quot;token_count&quot;: 5,
+  &quot;matched_hard_terms&quot;: [
+    &quot;작동&quot;
+  ],
+  &quot;complexity_score&quot;: 2,
+  &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;
+}</pre></td></tr><tr><td>hybrid_search_8b</td><td>1.98 ms</td><td><pre>{
+  &quot;lexical_query&quot;: &quot;rag는 전체적으로 어떤 단계로 작동하나요&quot;,
+  &quot;semantic_query&quot;: &quot;rag는 전체적으로 어떤 단계로 작동하나요 외부 데이터 관련 정보 검색 프롬프트 확장 업데이트&quot;,
+  &quot;lexical_candidate_count&quot;: 4,
+  &quot;semantic_candidate_count&quot;: 4,
+  &quot;fused_candidate_count&quot;: 5,
+  &quot;top_rrf_score&quot;: 0.032,
+  &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+  &quot;lexical_top_score&quot;: 4.55,
+  &quot;semantic_top_score&quot;: 26.35
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.10 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 5,
+  &quot;selected_count&quot;: 4,
+  &quot;top_rerank_score&quot;: 29.81,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 3.4599999999999973
+}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+  &quot;action&quot;: &quot;escalate_to_14b&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: false,
+    &quot;coverage&quot;: 0.2,
+    &quot;top_score&quot;: 29.81,
+    &quot;distinct_sections&quot;: 4,
+    &quot;reason&quot;: &quot;8B retrieval looked shallow; escalate to 14B&quot;
+  }
+}</pre></td></tr><tr><td>route_upgrade</td><td>0.00 ms</td><td><pre>{
+  &quot;from&quot;: &quot;8b&quot;,
+  &quot;to&quot;: &quot;14b&quot;,
+  &quot;reason&quot;: &quot;8B retrieval looked shallow; escalate to 14B&quot;
+}</pre></td></tr><tr><td>hybrid_search_14b</td><td>2.00 ms</td><td><pre>{
+  &quot;lexical_query&quot;: &quot;rag는 전체적으로 어떤 단계로 작동하나요 작동 단계 검색 프롬프트 업데이트 8b retrieval looked shallow escalate 14b&quot;,
+  &quot;semantic_query&quot;: &quot;rag는 전체적으로 어떤 단계로 작동하나요 외부 데이터 관련 정보 검색 프롬프트 확장 업데이트&quot;,
+  &quot;lexical_candidate_count&quot;: 6,
+  &quot;semantic_candidate_count&quot;: 6,
+  &quot;fused_candidate_count&quot;: 7,
+  &quot;top_rrf_score&quot;: 0.0325,
+  &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+  &quot;lexical_top_score&quot;: 16.45,
+  &quot;semantic_top_score&quot;: 26.35
+}</pre></td></tr><tr><td>rerank_14b</td><td>0.14 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 7,
+  &quot;selected_count&quot;: 6,
+  &quot;top_rerank_score&quot;: 30.21,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 3.8599999999999994
+}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: false,
+    &quot;coverage&quot;: 0.2,
+    &quot;top_score&quot;: 30.21,
+    &quot;distinct_sections&quot;: 6,
+    &quot;reason&quot;: &quot;14B retrieval still partial; answer with current evidence&quot;
+  }
+}</pre></td></tr><tr><td>answer</td><td>0.15 ms</td><td><pre>{
+  &quot;final_model&quot;: &quot;14b&quot;
+}</pre></td></tr></tbody>
+        </table>
+      </article>
+      <article class='panel'>
+        <h3>Raw logs</h3>
+        <pre>[
+  {
+    &quot;node&quot;: &quot;classify_8b&quot;,
+    &quot;message&quot;: &quot;질문 분류 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;analysis&quot;: {
+        &quot;token_count&quot;: 5,
+        &quot;matched_hard_terms&quot;: [
+          &quot;작동&quot;
+        ],
+        &quot;complexity_score&quot;: 2,
+        &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+        &quot;source&quot;: &quot;heuristic-mock&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;hybrid_search_8b&quot;,
+    &quot;message&quot;: &quot;8B hybrid retrieval 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;lexical_query&quot;: &quot;rag는 전체적으로 어떤 단계로 작동하나요&quot;,
+      &quot;semantic_query&quot;: &quot;rag는 전체적으로 어떤 단계로 작동하나요 외부 데이터 관련 정보 검색 프롬프트 확장 업데이트&quot;,
+      &quot;lexical_candidate_count&quot;: 4,
+      &quot;semantic_candidate_count&quot;: 4,
+      &quot;fused_candidate_count&quot;: 5,
+      &quot;top_rrf_score&quot;: 0.032,
+      &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+      &quot;lexical_top_score&quot;: 4.55,
+      &quot;semantic_top_score&quot;: 26.35,
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K09&quot;,
+        &quot;K11&quot;,
+        &quot;K10&quot;,
+        &quot;K12&quot;,
+        &quot;K08&quot;
+      ],
+      &quot;elapsed_ms&quot;: 1.98
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_8b&quot;,
+    &quot;message&quot;: &quot;8B reranker가 hybrid 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 5,
+        &quot;selected_count&quot;: 4,
+        &quot;top_rerank_score&quot;: 29.81,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K12&quot;,
+        &quot;K11&quot;,
+        &quot;K09&quot;,
+        &quot;K10&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 3.4599999999999973,
+      &quot;elapsed_ms&quot;: 0.1
+    }
+  },
+  {
+    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;message&quot;: &quot;품질 게이트가 8B 검색을 얕다고 판단해 14B로 승격함.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;escalate_to_14b&quot;,
+      &quot;quality&quot;: {
+        &quot;ok&quot;: false,
+        &quot;coverage&quot;: 0.2,
+        &quot;top_score&quot;: 29.81,
+        &quot;distinct_sections&quot;: 4,
+        &quot;reason&quot;: &quot;8B retrieval looked shallow; escalate to 14B&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;route_upgrade&quot;,
+    &quot;message&quot;: &quot;품질 게이트가 14B 승격을 요청함&quot;,
+    &quot;payload&quot;: {
+      &quot;reason&quot;: &quot;8B retrieval looked shallow; escalate to 14B&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;hybrid_search_14b&quot;,
+    &quot;message&quot;: &quot;14B hybrid retrieval 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;lexical_query&quot;: &quot;rag는 전체적으로 어떤 단계로 작동하나요 작동 단계 검색 프롬프트 업데이트 8b retrieval looked shallow escalate 14b&quot;,
+      &quot;semantic_query&quot;: &quot;rag는 전체적으로 어떤 단계로 작동하나요 외부 데이터 관련 정보 검색 프롬프트 확장 업데이트&quot;,
+      &quot;lexical_candidate_count&quot;: 6,
+      &quot;semantic_candidate_count&quot;: 6,
+      &quot;fused_candidate_count&quot;: 7,
+      &quot;top_rrf_score&quot;: 0.0325,
+      &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+      &quot;lexical_top_score&quot;: 16.45,
+      &quot;semantic_top_score&quot;: 26.35,
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K12&quot;,
+        &quot;K11&quot;,
+        &quot;K09&quot;,
+        &quot;K08&quot;,
+        &quot;K10&quot;,
+        &quot;K05&quot;,
+        &quot;K01&quot;
+      ],
+      &quot;elapsed_ms&quot;: 2.0
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_14b&quot;,
+    &quot;message&quot;: &quot;14B reranker가 hybrid 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 7,
+        &quot;selected_count&quot;: 6,
+        &quot;top_rerank_score&quot;: 30.21,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K12&quot;,
+        &quot;K11&quot;,
+        &quot;K09&quot;,
+        &quot;K10&quot;,
+        &quot;K08&quot;,
+        &quot;K05&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 3.8599999999999994,
+      &quot;elapsed_ms&quot;: 0.14
+    }
+  },
+  {
+    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;message&quot;: &quot;14B 검색도 완벽하진 않지만 현재 근거로 answer 단계로 진행함.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;answer&quot;,
+      &quot;quality&quot;: {
+        &quot;ok&quot;: false,
+        &quot;coverage&quot;: 0.2,
+        &quot;top_score&quot;: 30.21,
+        &quot;distinct_sections&quot;: 6,
+        &quot;reason&quot;: &quot;14B retrieval still partial; answer with current evidence&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;answer&quot;,
+    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;payload&quot;: {
+      &quot;final_model&quot;: &quot;14b&quot;,
+      &quot;elapsed_ms&quot;: 0.15,
+      &quot;answer_preview&quot;: &quot;Route: 14B | quality_ok=False | coverage=0.2 질문: RAG는 전체적으로 어떤 단계로 작동하나요? 문서 근거 요약: - [K12] 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트: 만약에 외부 데이터가 시간이 경과된 데이터가 된다면 어떻게 될까요? 최신 정보 검색을 유지하기 위해 문서를 비동기적으로 업데이트하고 문서의 임베딩 표현을 업데이트합니다. - [K11] 검색 증강…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;gold_answer&quot;: &quot;문서는 외부 데이터 생성, 관련 정보 검색, LLM 프롬프트 확장, 외부 데이터 업데이트의 흐름으로 설명한다.&quot;,
+      &quot;rubric_keywords&quot;: [
+        &quot;외부 데이터&quot;,
+        &quot;검색&quot;,
+        &quot;프롬프트&quot;,
+        &quot;업데이트&quot;
+      ],
+      &quot;keyword_hits&quot;: [
+        &quot;외부 데이터&quot;,
+        &quot;검색&quot;,
+        &quot;프롬프트&quot;,
+        &quot;업데이트&quot;
+      ],
+      &quot;support_chunks_expected&quot;: [
+        &quot;K08&quot;,
+        &quot;K09&quot;,
+        &quot;K10&quot;,
+        &quot;K11&quot;,
+        &quot;K12&quot;
+      ],
+      &quot;support_chunks_hit&quot;: [
+        &quot;K08&quot;,
+        &quot;K09&quot;,
+        &quot;K10&quot;,
+        &quot;K11&quot;,
+        &quot;K12&quot;
+      ],
+      &quot;score_breakdown&quot;: {
+        &quot;keyword_score&quot;: 55.0,
+        &quot;support_score&quot;: 25.0,
+        &quot;quality_score&quot;: 4.8
+      },
+      &quot;total_score&quot;: 84.8,
+      &quot;verdict&quot;: &quot;무난&quot;,
+      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/4, 핵심 청크 5/5개를 잡아서 총점 84.8점으로 평가했다.&quot;
+    }
+  }
+]</pre>
+      </article>
+    </section>
+    
+
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q7 · retrieval</div>
+          <h2>문서에서 말하는 관련 정보 검색 단계는 어떤 식으로 이뤄지나요?</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>initial route: 8B</span>
+          <span class='pill'>final model: 8B</span>
+          <span class='pill'>restarts: 0</span>
+          <span class='pill'>hybrid retrieval</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 2.44 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>LangGraph-style flow</h3>
+          <ol><li>classify_8b → 8b</li><li>hybrid_search_8b</li><li>rerank_8b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <h3>왜 이런 결과가 나왔나</h3>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid_search_8b가 lexical/semantic-like 후보를 합친 뒤 RRF로 묶었고, rerank_8b가 그중 K10, K12, K13, K09 순서로 다시 정렬했다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 hybrid+rereanked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 4/6, 핵심 청크 1/1개를 잡아서 총점 72.4점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>Route: 8B | quality_ok=True | coverage=0.444
+질문: 문서에서 말하는 관련 정보 검색 단계는 어떤 식으로 이뤄지나요?
+문서 근거 요약:
+- [K10] 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.
+- [K12] 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트: 만약에 외부 데이터가 시간이 경과된 데이터가 된다면 어떻게 될까요? 최신 정보 검색을 유지하기 위해 문서를 비동기적으로 업데이트하고 문서의 임베딩 표현을 업데이트합니다.
+- [K13] 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요?: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.
+- [K09] 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성: LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다.</pre>
+          <h3>Expected answer</h3>
+          <pre>사용자 쿼리를 벡터 표현으로 바꾸고 벡터 데이터베이스와 매칭해, 연관성이 높은 문서나 구절을 검색하는 방식으로 이뤄진다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;사용자 쿼리를 벡터 표현으로 바꾸고 벡터 데이터베이스와 매칭해, 연관성이 높은 문서나 구절을 검색하는 방식으로 이뤄진다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;벡터&quot;,
+    &quot;데이터베이스&quot;,
+    &quot;매칭&quot;,
+    &quot;연관성&quot;,
+    &quot;문서&quot;,
+    &quot;구절&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;벡터&quot;,
+    &quot;데이터베이스&quot;,
+    &quot;연관성&quot;,
+    &quot;문서&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K10&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K10&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 36.7,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 10.7
+  },
+  &quot;total_score&quot;: 72.4,
+  &quot;verdict&quot;: &quot;무난&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/6, 핵심 청크 1/1개를 잡아서 총점 72.4점으로 평가했다.&quot;
+}</pre>
+          <h3>Quality gate</h3>
+          <pre>{
+  &quot;ok&quot;: true,
+  &quot;coverage&quot;: 0.444,
+  &quot;top_score&quot;: 48.43,
+  &quot;distinct_sections&quot;: 4,
+  &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Hybrid retrieval + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>hybrid_search_8b+rerank_8b</strong>
+                <span>2.08 ms</span>
+              </div>
+              <div class='query'>lexical: 문서에서 말하는 관련 정보 검색 단계는 어떤 식으로</div>
+              <div class='query'>semantic: 문서에서 말하는 관련 정보 검색 단계는 어떤 식으로 이뤄지나요 외부 데이터 관련 정보 검색 프롬프트 확장 업데이트 연관성 벡터 데이터베이스 시맨틱</div>
+              <h4>hybrid fused candidates</h4>
+              <ul><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rrf 0.0328</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rrf 0.0315</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K12</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트 <span class='score'>rrf 0.0161</span><br><span class='hits'>sources: semantic</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>rrf 0.0161</span><br><span class='hits'>sources: lexical</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>rrf 0.0159</span><br><span class='hits'>sources: lexical</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rrf 0.0156</span><br><span class='hits'>sources: semantic</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rerank 48.43</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>overlap: 검색, 관련, 단계는, 정보</span></li><li><strong>K12</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트 <span class='score'>rerank 34.32</span><br>만약에 외부 데이터가 시간이 경과된 데이터가 된다면 어떻게 될까요? 최신 정보 검색을 유지하기 위해 문서를 비동기적으로 업데이트하고 문서의 임베딩 표현을 업데이트합니다. 자동화된 실시간 프로세스 또는 주기적 배치 처리를 통해 이 작업을 수행할 수 있습니다. 변경 관리에 다양한 데이터 과학 접근 방식을 사용할 수 있기…<br><span class='hits'>overlap: 검색, 정보</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 29.85</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>overlap: 검색, 관련</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rerank 29.13</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>overlap: 검색</span></li></ul>
+            </article>
+            
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table>
+          <thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead>
+          <tbody><tr><td>classify_8b</td><td>0.01 ms</td><td><pre>{
+  &quot;token_count&quot;: 9,
+  &quot;matched_hard_terms&quot;: [],
+  &quot;complexity_score&quot;: 2,
+  &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;
+}</pre></td></tr><tr><td>hybrid_search_8b</td><td>1.95 ms</td><td><pre>{
+  &quot;lexical_query&quot;: &quot;문서에서 말하는 관련 정보 검색 단계는 어떤 식으로&quot;,
+  &quot;semantic_query&quot;: &quot;문서에서 말하는 관련 정보 검색 단계는 어떤 식으로 이뤄지나요 외부 데이터 관련 정보 검색 프롬프트 확장 업데이트 연관성 벡터 데이터베이스 시맨틱&quot;,
+  &quot;lexical_candidate_count&quot;: 4,
+  &quot;semantic_candidate_count&quot;: 4,
+  &quot;fused_candidate_count&quot;: 6,
+  &quot;top_rrf_score&quot;: 0.0328,
+  &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+  &quot;lexical_top_score&quot;: 17.6,
+  &quot;semantic_top_score&quot;: 37.15
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.13 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 6,
+  &quot;selected_count&quot;: 4,
+  &quot;top_rerank_score&quot;: 48.43,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 11.280000000000001
+}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.444,
+    &quot;top_score&quot;: 48.43,
+    &quot;distinct_sections&quot;: 4,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre></td></tr><tr><td>answer</td><td>0.16 ms</td><td><pre>{
+  &quot;final_model&quot;: &quot;8b&quot;
+}</pre></td></tr></tbody>
+        </table>
+      </article>
+      <article class='panel'>
+        <h3>Raw logs</h3>
+        <pre>[
+  {
+    &quot;node&quot;: &quot;classify_8b&quot;,
+    &quot;message&quot;: &quot;질문 분류 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;analysis&quot;: {
+        &quot;token_count&quot;: 9,
+        &quot;matched_hard_terms&quot;: [],
+        &quot;complexity_score&quot;: 2,
+        &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+        &quot;source&quot;: &quot;heuristic-mock&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;hybrid_search_8b&quot;,
+    &quot;message&quot;: &quot;8B hybrid retrieval 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;lexical_query&quot;: &quot;문서에서 말하는 관련 정보 검색 단계는 어떤 식으로&quot;,
+      &quot;semantic_query&quot;: &quot;문서에서 말하는 관련 정보 검색 단계는 어떤 식으로 이뤄지나요 외부 데이터 관련 정보 검색 프롬프트 확장 업데이트 연관성 벡터 데이터베이스 시맨틱&quot;,
+      &quot;lexical_candidate_count&quot;: 4,
+      &quot;semantic_candidate_count&quot;: 4,
+      &quot;fused_candidate_count&quot;: 6,
+      &quot;top_rrf_score&quot;: 0.0328,
+      &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+      &quot;lexical_top_score&quot;: 17.6,
+      &quot;semantic_top_score&quot;: 37.15,
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K10&quot;,
+        &quot;K13&quot;,
+        &quot;K12&quot;,
+        &quot;K08&quot;,
+        &quot;K05&quot;,
+        &quot;K09&quot;
+      ],
+      &quot;elapsed_ms&quot;: 1.95
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_8b&quot;,
+    &quot;message&quot;: &quot;8B reranker가 hybrid 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 6,
+        &quot;selected_count&quot;: 4,
+        &quot;top_rerank_score&quot;: 48.43,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K10&quot;,
+        &quot;K12&quot;,
+        &quot;K13&quot;,
+        &quot;K09&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 11.280000000000001,
+      &quot;elapsed_ms&quot;: 0.13
+    }
+  },
+  {
+    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;answer&quot;,
+      &quot;quality&quot;: {
+        &quot;ok&quot;: true,
+        &quot;coverage&quot;: 0.444,
+        &quot;top_score&quot;: 48.43,
+        &quot;distinct_sections&quot;: 4,
+        &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;answer&quot;,
+    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;payload&quot;: {
+      &quot;final_model&quot;: &quot;8b&quot;,
+      &quot;elapsed_ms&quot;: 0.16,
+      &quot;answer_preview&quot;: &quot;Route: 8B | quality_ok=True | coverage=0.444 질문: 문서에서 말하는 관련 정보 검색 단계는 어떤 식으로 이뤄지나요? 문서 근거 요약: - [K10] 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. - [K12] 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;gold_answer&quot;: &quot;사용자 쿼리를 벡터 표현으로 바꾸고 벡터 데이터베이스와 매칭해, 연관성이 높은 문서나 구절을 검색하는 방식으로 이뤄진다.&quot;,
+      &quot;rubric_keywords&quot;: [
+        &quot;벡터&quot;,
+        &quot;데이터베이스&quot;,
+        &quot;매칭&quot;,
+        &quot;연관성&quot;,
+        &quot;문서&quot;,
+        &quot;구절&quot;
+      ],
+      &quot;keyword_hits&quot;: [
+        &quot;벡터&quot;,
+        &quot;데이터베이스&quot;,
+        &quot;연관성&quot;,
+        &quot;문서&quot;
+      ],
+      &quot;support_chunks_expected&quot;: [
+        &quot;K10&quot;
+      ],
+      &quot;support_chunks_hit&quot;: [
+        &quot;K10&quot;
+      ],
+      &quot;score_breakdown&quot;: {
+        &quot;keyword_score&quot;: 36.7,
+        &quot;support_score&quot;: 25.0,
+        &quot;quality_score&quot;: 10.7
+      },
+      &quot;total_score&quot;: 72.4,
+      &quot;verdict&quot;: &quot;무난&quot;,
+      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/6, 핵심 청크 1/1개를 잡아서 총점 72.4점으로 평가했다.&quot;
+    }
+  }
+]</pre>
+      </article>
+    </section>
+    
+
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q8 · prompting</div>
+          <h2>LLM 프롬프트 확장 단계는 왜 필요하고 무엇을 추가하나요?</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>initial route: 8B</span>
+          <span class='pill'>final model: 8B</span>
+          <span class='pill'>restarts: 0</span>
+          <span class='pill'>hybrid retrieval</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 2.31 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>LangGraph-style flow</h3>
+          <ol><li>classify_8b → 8b</li><li>hybrid_search_8b</li><li>rerank_8b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <h3>왜 이런 결과가 나왔나</h3>
+          <ul><li>처음에는 classify_8b가 질문을 8B 경로로 분류했다. 이유: direct factual retrieval</li><li>hybrid_search_8b가 lexical/semantic-like 후보를 합친 뒤 RRF로 묶었고, rerank_8b가 그중 K11, K12, K10, K13 순서로 다시 정렬했다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 8B answer 단계가 hybrid+rereanked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 4/6, 핵심 청크 1/1개를 잡아서 총점 75.4점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>Route: 8B | quality_ok=True | coverage=0.571
+질문: LLM 프롬프트 확장 단계는 왜 필요하고 무엇을 추가하나요?
+문서 근거 요약:
+- [K11] 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장: 다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다.
+- [K12] 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트: 만약에 외부 데이터가 시간이 경과된 데이터가 된다면 어떻게 될까요? 최신 정보 검색을 유지하기 위해 문서를 비동기적으로 업데이트하고 문서의 임베딩 표현을 업데이트합니다.
+- [K10] 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.
+- [K13] 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요?: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.</pre>
+          <h3>Expected answer</h3>
+          <pre>검색된 관련 데이터를 사용자 입력에 붙여 프롬프트를 확장함으로써, LLM이 더 정확하고 근거 있는 답변을 생성하게 하기 위해 필요하다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;검색된 관련 데이터를 사용자 입력에 붙여 프롬프트를 확장함으로써, LLM이 더 정확하고 근거 있는 답변을 생성하게 하기 위해 필요하다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;검색된&quot;,
+    &quot;관련 데이터&quot;,
+    &quot;프롬프트&quot;,
+    &quot;확장&quot;,
+    &quot;정확&quot;,
+    &quot;답변&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;검색된&quot;,
+    &quot;관련 데이터&quot;,
+    &quot;프롬프트&quot;,
+    &quot;확장&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K11&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K11&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 36.7,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 13.7
+  },
+  &quot;total_score&quot;: 75.4,
+  &quot;verdict&quot;: &quot;무난&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/6, 핵심 청크 1/1개를 잡아서 총점 75.4점으로 평가했다.&quot;
+}</pre>
+          <h3>Quality gate</h3>
+          <pre>{
+  &quot;ok&quot;: true,
+  &quot;coverage&quot;: 0.571,
+  &quot;top_score&quot;: 43.18,
+  &quot;distinct_sections&quot;: 4,
+  &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Hybrid retrieval + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>hybrid_search_8b+rerank_8b</strong>
+                <span>1.97 ms</span>
+              </div>
+              <div class='query'>lexical: llm 프롬프트 확장 단계는 필요하고 무엇을 추가하나요</div>
+              <div class='query'>semantic: llm 프롬프트 확장 단계는 필요하고 무엇을 추가하나요 개념 정의 프로세스 외부 데이터 관련 정보 검색 프롬프트 확장 업데이트 보강 컨텍스트 정확한 답변</div>
+              <h4>hybrid fused candidates</h4>
+              <ul><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>rrf 0.0328</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rrf 0.0312</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K12</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트 <span class='score'>rrf 0.0161</span><br><span class='hits'>sources: semantic</span></li><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>rrf 0.0161</span><br><span class='hits'>sources: lexical</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rrf 0.0159</span><br><span class='hits'>sources: semantic</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>rrf 0.0159</span><br><span class='hits'>sources: lexical</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>rerank 43.18</span><br>다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다. 확장된 프롬프트를 사용하면 대규모 언어 모델이 사용자 쿼리에 대한 정확한 답변을 생성할 수 있습니다.<br><span class='hits'>overlap: llm, 프롬프트, 확장</span></li><li><strong>K12</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트 <span class='score'>rerank 26.77</span><br>만약에 외부 데이터가 시간이 경과된 데이터가 된다면 어떻게 될까요? 최신 정보 검색을 유지하기 위해 문서를 비동기적으로 업데이트하고 문서의 임베딩 표현을 업데이트합니다. 자동화된 실시간 프로세스 또는 주기적 배치 처리를 통해 이 작업을 수행할 수 있습니다. 변경 관리에 다양한 데이터 과학 접근 방식을 사용할 수 있기…<br><span class='hits'>overlap: -</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rerank 21.3</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>overlap: 단계는</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 20.96</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>overlap: llm</span></li></ul>
+            </article>
+            
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table>
+          <thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead>
+          <tbody><tr><td>classify_8b</td><td>0.01 ms</td><td><pre>{
+  &quot;token_count&quot;: 7,
+  &quot;matched_hard_terms&quot;: [
+    &quot;왜&quot;
+  ],
+  &quot;complexity_score&quot;: 2,
+  &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;
+}</pre></td></tr><tr><td>hybrid_search_8b</td><td>1.81 ms</td><td><pre>{
+  &quot;lexical_query&quot;: &quot;llm 프롬프트 확장 단계는 필요하고 무엇을 추가하나요&quot;,
+  &quot;semantic_query&quot;: &quot;llm 프롬프트 확장 단계는 필요하고 무엇을 추가하나요 개념 정의 프로세스 외부 데이터 관련 정보 검색 프롬프트 확장 업데이트 보강 컨텍스트 정확한 답변&quot;,
+  &quot;lexical_candidate_count&quot;: 4,
+  &quot;semantic_candidate_count&quot;: 4,
+  &quot;fused_candidate_count&quot;: 6,
+  &quot;top_rrf_score&quot;: 0.0328,
+  &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+  &quot;lexical_top_score&quot;: 14.95,
+  &quot;semantic_top_score&quot;: 33.6
+}</pre></td></tr><tr><td>rerank_8b</td><td>0.16 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 6,
+  &quot;selected_count&quot;: 4,
+  &quot;top_rerank_score&quot;: 43.18,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 9.579999999999998
+}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.571,
+    &quot;top_score&quot;: 43.18,
+    &quot;distinct_sections&quot;: 4,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre></td></tr><tr><td>answer</td><td>0.15 ms</td><td><pre>{
+  &quot;final_model&quot;: &quot;8b&quot;
+}</pre></td></tr></tbody>
+        </table>
+      </article>
+      <article class='panel'>
+        <h3>Raw logs</h3>
+        <pre>[
+  {
+    &quot;node&quot;: &quot;classify_8b&quot;,
+    &quot;message&quot;: &quot;질문 분류 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;analysis&quot;: {
+        &quot;token_count&quot;: 7,
+        &quot;matched_hard_terms&quot;: [
+          &quot;왜&quot;
+        ],
+        &quot;complexity_score&quot;: 2,
+        &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+        &quot;source&quot;: &quot;heuristic-mock&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;hybrid_search_8b&quot;,
+    &quot;message&quot;: &quot;8B hybrid retrieval 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;lexical_query&quot;: &quot;llm 프롬프트 확장 단계는 필요하고 무엇을 추가하나요&quot;,
+      &quot;semantic_query&quot;: &quot;llm 프롬프트 확장 단계는 필요하고 무엇을 추가하나요 개념 정의 프로세스 외부 데이터 관련 정보 검색 프롬프트 확장 업데이트 보강 컨텍스트 정확한 답변&quot;,
+      &quot;lexical_candidate_count&quot;: 4,
+      &quot;semantic_candidate_count&quot;: 4,
+      &quot;fused_candidate_count&quot;: 6,
+      &quot;top_rrf_score&quot;: 0.0328,
+      &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+      &quot;lexical_top_score&quot;: 14.95,
+      &quot;semantic_top_score&quot;: 33.6,
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K11&quot;,
+        &quot;K10&quot;,
+        &quot;K12&quot;,
+        &quot;K02&quot;,
+        &quot;K13&quot;,
+        &quot;K01&quot;
+      ],
+      &quot;elapsed_ms&quot;: 1.81
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_8b&quot;,
+    &quot;message&quot;: &quot;8B reranker가 hybrid 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 6,
+        &quot;selected_count&quot;: 4,
+        &quot;top_rerank_score&quot;: 43.18,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K11&quot;,
+        &quot;K12&quot;,
+        &quot;K10&quot;,
+        &quot;K13&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 9.579999999999998,
+      &quot;elapsed_ms&quot;: 0.16
+    }
+  },
+  {
+    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;answer&quot;,
+      &quot;quality&quot;: {
+        &quot;ok&quot;: true,
+        &quot;coverage&quot;: 0.571,
+        &quot;top_score&quot;: 43.18,
+        &quot;distinct_sections&quot;: 4,
+        &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;answer&quot;,
+    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;payload&quot;: {
+      &quot;final_model&quot;: &quot;8b&quot;,
+      &quot;elapsed_ms&quot;: 0.15,
+      &quot;answer_preview&quot;: &quot;Route: 8B | quality_ok=True | coverage=0.571 질문: LLM 프롬프트 확장 단계는 왜 필요하고 무엇을 추가하나요? 문서 근거 요약: - [K11] 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장: 다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;gold_answer&quot;: &quot;검색된 관련 데이터를 사용자 입력에 붙여 프롬프트를 확장함으로써, LLM이 더 정확하고 근거 있는 답변을 생성하게 하기 위해 필요하다.&quot;,
+      &quot;rubric_keywords&quot;: [
+        &quot;검색된&quot;,
+        &quot;관련 데이터&quot;,
+        &quot;프롬프트&quot;,
+        &quot;확장&quot;,
+        &quot;정확&quot;,
+        &quot;답변&quot;
+      ],
+      &quot;keyword_hits&quot;: [
+        &quot;검색된&quot;,
+        &quot;관련 데이터&quot;,
+        &quot;프롬프트&quot;,
+        &quot;확장&quot;
+      ],
+      &quot;support_chunks_expected&quot;: [
+        &quot;K11&quot;
+      ],
+      &quot;support_chunks_hit&quot;: [
+        &quot;K11&quot;
+      ],
+      &quot;score_breakdown&quot;: {
+        &quot;keyword_score&quot;: 36.7,
+        &quot;support_score&quot;: 25.0,
+        &quot;quality_score&quot;: 13.7
+      },
+      &quot;total_score&quot;: 75.4,
+      &quot;verdict&quot;: &quot;무난&quot;,
+      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/6, 핵심 청크 1/1개를 잡아서 총점 75.4점으로 평가했다.&quot;
+    }
+  }
+]</pre>
+      </article>
+    </section>
+    
+
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q9 · comparison</div>
+          <h2>AWS 문서 기준으로 RAG와 시맨틱 검색의 차이를 비교해줘.</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>initial route: 14B</span>
+          <span class='pill'>final model: 14B</span>
+          <span class='pill'>restarts: 0</span>
+          <span class='pill'>hybrid retrieval</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 2.31 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>LangGraph-style flow</h3>
+          <ol><li>classify_8b → 14b</li><li>hybrid_search_14b</li><li>rerank_14b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <h3>왜 이런 결과가 나왔나</h3>
+          <ul><li>처음에는 classify_8b가 질문을 14B 경로로 분류했다. 이유: multi-step/comparison</li><li>hybrid_search_14b가 lexical/semantic-like 후보를 합친 뒤 RRF로 묶었고, rerank_14b가 그중 K13, K14, K09, K10 순서로 다시 정렬했다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 14B answer 단계가 hybrid+rereanked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 2/6, 핵심 청크 1/1개를 잡아서 총점 55.3점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>Route: 14B | quality_ok=True | coverage=0.5
+질문: AWS 문서 기준으로 RAG와 시맨틱 검색의 차이를 비교해줘.
+문서 근거 요약:
+- [K13] 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요?: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.
+- [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
+- [K09] 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성: LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다.
+- [K10] 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색: 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.</pre>
+          <h3>Expected answer</h3>
+          <pre>RAG는 외부 지식을 붙여 답변을 생성하는 전체 접근이고, 시맨틱 검색은 그 RAG 성능을 높이기 위해 대규모 데이터에서 더 정확한 관련 구절을 찾고 지식 준비 작업을 줄여주는 검색 기술이다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;RAG는 외부 지식을 붙여 답변을 생성하는 전체 접근이고, 시맨틱 검색은 그 RAG 성능을 높이기 위해 대규모 데이터에서 더 정확한 관련 구절을 찾고 지식 준비 작업을 줄여주는 검색 기술이다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;전체 접근&quot;,
+    &quot;시맨틱 검색&quot;,
+    &quot;관련 구절&quot;,
+    &quot;정확&quot;,
+    &quot;준비 작업&quot;,
+    &quot;성능&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;시맨틱 검색&quot;,
+    &quot;관련 구절&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K13&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K13&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 18.3,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 12.0
+  },
+  &quot;total_score&quot;: 55.3,
+  &quot;verdict&quot;: &quot;아쉬움&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/6, 핵심 청크 1/1개를 잡아서 총점 55.3점으로 평가했다.&quot;
+}</pre>
+          <h3>Quality gate</h3>
+          <pre>{
+  &quot;ok&quot;: true,
+  &quot;coverage&quot;: 0.5,
+  &quot;top_score&quot;: 53.56,
+  &quot;distinct_sections&quot;: 6,
+  &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Hybrid retrieval + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>hybrid_search_14b+rerank_14b</strong>
+                <span>1.91 ms</span>
+              </div>
+              <div class='query'>lexical: aws 문서 기준으로 rag와 시맨틱 검색의 차이를 비교해줘 차이 비교 검색 bedrock kendra sagemaker</div>
+              <div class='query'>semantic: aws 문서 기준으로 rag와 시맨틱 검색의 차이를 비교해줘 연관성 벡터 데이터베이스 시맨틱 검색 키워드 검색 지식 준비 bedrock kendra sagemaker 지식 기반</div>
+              <h4>hybrid fused candidates</h4>
+              <ul><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rrf 0.0325</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rrf 0.0325</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rrf 0.0317</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rrf 0.0310</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>rrf 0.0303</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>rrf 0.0156</span><br><span class='hits'>sources: lexical</span></li><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>rrf 0.0154</span><br><span class='hits'>sources: semantic</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 53.56</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>overlap: 검색의, 문서, 시맨틱</span></li><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rerank 52.83</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>overlap: 기준으로, 문서, 시맨틱</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rerank 25.7</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>overlap: 문서</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rerank 19.72</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>overlap: -</span></li><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>rerank 14.98</span><br>LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다. 안타깝게도 LLM 기술의 특성상 LLM 응답에 대한 예측이 불가능합니다. 또한…<br><span class='hits'>overlap: -</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>rerank 12.09</span><br>검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의…<br><span class='hits'>overlap: -</span></li></ul>
+            </article>
+            
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table>
+          <thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead>
+          <tbody><tr><td>classify_8b</td><td>0.01 ms</td><td><pre>{
+  &quot;token_count&quot;: 8,
+  &quot;matched_hard_terms&quot;: [
+    &quot;비교&quot;,
+    &quot;시맨틱&quot;,
+    &quot;차이&quot;
+  ],
+  &quot;complexity_score&quot;: 4,
+  &quot;reason&quot;: &quot;multi-step/comparison&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;
+}</pre></td></tr><tr><td>hybrid_search_14b</td><td>1.72 ms</td><td><pre>{
+  &quot;lexical_query&quot;: &quot;aws 문서 기준으로 rag와 시맨틱 검색의 차이를 비교해줘 차이 비교 검색 bedrock kendra sagemaker&quot;,
+  &quot;semantic_query&quot;: &quot;aws 문서 기준으로 rag와 시맨틱 검색의 차이를 비교해줘 연관성 벡터 데이터베이스 시맨틱 검색 키워드 검색 지식 준비 bedrock kendra sagemaker 지식 기반&quot;,
+  &quot;lexical_candidate_count&quot;: 6,
+  &quot;semantic_candidate_count&quot;: 6,
+  &quot;fused_candidate_count&quot;: 7,
+  &quot;top_rrf_score&quot;: 0.0325,
+  &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+  &quot;lexical_top_score&quot;: 25.85,
+  &quot;semantic_top_score&quot;: 45.9
+}</pre></td></tr><tr><td>rerank_14b</td><td>0.19 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 7,
+  &quot;selected_count&quot;: 6,
+  &quot;top_rerank_score&quot;: 53.56,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 7.660000000000004
+}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.5,
+    &quot;top_score&quot;: 53.56,
+    &quot;distinct_sections&quot;: 6,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre></td></tr><tr><td>answer</td><td>0.19 ms</td><td><pre>{
+  &quot;final_model&quot;: &quot;14b&quot;
+}</pre></td></tr></tbody>
+        </table>
+      </article>
+      <article class='panel'>
+        <h3>Raw logs</h3>
+        <pre>[
+  {
+    &quot;node&quot;: &quot;classify_8b&quot;,
+    &quot;message&quot;: &quot;질문 분류 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;analysis&quot;: {
+        &quot;token_count&quot;: 8,
+        &quot;matched_hard_terms&quot;: [
+          &quot;비교&quot;,
+          &quot;시맨틱&quot;,
+          &quot;차이&quot;
+        ],
+        &quot;complexity_score&quot;: 4,
+        &quot;reason&quot;: &quot;multi-step/comparison&quot;,
+        &quot;source&quot;: &quot;heuristic-mock&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;hybrid_search_14b&quot;,
+    &quot;message&quot;: &quot;14B hybrid retrieval 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;lexical_query&quot;: &quot;aws 문서 기준으로 rag와 시맨틱 검색의 차이를 비교해줘 차이 비교 검색 bedrock kendra sagemaker&quot;,
+      &quot;semantic_query&quot;: &quot;aws 문서 기준으로 rag와 시맨틱 검색의 차이를 비교해줘 연관성 벡터 데이터베이스 시맨틱 검색 키워드 검색 지식 준비 bedrock kendra sagemaker 지식 기반&quot;,
+      &quot;lexical_candidate_count&quot;: 6,
+      &quot;semantic_candidate_count&quot;: 6,
+      &quot;fused_candidate_count&quot;: 7,
+      &quot;top_rrf_score&quot;: 0.0325,
+      &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+      &quot;lexical_top_score&quot;: 25.85,
+      &quot;semantic_top_score&quot;: 45.9,
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K13&quot;,
+        &quot;K14&quot;,
+        &quot;K09&quot;,
+        &quot;K10&quot;,
+        &quot;K01&quot;,
+        &quot;K08&quot;,
+        &quot;K02&quot;
+      ],
+      &quot;elapsed_ms&quot;: 1.72
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_14b&quot;,
+    &quot;message&quot;: &quot;14B reranker가 hybrid 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 7,
+        &quot;selected_count&quot;: 6,
+        &quot;top_rerank_score&quot;: 53.56,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K13&quot;,
+        &quot;K14&quot;,
+        &quot;K09&quot;,
+        &quot;K10&quot;,
+        &quot;K02&quot;,
+        &quot;K01&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 7.660000000000004,
+      &quot;elapsed_ms&quot;: 0.19
+    }
+  },
+  {
+    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;answer&quot;,
+      &quot;quality&quot;: {
+        &quot;ok&quot;: true,
+        &quot;coverage&quot;: 0.5,
+        &quot;top_score&quot;: 53.56,
+        &quot;distinct_sections&quot;: 6,
+        &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;answer&quot;,
+    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;payload&quot;: {
+      &quot;final_model&quot;: &quot;14b&quot;,
+      &quot;elapsed_ms&quot;: 0.19,
+      &quot;answer_preview&quot;: &quot;Route: 14B | quality_ok=True | coverage=0.5 질문: AWS 문서 기준으로 RAG와 시맨틱 검색의 차이를 비교해줘. 문서 근거 요약: - [K13] 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요?: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;gold_answer&quot;: &quot;RAG는 외부 지식을 붙여 답변을 생성하는 전체 접근이고, 시맨틱 검색은 그 RAG 성능을 높이기 위해 대규모 데이터에서 더 정확한 관련 구절을 찾고 지식 준비 작업을 줄여주는 검색 기술이다.&quot;,
+      &quot;rubric_keywords&quot;: [
+        &quot;전체 접근&quot;,
+        &quot;시맨틱 검색&quot;,
+        &quot;관련 구절&quot;,
+        &quot;정확&quot;,
+        &quot;준비 작업&quot;,
+        &quot;성능&quot;
+      ],
+      &quot;keyword_hits&quot;: [
+        &quot;시맨틱 검색&quot;,
+        &quot;관련 구절&quot;
+      ],
+      &quot;support_chunks_expected&quot;: [
+        &quot;K13&quot;
+      ],
+      &quot;support_chunks_hit&quot;: [
+        &quot;K13&quot;
+      ],
+      &quot;score_breakdown&quot;: {
+        &quot;keyword_score&quot;: 18.3,
+        &quot;support_score&quot;: 25.0,
+        &quot;quality_score&quot;: 12.0
+      },
+      &quot;total_score&quot;: 55.3,
+      &quot;verdict&quot;: &quot;아쉬움&quot;,
+      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 2/6, 핵심 청크 1/1개를 잡아서 총점 55.3점으로 평가했다.&quot;
+    }
+  }
+]</pre>
+      </article>
+    </section>
+    
+
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q10 · aws-support</div>
+          <h2>AWS는 RAG 구축을 위해 어떤 서비스들을 어떻게 지원한다고 설명하나요?</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>initial route: 14B</span>
+          <span class='pill'>final model: 14B</span>
+          <span class='pill'>restarts: 0</span>
+          <span class='pill'>hybrid retrieval</span>
+          <span class='pill'>reranker applied</span>
+          <span class='pill'>total: 2.15 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>LangGraph-style flow</h3>
+          <ol><li>classify_8b → 14b</li><li>hybrid_search_14b</li><li>rerank_14b</li><li>grade_results → answer</li><li>answer</li></ol>
+          <h3>왜 이런 결과가 나왔나</h3>
+          <ul><li>처음에는 classify_8b가 질문을 14B 경로로 분류했다. 이유: multi-step/comparison</li><li>hybrid_search_14b가 lexical/semantic-like 후보를 합친 뒤 RRF로 묶었고, rerank_14b가 그중 K14, K13, K16, K03 순서로 다시 정렬했다.</li><li>grade_results가 hybrid+rereank 결과를 보고 &#x27;retrieval looks grounded&#x27;로 판단해 answer을 선택했다.</li><li>마지막에는 14B answer 단계가 hybrid+rereanked top chunks를 근거로 응답을 만들었다.</li><li>미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 64.5점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>Route: 14B | quality_ok=True | coverage=0.5
+질문: AWS는 RAG 구축을 위해 어떤 서비스들을 어떻게 지원한다고 설명하나요?
+문서 근거 요약:
+- [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
+- [K13] 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요?: 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.
+- [K16] AWS에서의 다음 단계 / 콘솔에서 구축 시작: AWS Management Console에서 구축을 시작하세요.
+- [K03] 검색 증강 생성의 이점은 무엇인가요?: RAG 기술은 조직의 생성형 AI 관련 작업에 있어 여러 가지 이점을 제공합니다.</pre>
+          <h3>Expected answer</h3>
+          <pre>AWS는 Amazon Bedrock 지식 기반으로 데이터 소스 연결과 생성형 앱 개발을 단순화하고, Amazon Kendra로 엔터프라이즈 검색과 시맨틱 랭킹을 제공하며, SageMaker JumpStart로 빠른 배포와 예시 기반 구현 가속을 지원한다고 설명한다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;AWS는 Amazon Bedrock 지식 기반으로 데이터 소스 연결과 생성형 앱 개발을 단순화하고, Amazon Kendra로 엔터프라이즈 검색과 시맨틱 랭킹을 제공하며, SageMaker JumpStart로 빠른 배포와 예시 기반 구현 가속을 지원한다고 설명한다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;bedrock&quot;,
+    &quot;kendra&quot;,
+    &quot;sagemaker&quot;,
+    &quot;지식 기반&quot;,
+    &quot;검색&quot;,
+    &quot;배포&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;bedrock&quot;,
+    &quot;지식 기반&quot;,
+    &quot;검색&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K14&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K14&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 27.5,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 12.0
+  },
+  &quot;total_score&quot;: 64.5,
+  &quot;verdict&quot;: &quot;아쉬움&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 64.5점으로 평가했다.&quot;
+}</pre>
+          <h3>Quality gate</h3>
+          <pre>{
+  &quot;ok&quot;: true,
+  &quot;coverage&quot;: 0.5,
+  &quot;top_score&quot;: 29.24,
+  &quot;distinct_sections&quot;: 6,
+  &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Hybrid retrieval + rerank attempts</h3>
+        
+            <article class='attempt'>
+              <div class='attempt-head'>
+                <strong>hybrid_search_14b+rerank_14b</strong>
+                <span>1.83 ms</span>
+              </div>
+              <div class='query'>lexical: aws는 rag 구축을 위해 어떤 서비스들을 지원한다고 설명하나요 aws bedrock kendra sagemaker</div>
+              <div class='query'>semantic: aws는 rag 구축을 위해 어떤 서비스들을 지원한다고 설명하나요 bedrock kendra sagemaker 지식 기반</div>
+              <h4>hybrid fused candidates</h4>
+              <ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rrf 0.0328</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rrf 0.0320</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K03</strong> · 검색 증강 생성의 이점은 무엇인가요? <span class='score'>rrf 0.0310</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K04</strong> · 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현 <span class='score'>rrf 0.0305</span><br><span class='hits'>sources: lexical, semantic</span></li><li><strong>K16</strong> · AWS에서의 다음 단계 / 콘솔에서 구축 시작 <span class='score'>rrf 0.0161</span><br><span class='hits'>sources: lexical</span></li><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>rrf 0.0159</span><br><span class='hits'>sources: semantic</span></li><li><strong>K15</strong> · AWS에서의 다음 단계 / 무료 계정 가입 <span class='score'>rrf 0.0156</span><br><span class='hits'>sources: lexical</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rrf 0.0152</span><br><span class='hits'>sources: semantic</span></li></ul>
+              <h4>reranked top chunks</h4>
+              <ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rerank 29.24</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>overlap: aws는, rag</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 17.51</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>overlap: rag, 위해</span></li><li><strong>K16</strong> · AWS에서의 다음 단계 / 콘솔에서 구축 시작 <span class='score'>rerank 8.82</span><br>AWS Management Console에서 구축을 시작하세요.<br><span class='hits'>overlap: 구축을</span></li><li><strong>K03</strong> · 검색 증강 생성의 이점은 무엇인가요? <span class='score'>rerank 5.23</span><br>RAG 기술은 조직의 생성형 AI 관련 작업에 있어 여러 가지 이점을 제공합니다.<br><span class='hits'>overlap: rag</span></li><li><strong>K04</strong> · 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현 <span class='score'>rerank 5.15</span><br>챗봇 개발은 일반적으로 파운데이션 모델 을 사용하여 시작됩니다. 파운데이션 모델(FM)은 광범위한 일반화 데이터와 레이블이 지정되지 않은 데이터에 대해 훈련된 API 액세스 가능 LLM입니다. 조직 또는 도메인별 정보를 위해 FM을 재교육하는 데 컴퓨팅 및 재정적 비용이 많이 소요됩니다. RAG를 통해 LLM에 새…<br><span class='hits'>overlap: 위해</span></li><li><strong>K15</strong> · AWS에서의 다음 단계 / 무료 계정 가입 <span class='score'>rerank 4.31</span><br>AWS 프리 티어에 즉시 액세스할 수 있습니다.<br><span class='hits'>overlap: -</span></li></ul>
+            </article>
+            
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table>
+          <thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead>
+          <tbody><tr><td>classify_8b</td><td>0.01 ms</td><td><pre>{
+  &quot;token_count&quot;: 8,
+  &quot;matched_hard_terms&quot;: [
+    &quot;어떻게&quot;
+  ],
+  &quot;complexity_score&quot;: 5,
+  &quot;reason&quot;: &quot;multi-step/comparison&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;
+}</pre></td></tr><tr><td>hybrid_search_14b</td><td>1.65 ms</td><td><pre>{
+  &quot;lexical_query&quot;: &quot;aws는 rag 구축을 위해 어떤 서비스들을 지원한다고 설명하나요 aws bedrock kendra sagemaker&quot;,
+  &quot;semantic_query&quot;: &quot;aws는 rag 구축을 위해 어떤 서비스들을 지원한다고 설명하나요 bedrock kendra sagemaker 지식 기반&quot;,
+  &quot;lexical_candidate_count&quot;: 6,
+  &quot;semantic_candidate_count&quot;: 6,
+  &quot;fused_candidate_count&quot;: 8,
+  &quot;top_rrf_score&quot;: 0.0328,
+  &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+  &quot;lexical_top_score&quot;: 19.2,
+  &quot;semantic_top_score&quot;: 23.0
+}</pre></td></tr><tr><td>rerank_14b</td><td>0.18 ms</td><td><pre>{
+  &quot;candidate_count&quot;: 8,
+  &quot;selected_count&quot;: 6,
+  &quot;top_rerank_score&quot;: 29.24,
+  &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;,
+  &quot;top_rerank_lift&quot;: 6.239999999999998
+}</pre></td></tr><tr><td>grade_results</td><td>0.01 ms</td><td><pre>{
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.5,
+    &quot;top_score&quot;: 29.24,
+    &quot;distinct_sections&quot;: 6,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre></td></tr><tr><td>answer</td><td>0.15 ms</td><td><pre>{
+  &quot;final_model&quot;: &quot;14b&quot;
+}</pre></td></tr></tbody>
+        </table>
+      </article>
+      <article class='panel'>
+        <h3>Raw logs</h3>
+        <pre>[
+  {
+    &quot;node&quot;: &quot;classify_8b&quot;,
+    &quot;message&quot;: &quot;질문 분류 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;analysis&quot;: {
+        &quot;token_count&quot;: 8,
+        &quot;matched_hard_terms&quot;: [
+          &quot;어떻게&quot;
+        ],
+        &quot;complexity_score&quot;: 5,
+        &quot;reason&quot;: &quot;multi-step/comparison&quot;,
+        &quot;source&quot;: &quot;heuristic-mock&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;hybrid_search_14b&quot;,
+    &quot;message&quot;: &quot;14B hybrid retrieval 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;lexical_query&quot;: &quot;aws는 rag 구축을 위해 어떤 서비스들을 지원한다고 설명하나요 aws bedrock kendra sagemaker&quot;,
+      &quot;semantic_query&quot;: &quot;aws는 rag 구축을 위해 어떤 서비스들을 지원한다고 설명하나요 bedrock kendra sagemaker 지식 기반&quot;,
+      &quot;lexical_candidate_count&quot;: 6,
+      &quot;semantic_candidate_count&quot;: 6,
+      &quot;fused_candidate_count&quot;: 8,
+      &quot;top_rrf_score&quot;: 0.0328,
+      &quot;retrieval_strategy&quot;: &quot;hybrid lexical+dense-like heuristic with RRF&quot;,
+      &quot;lexical_top_score&quot;: 19.2,
+      &quot;semantic_top_score&quot;: 23.0,
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K14&quot;,
+        &quot;K13&quot;,
+        &quot;K03&quot;,
+        &quot;K04&quot;,
+        &quot;K16&quot;,
+        &quot;K02&quot;,
+        &quot;K15&quot;,
+        &quot;K09&quot;
+      ],
+      &quot;elapsed_ms&quot;: 1.65
+    }
+  },
+  {
+    &quot;node&quot;: &quot;rerank_14b&quot;,
+    &quot;message&quot;: &quot;14B reranker가 hybrid 후보를 재정렬함&quot;,
+    &quot;payload&quot;: {
+      &quot;stats&quot;: {
+        &quot;candidate_count&quot;: 8,
+        &quot;selected_count&quot;: 6,
+        &quot;top_rerank_score&quot;: 29.24,
+        &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+      },
+      &quot;selected_chunk_ids&quot;: [
+        &quot;K14&quot;,
+        &quot;K13&quot;,
+        &quot;K16&quot;,
+        &quot;K03&quot;,
+        &quot;K04&quot;,
+        &quot;K15&quot;
+      ],
+      &quot;top_rerank_lift&quot;: 6.239999999999998,
+      &quot;elapsed_ms&quot;: 0.18
+    }
+  },
+  {
+    &quot;node&quot;: &quot;grade_results&quot;,
+    &quot;message&quot;: &quot;품질 게이트 통과: 상위 청크가 질문과 충분히 맞물림.&quot;,
+    &quot;payload&quot;: {
+      &quot;action&quot;: &quot;answer&quot;,
+      &quot;quality&quot;: {
+        &quot;ok&quot;: true,
+        &quot;coverage&quot;: 0.5,
+        &quot;top_score&quot;: 29.24,
+        &quot;distinct_sections&quot;: 6,
+        &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+      },
+      &quot;elapsed_ms&quot;: 0.01
+    }
+  },
+  {
+    &quot;node&quot;: &quot;answer&quot;,
+    &quot;message&quot;: &quot;최종 답변 생성&quot;,
+    &quot;payload&quot;: {
+      &quot;final_model&quot;: &quot;14b&quot;,
+      &quot;elapsed_ms&quot;: 0.15,
+      &quot;answer_preview&quot;: &quot;Route: 14B | quality_ok=True | coverage=0.5 질문: AWS는 RAG 구축을 위해 어떤 서비스들을 어떻게 지원한다고 설명하나요? 문서 근거 요약: - [K14] AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?: Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반…&quot;
+    }
+  },
+  {
+    &quot;node&quot;: &quot;judge&quot;,
+    &quot;message&quot;: &quot;미리 정한 정답 기준으로 응답 평가 완료&quot;,
+    &quot;payload&quot;: {
+      &quot;gold_answer&quot;: &quot;AWS는 Amazon Bedrock 지식 기반으로 데이터 소스 연결과 생성형 앱 개발을 단순화하고, Amazon Kendra로 엔터프라이즈 검색과 시맨틱 랭킹을 제공하며, SageMaker JumpStart로 빠른 배포와 예시 기반 구현 가속을 지원한다고 설명한다.&quot;,
+      &quot;rubric_keywords&quot;: [
+        &quot;bedrock&quot;,
+        &quot;kendra&quot;,
+        &quot;sagemaker&quot;,
+        &quot;지식 기반&quot;,
+        &quot;검색&quot;,
+        &quot;배포&quot;
+      ],
+      &quot;keyword_hits&quot;: [
+        &quot;bedrock&quot;,
+        &quot;지식 기반&quot;,
+        &quot;검색&quot;
+      ],
+      &quot;support_chunks_expected&quot;: [
+        &quot;K14&quot;
+      ],
+      &quot;support_chunks_hit&quot;: [
+        &quot;K14&quot;
+      ],
+      &quot;score_breakdown&quot;: {
+        &quot;keyword_score&quot;: 27.5,
+        &quot;support_score&quot;: 25.0,
+        &quot;quality_score&quot;: 12.0
+      },
+      &quot;total_score&quot;: 64.5,
+      &quot;verdict&quot;: &quot;아쉬움&quot;,
+      &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 3/6, 핵심 청크 1/1개를 잡아서 총점 64.5점으로 평가했다.&quot;
+    }
+  }
+]</pre>
+      </article>
+    </section>
+    
+  </main>
+</body>
+</html>
