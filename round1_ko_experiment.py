@@ -31,16 +31,86 @@ STOPWORDS = {
 HARD_TERMS = {"차이", "비교", "왜", "어떻게", "작동", "흐름", "업데이트", "신뢰", "제어", "시맨틱", "이점", "한계"}
 
 QUESTIONS = [
-    {"label": "Q1", "category": "definition", "question": "검색 증강 생성(RAG)을 AWS 문서는 어떻게 정의하나요?"},
-    {"label": "Q2", "category": "importance", "question": "AWS 문서가 말하는 RAG의 필요성은 무엇이며, LLM의 어떤 문제를 줄이려 하나요?"},
-    {"label": "Q3", "category": "benefits", "question": "RAG의 주요 이점을 문서 기준으로 정리해줘."},
-    {"label": "Q4", "category": "cost", "question": "왜 AWS 문서는 RAG를 비용 효율적인 구현 방식이라고 설명하나요?"},
-    {"label": "Q5", "category": "trust", "question": "RAG는 사용자 신뢰를 어떻게 강화한다고 설명하나요?"},
-    {"label": "Q6", "category": "workflow", "question": "RAG는 전체적으로 어떤 단계로 작동하나요?"},
-    {"label": "Q7", "category": "retrieval", "question": "문서에서 말하는 관련 정보 검색 단계는 어떤 식으로 이뤄지나요?"},
-    {"label": "Q8", "category": "prompting", "question": "LLM 프롬프트 확장 단계는 왜 필요하고 무엇을 추가하나요?"},
-    {"label": "Q9", "category": "comparison", "question": "AWS 문서 기준으로 RAG와 시맨틱 검색의 차이를 비교해줘."},
-    {"label": "Q10", "category": "aws-support", "question": "AWS는 RAG 구축을 위해 어떤 서비스들을 어떻게 지원한다고 설명하나요?"},
+    {
+        "label": "Q1",
+        "category": "definition",
+        "question": "검색 증강 생성(RAG)을 AWS 문서는 어떻게 정의하나요?",
+        "gold_answer": "RAG는 응답 생성 전에 외부의 신뢰할 수 있는 지식 소스를 참조하도록 LLM 출력을 최적화하는 방식이며, 모델 재학습 없이 특정 도메인 지식을 붙여 정확성과 유용성을 높이는 접근이다.",
+        "rubric_keywords": ["외부", "신뢰", "지식", "참조", "재학습", "정확성"],
+        "support_chunks": ["K01"],
+    },
+    {
+        "label": "Q2",
+        "category": "importance",
+        "question": "AWS 문서가 말하는 RAG의 필요성은 무엇이며, LLM의 어떤 문제를 줄이려 하나요?",
+        "gold_answer": "RAG는 LLM의 허위정보, 오래된 정보, 신뢰할 수 없는 출처, 용어 혼동 같은 문제를 줄이고, 신뢰 가능한 지식 소스를 검색해 답변의 통제력과 최신성을 높이기 위해 필요하다.",
+        "rubric_keywords": ["허위", "오래된", "신뢰", "출처", "혼동", "통제"],
+        "support_chunks": ["K02"],
+    },
+    {
+        "label": "Q3",
+        "category": "benefits",
+        "question": "RAG의 주요 이점을 문서 기준으로 정리해줘.",
+        "gold_answer": "문서 기준 핵심 이점은 비용 효율적인 구현, 최신 정보 반영, 사용자 신뢰 강화, 개발자 제어 강화다.",
+        "rubric_keywords": ["비용", "최신", "신뢰", "제어"],
+        "support_chunks": ["K03", "K04", "K05", "K06", "K07"],
+    },
+    {
+        "label": "Q4",
+        "category": "cost",
+        "question": "왜 AWS 문서는 RAG를 비용 효율적인 구현 방식이라고 설명하나요?",
+        "gold_answer": "파운데이션 모델을 조직 데이터에 맞게 다시 학습시키는 대신, RAG는 외부 지식 소스를 연결해 새 데이터를 주입하므로 컴퓨팅 및 재정 비용을 크게 줄일 수 있기 때문이다.",
+        "rubric_keywords": ["재학습", "외부", "새 데이터", "컴퓨팅", "재정", "비용"],
+        "support_chunks": ["K03", "K01"],
+    },
+    {
+        "label": "Q5",
+        "category": "trust",
+        "question": "RAG는 사용자 신뢰를 어떻게 강화한다고 설명하나요?",
+        "gold_answer": "RAG는 정확한 정보를 출처와 함께 제시하고, 사용자가 원문을 직접 확인할 수 있게 해 생성형 AI 결과에 대한 신뢰와 확신을 높인다.",
+        "rubric_keywords": ["출처", "정확", "원문", "확인", "신뢰", "확신"],
+        "support_chunks": ["K05"],
+    },
+    {
+        "label": "Q6",
+        "category": "workflow",
+        "question": "RAG는 전체적으로 어떤 단계로 작동하나요?",
+        "gold_answer": "문서는 외부 데이터 생성, 관련 정보 검색, LLM 프롬프트 확장, 외부 데이터 업데이트의 흐름으로 설명한다.",
+        "rubric_keywords": ["외부 데이터", "검색", "프롬프트", "업데이트"],
+        "support_chunks": ["K08", "K09", "K10", "K11", "K12"],
+    },
+    {
+        "label": "Q7",
+        "category": "retrieval",
+        "question": "문서에서 말하는 관련 정보 검색 단계는 어떤 식으로 이뤄지나요?",
+        "gold_answer": "사용자 쿼리를 벡터 표현으로 바꾸고 벡터 데이터베이스와 매칭해, 연관성이 높은 문서나 구절을 검색하는 방식으로 이뤄진다.",
+        "rubric_keywords": ["벡터", "데이터베이스", "매칭", "연관성", "문서", "구절"],
+        "support_chunks": ["K10"],
+    },
+    {
+        "label": "Q8",
+        "category": "prompting",
+        "question": "LLM 프롬프트 확장 단계는 왜 필요하고 무엇을 추가하나요?",
+        "gold_answer": "검색된 관련 데이터를 사용자 입력에 붙여 프롬프트를 확장함으로써, LLM이 더 정확하고 근거 있는 답변을 생성하게 하기 위해 필요하다.",
+        "rubric_keywords": ["검색된", "관련 데이터", "프롬프트", "확장", "정확", "답변"],
+        "support_chunks": ["K11"],
+    },
+    {
+        "label": "Q9",
+        "category": "comparison",
+        "question": "AWS 문서 기준으로 RAG와 시맨틱 검색의 차이를 비교해줘.",
+        "gold_answer": "RAG는 외부 지식을 붙여 답변을 생성하는 전체 접근이고, 시맨틱 검색은 그 RAG 성능을 높이기 위해 대규모 데이터에서 더 정확한 관련 구절을 찾고 지식 준비 작업을 줄여주는 검색 기술이다.",
+        "rubric_keywords": ["전체 접근", "시맨틱 검색", "관련 구절", "정확", "준비 작업", "성능"],
+        "support_chunks": ["K13"],
+    },
+    {
+        "label": "Q10",
+        "category": "aws-support",
+        "question": "AWS는 RAG 구축을 위해 어떤 서비스들을 어떻게 지원한다고 설명하나요?",
+        "gold_answer": "AWS는 Amazon Bedrock 지식 기반으로 데이터 소스 연결과 생성형 앱 개발을 단순화하고, Amazon Kendra로 엔터프라이즈 검색과 시맨틱 랭킹을 제공하며, SageMaker JumpStart로 빠른 배포와 예시 기반 구현 가속을 지원한다고 설명한다.",
+        "rubric_keywords": ["bedrock", "kendra", "sagemaker", "지식 기반", "검색", "배포"],
+        "support_chunks": ["K14"],
+    },
 ]
 
 
@@ -271,6 +341,51 @@ def build_answer(question: str, final_model: str, chunks: list[dict[str, Any]], 
     return "\n".join(lines)
 
 
+def build_expected_answer(question_item: dict[str, Any]) -> str:
+    return question_item["gold_answer"]
+
+
+def evaluate_run(question_item: dict[str, Any], final_answer: str, top_chunks: list[dict[str, Any]], quality: dict[str, Any]) -> dict[str, Any]:
+    answer_tokens = set(tokenize(final_answer))
+    keyword_hits = [keyword for keyword in question_item["rubric_keywords"] if any(tok in answer_tokens for tok in tokenize(keyword))]
+    keyword_score = round(55 * (len(keyword_hits) / max(len(question_item["rubric_keywords"]), 1)), 1)
+
+    top_chunk_ids = [chunk["chunk_id"] for chunk in top_chunks]
+    support_hits = [chunk_id for chunk_id in question_item["support_chunks"] if chunk_id in top_chunk_ids]
+    support_score = round(25 * (len(support_hits) / max(len(question_item["support_chunks"]), 1)), 1)
+
+    quality_score = round(20 * min(1.0, (quality.get("coverage", 0) * 1.2)), 1)
+    total_score = round(keyword_score + support_score + quality_score, 1)
+
+    if total_score >= 85:
+        verdict = "좋음"
+    elif total_score >= 70:
+        verdict = "무난"
+    elif total_score >= 50:
+        verdict = "아쉬움"
+    else:
+        verdict = "미흡"
+
+    return {
+        "gold_answer": build_expected_answer(question_item),
+        "rubric_keywords": question_item["rubric_keywords"],
+        "keyword_hits": keyword_hits,
+        "support_chunks_expected": question_item["support_chunks"],
+        "support_chunks_hit": support_hits,
+        "score_breakdown": {
+            "keyword_score": keyword_score,
+            "support_score": support_score,
+            "quality_score": quality_score,
+        },
+        "total_score": total_score,
+        "verdict": verdict,
+        "judge_comment": (
+            f"미리 정한 정답 기준 키워드 {len(keyword_hits)}/{len(question_item['rubric_keywords'])}, "
+            f"핵심 청크 {len(support_hits)}/{len(question_item['support_chunks'])}개를 잡아서 총점 {total_score}점으로 평가했다."
+        ),
+    }
+
+
 def run_one(question_item: dict[str, Any], chunks: list[Chunk]) -> dict[str, Any]:
     question = question_item["question"]
     flow: list[str] = []
@@ -336,10 +451,13 @@ def run_one(question_item: dict[str, Any], chunks: list[Chunk]) -> dict[str, Any
     t0 = time.perf_counter()
     final_answer = build_answer(question, current_model, final_chunks, final_quality)
     answer_elapsed = round((time.perf_counter() - t0) * 1000, 2)
+    evaluation = evaluate_run(question_item, final_answer, final_chunks, final_quality)
     flow.append("answer")
     logs.append({"node": "answer", "message": "최종 답변 생성", "payload": {"final_model": current_model, "elapsed_ms": answer_elapsed, "answer_preview": textwrap.shorten(final_answer, width=240, placeholder='…')}})
+    logs.append({"node": "judge", "message": "미리 정한 정답 기준으로 응답 평가 완료", "payload": evaluation})
     node_timings.append({"node": "answer", "elapsed_ms": answer_elapsed, "details": {"final_model": current_model}})
     explanation.append(f"마지막에는 {current_model.upper()} answer 단계가 현재 상위 청크를 근거로 응답을 만들었다.")
+    explanation.append(evaluation["judge_comment"])
 
     return {
         "label": question_item["label"],
@@ -355,6 +473,8 @@ def run_one(question_item: dict[str, Any], chunks: list[Chunk]) -> dict[str, Any
         "restart_count": restart_count,
         "final_model": current_model,
         "quality": final_quality,
+        "expected_answer": evaluation["gold_answer"],
+        "evaluation": evaluation,
         "final_answer": final_answer,
         "logs": logs,
         "node_timings": node_timings,
@@ -409,6 +529,10 @@ def render_run(run: dict[str, Any]) -> str:
         <article class='panel'>
           <h3>Final answer</h3>
           <pre>{html.escape(run['final_answer'])}</pre>
+          <h3>Expected answer</h3>
+          <pre>{html.escape(run['expected_answer'])}</pre>
+          <h3>Judge score</h3>
+          <pre>{html.escape(json.dumps(run['evaluation'], ensure_ascii=False, indent=2))}</pre>
           <h3>Quality gate</h3>
           <pre>{html.escape(json.dumps(run['quality'], ensure_ascii=False, indent=2))}</pre>
         </article>
@@ -478,7 +602,7 @@ def render_report(payload: dict[str, Any]) -> str:
     <section class='hero'>
       <div class='eyebrow'>round1 · qwen3 routed rag · ko</div>
       <h1>AWS 한국어 RAG 문서를 기준으로 돌린 round1</h1>
-      <p>이번 round1은 이 맥에서 실제 Qwen3/Ollama 백엔드가 없어서 <strong>mock 라우팅/검색 실험</strong>으로 실행했다. 대신 문서는 실제 AWS 한국어 원문을 가져와 청크화했고, 질문/검색/품질 게이트/흐름/HTML 리포트는 전부 실제 산출물로 남겼다.</p>
+      <p>이번 round1은 이 맥에서 실제 Qwen3/Ollama 백엔드가 없어서 <strong>mock 라우팅/검색 실험</strong>으로 실행했다. 대신 문서는 실제 AWS 한국어 원문을 가져와 청크화했고, 질문/검색/품질 게이트/흐름/HTML 리포트는 전부 실제 산출물로 남겼다. 이번 개정판은 질문마다 <strong>미리 정한 기대 정답</strong>을 두고 점수까지 매겨서, 결과가 얼마나 잘 나왔는지도 같이 본다.</p>
       <div class='pillrow'>
         <span class='pill'>provider: {html.escape(summary['provider_mode'])}</span>
         <span class='pill'>router: {html.escape(summary['models']['router_8b'])}</span>
@@ -492,6 +616,8 @@ def render_report(payload: dict[str, Any]) -> str:
         <article class='panel'><strong>{summary['total_restarts']}</strong><span>total restarts</span></article>
         <article class='panel'><strong>{summary['avg_total_ms']:.2f} ms</strong><span>avg end-to-end time</span></article>
         <article class='panel'><strong>{summary['chunk_count']}</strong><span>document chunks</span></article>
+        <article class='panel'><strong>{summary['avg_judge_score']:.1f}</strong><span>avg judge score</span></article>
+        <article class='panel'><strong>{summary['score_bands']['good']}</strong><span>good verdicts</span></article>
       </div>
     </section>
     {run_html}
@@ -525,6 +651,13 @@ def main() -> None:
         "routes": {"8b": sum(1 for run in runs if run['route_decision'] == '8b'), "14b": sum(1 for run in runs if run['route_decision'] == '14b')},
         "total_restarts": sum(run['restart_count'] for run in runs),
         "avg_total_ms": round(sum(run['total_ms'] for run in runs) / max(len(runs), 1), 2),
+        "avg_judge_score": round(sum(run['evaluation']['total_score'] for run in runs) / max(len(runs), 1), 1),
+        "score_bands": {
+            "good": sum(1 for run in runs if run['evaluation']['verdict'] == '좋음'),
+            "okay": sum(1 for run in runs if run['evaluation']['verdict'] == '무난'),
+            "weak": sum(1 for run in runs if run['evaluation']['verdict'] == '아쉬움'),
+            "poor": sum(1 for run in runs if run['evaluation']['verdict'] == '미흡'),
+        },
     }
     payload = {"summary": summary, "runs": runs}
     RESULTS_JSON.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

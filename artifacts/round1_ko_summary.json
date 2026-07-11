@@ -15,5 +15,12 @@
     "14b": 3
   },
   "total_restarts": 2,
-  "avg_total_ms": 1.89
+  "avg_total_ms": 1.82,
+  "avg_judge_score": 52.9,
+  "score_bands": {
+    "good": 1,
+    "okay": 1,
+    "weak": 3,
+    "poor": 5
+  }
 }
