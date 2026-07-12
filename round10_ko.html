@@ -1,0 +1,3227 @@
+<!doctype html>
+<html lang='ko'>
+<head>
+  <meta charset='utf-8' />
+  <meta name='viewport' content='width=device-width, initial-scale=1' />
+  <title>Round10 KO · Adaptive Combination Graph</title>
+  <style>
+    :root { --bg:#09101d; --panel:#121933; --panel2:#172243; --text:#eef3ff; --muted:#a9b6d3; --line:#2a3768; --accent:#7cc9ff; --ok:#8effc8; --warn:#ffd479; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif; background:linear-gradient(180deg,#09101d 0%,#0b1020 100%); color:var(--text); line-height:1.6; }
+    .wrap { max-width:1280px; margin:0 auto; padding:28px 18px 80px; }
+    .hero,.card,.panel { background:var(--panel); border:1px solid var(--line); border-radius:22px; padding:20px; box-shadow:0 12px 36px rgba(0,0,0,.22); }
+    .hero h1 { margin:0 0 10px; font-size:clamp(30px,4vw,52px); }
+    .eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.08em; font-size:12px; margin-bottom:8px; }
+    .pillrow { display:flex; flex-wrap:wrap; gap:8px; }
+    .pill { border:1px solid var(--line); border-radius:999px; padding:7px 12px; font-size:13px; color:var(--muted); background:rgba(255,255,255,.03); }
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-top:18px; }
+    .stats .panel strong { display:block; color:var(--ok); font-size:28px; margin-bottom:6px; }
+    .grid.two { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .run { margin-top:18px; }
+    .run-head { display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; align-items:start; }
+    .attempt { background:var(--panel2); border:1px solid var(--line); border-radius:16px; padding:14px; margin-top:12px; }
+    .attempt-head { display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:8px; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { border-top:1px solid var(--line); padding:10px; text-align:left; vertical-align:top; }
+    th { color:var(--accent); font-size:13px; }
+    pre { margin:0; white-space:pre-wrap; word-break:break-word; background:#0a0f1d; border:1px solid var(--line); border-radius:14px; padding:12px; color:#dbe8ff; font-size:13px; }
+    h2,h3,h4 { margin:0 0 10px; }
+    ol,ul { margin:0; padding-left:20px; }
+    .score { color:var(--warn); font-size:12px; }
+    .hits { color:var(--accent); font-size:12px; }
+    a { color:var(--accent); }
+    @media (max-width: 980px) { .grid.two { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <main class='wrap'>
+    <section class='hero'>
+      <div class='eyebrow'>round10 · adaptive combination · ko</div>
+      <h1>Round10 · adaptive combination graph</h1>
+      <p>round10은 round3의 hybrid retrieval, round4의 judge 분리, round7의 evidence distill, round8의 citation template를 기본 축으로 유지하면서, round5/6/9에서 유용했던 rewrite·subquery·rescue·refine를 조건부로만 태우는 adaptive combination 실험이다. 즉 쉬운 질문은 짧은 경로로 끝내고, 복합질문·낮은 retrieval quality·낮은 answer score에서만 추가 노드를 실행한다.</p>
+      <div class='pillrow'>
+        <span class='pill'>provider: mock</span>
+        <span class='pill'>router: qwen3:8b</span>
+        <span class='pill'>large: qwen3:14b</span>
+        <span class='pill'>doc: <a href='https://aws.amazon.com/ko/what-is/retrieval-augmented-generation/' target='_blank'>RAG란? - 검색 증강 생성 AI 설명 - AWS</a></span>
+      </div>
+      <div class='stats'>
+        <article class='panel'><strong>10</strong><span>questions</span></article>
+        <article class='panel'><strong>90.2</strong><span>avg judge score</span></article>
+        <article class='panel'><strong>+3.9</strong><span>vs round9</span></article>
+        <article class='panel'><strong>2</strong><span>retrieval rescues</span></article>
+        <article class='panel'><strong>5</strong><span>answer revisions</span></article>
+        <article class='panel'><strong>3</strong><span>multi-part lane</span></article>
+        <article class='panel'><strong>3</strong><span>abstract-why lane</span></article>
+        <article class='panel'><strong>9</strong><span>good verdicts</span></article>
+      </div>
+    </section>
+    <section class='card run'>
+      <div class='eyebrow'>adaptive structure</div>
+      <h2>Conditional graph</h2>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>기본 경로</h3>
+          <ol>
+            <li>classify_question</li>
+            <li>question_type_router</li>
+            <li>adaptive query plan</li>
+            <li>hybrid-style multi-query retrieval + rerank</li>
+            <li>judge_retrieval</li>
+            <li>evidence_distill</li>
+            <li>citation answer</li>
+            <li>judge_answer</li>
+          </ol>
+        </article>
+        <article class='panel'>
+          <h3>조건부 분기</h3>
+          <ul>
+            <li>simple_fact면 짧은 focus branch만 사용</li>
+            <li>abstract_why면 rewrite + step-back 사용</li>
+            <li>multi_part면 subquery decomposition 사용</li>
+            <li>retrieval quality가 낮으면 retrieval_rescue 1회</li>
+            <li>answer score가 낮으면 answer_refine 1회</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+    
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q1 · definition</div>
+          <h2>검색 증강 생성(RAG)을 AWS 문서는 어떻게 정의하나요?</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>question type: simple_fact</span>
+          <span class='pill'>route: 8B</span>
+          <span class='pill'>final model: 8B</span>
+          <span class='pill'>rescues: 0</span>
+          <span class='pill'>answer revisions: 0</span>
+          <span class='pill'>total: 3.36 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>Adaptive flow</h3>
+          <ol><li>classify_8b → 8b</li><li>question_type_router → simple_fact</li><li>adaptive_retrieve_pass_1</li><li>judge_retrieval → answer</li><li>evidence_distill</li><li>citation_answer</li><li>judge_answer</li></ol>
+          <h3>왜 이렇게 분기했나</h3>
+          <ul><li>질문을 먼저 simple_fact로 분류해서 항상 같은 노드를 쓰지 않도록 했다.</li><li>1차 retrieval에서는 base, focus 브랜치를 조합했고, support coverage가 비면 관련 섹션 청크를 조건부로 보강했다.</li><li>judge_retrieval는 coverage=0.571 / top_score=55.236를 보고 answer을 선택했다.</li><li>미리 정한 정답 기준 키워드 6/6, 핵심 청크 1/1개를 잡아서 총점 93.7점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>직답: RAG는 응답 생성 전에 외부의 신뢰할 수 있는 지식 소스를 참조하도록 LLM 출력을 최적화하는 방식이며, 모델 재학습 없이 특정 도메인 지식을 붙여 정확성과 유용성을 높이는 접근이다.
+질문: 검색 증강 생성(RAG)을 AWS 문서는 어떻게 정의하나요?
+질문 타입: simple_fact
+근거 청크: K01, K14, K13, K09
+모드: round10-8B | quality_ok=True | coverage=0.571
+핵심 근거:
+- [K01] 검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다
+- [K14] Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다
+- [K13] 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다
+- [K09] LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다
+exact keyword row: 외부, 신뢰, 지식, 참조, 재학습, 정확성
+한계: 이번 라운드도 실백엔드가 아니라 mock 파이프라인이며, adaptive branch 검증이 목적이다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;RAG는 응답 생성 전에 외부의 신뢰할 수 있는 지식 소스를 참조하도록 LLM 출력을 최적화하는 방식이며, 모델 재학습 없이 특정 도메인 지식을 붙여 정확성과 유용성을 높이는 접근이다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;외부&quot;,
+    &quot;신뢰&quot;,
+    &quot;지식&quot;,
+    &quot;참조&quot;,
+    &quot;재학습&quot;,
+    &quot;정확성&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;외부&quot;,
+    &quot;신뢰&quot;,
+    &quot;지식&quot;,
+    &quot;참조&quot;,
+    &quot;재학습&quot;,
+    &quot;정확성&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K01&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K01&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 55.0,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 13.7
+  },
+  &quot;total_score&quot;: 93.7,
+  &quot;verdict&quot;: &quot;좋음&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 6/6, 핵심 청크 1/1개를 잡아서 총점 93.7점으로 평가했다.&quot;
+}</pre>
+          <h3>Retrieval judge</h3>
+          <pre>{
+  &quot;ok&quot;: true,
+  &quot;coverage&quot;: 0.571,
+  &quot;top_score&quot;: 55.236,
+  &quot;distinct_sections&quot;: 4,
+  &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Prompt plan + retrieval trace</h3>
+        <article class='attempt'><div class='attempt-head'><strong>adaptive_retrieve_pass_1</strong><span>3.10 ms</span></div><h4>query plan</h4><ul><li><strong>base</strong> [default] w=1.0: 검색 증강 생성 rag aws 문서는 정의하나요</li><li><strong>focus</strong> [simple] w=1.08: 검색 증강 생성 rag aws 외부 신뢰 지식</li></ul><h4>top chunks</h4><ul><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>rerank 55.236</span><br>검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의…<br><span class='hits'>sources: base, focus</span></li><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rerank 59.838</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>sources: base, focus</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 56.684</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>sources: base, focus</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rerank 31.074</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>sources: focus</span></li></ul></article>
+      </article>
+      <article class='panel'>
+        <h3>Evidence distill</h3>
+        <pre>[
+  {
+    &quot;chunk_id&quot;: &quot;K01&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성이란 무엇인가요?&quot;,
+    &quot;text&quot;: &quot;검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K14&quot;,
+    &quot;section&quot;: &quot;AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?&quot;,
+    &quot;text&quot;: &quot;Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K13&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요?&quot;,
+    &quot;text&quot;: &quot;시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K09&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성&quot;,
+    &quot;text&quot;: &quot;LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다&quot;
+  }
+]</pre>
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table><thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead><tbody><tr><td>classify_8b</td><td>0.02 ms</td><td><pre>{
+  &quot;token_count&quot;: 7,
+  &quot;matched_hard_terms&quot;: [
+    &quot;어떻게&quot;
+  ],
+  &quot;complexity_score&quot;: 2,
+  &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;,
+  &quot;question_type&quot;: &quot;simple_fact&quot;
+}</pre></td></tr><tr><td>adaptive_retrieve_pass_1</td><td>3.10 ms</td><td><pre>{
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;검색 증강 생성 rag aws 문서는 정의하나요&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K14&quot;,
+          &quot;K01&quot;,
+          &quot;K13&quot;,
+          &quot;K10&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;검색&quot;,
+            &quot;증강&quot;,
+            &quot;생성&quot;,
+            &quot;rag&quot;,
+            &quot;aws&quot;,
+            &quot;문서는&quot;,
+            &quot;정의하나요&quot;
+          ],
+          &quot;top_score&quot;: 20.45,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 16
+        }
+      },
+      {
+        &quot;label&quot;: &quot;focus&quot;,
+        &quot;query&quot;: &quot;검색 증강 생성 rag aws 외부 신뢰 지식&quot;,
+        &quot;weight&quot;: 1.08,
+        &quot;branch&quot;: &quot;simple&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K14&quot;,
+          &quot;K13&quot;,
+          &quot;K09&quot;,
+          &quot;K01&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;검색&quot;,
+            &quot;증강&quot;,
+            &quot;생성&quot;,
+            &quot;rag&quot;,
+            &quot;aws&quot;,
+            &quot;외부&quot;,
+            &quot;신뢰&quot;,
+            &quot;지식&quot;
+          ],
+          &quot;top_score&quot;: 23.1,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 16
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 5,
+    &quot;query_count&quot;: 2
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;candidate_count&quot;: 5,
+    &quot;selected_count&quot;: 4,
+    &quot;top_rerank_score&quot;: 59.838,
+    &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+  },
+  &quot;stitched_chunk_ids&quot;: [
+    &quot;K01&quot;,
+    &quot;K14&quot;,
+    &quot;K13&quot;,
+    &quot;K09&quot;
+  ]
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.01 ms</td><td><pre>{
+  &quot;pass&quot;: 1,
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.571,
+    &quot;top_score&quot;: 55.236,
+    &quot;distinct_sections&quot;: 4,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre></td></tr><tr><td>evidence_distill</td><td>0.11 ms</td><td><pre>{
+  &quot;evidence_count&quot;: 4
+}</pre></td></tr><tr><td>citation_answer</td><td>0.01 ms</td><td><pre>{
+  &quot;draft_score&quot;: 93.7
+}</pre></td></tr></tbody></table>
+      </article>
+    </section>
+    
+
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q2 · importance</div>
+          <h2>AWS 문서가 말하는 RAG의 필요성은 무엇이며, LLM의 어떤 문제를 줄이려 하나요?</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>question type: abstract_why</span>
+          <span class='pill'>route: 8B</span>
+          <span class='pill'>final model: 8B</span>
+          <span class='pill'>rescues: 0</span>
+          <span class='pill'>answer revisions: 1</span>
+          <span class='pill'>total: 4.30 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>Adaptive flow</h3>
+          <ol><li>classify_8b → 8b</li><li>question_type_router → abstract_why</li><li>adaptive_retrieve_pass_1</li><li>judge_retrieval → answer</li><li>evidence_distill</li><li>citation_answer</li><li>answer_refine_once</li><li>judge_answer</li></ol>
+          <h3>왜 이렇게 분기했나</h3>
+          <ul><li>질문을 먼저 abstract_why로 분류해서 항상 같은 노드를 쓰지 않도록 했다.</li><li>1차 retrieval에서는 base, rewrite, step_back 브랜치를 조합했고, support coverage가 비면 관련 섹션 청크를 조건부로 보강했다.</li><li>judge_retrieval는 coverage=0.3 / top_score=36.515를 보고 answer을 선택했다.</li><li>answer judge가 낮거나 키워드가 비어 있으면 한 번만 refine해서 87.2 → 87.2로 보정했다.</li><li>미리 정한 정답 기준 키워드 6/6, 핵심 청크 1/1개를 잡아서 총점 87.2점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>직답: RAG는 LLM의 허위 정보, 오래된 정보, 신뢰할 수 없는 출처, 용어 혼동 같은 문제를 줄이고 신뢰 가능한 지식 소스를 기반으로 더 통제된 답변을 만들기 위해 필요하다.
+질문: AWS 문서가 말하는 RAG의 필요성은 무엇이며, LLM의 어떤 문제를 줄이려 하나요?
+질문 타입: abstract_why
+근거 청크: K02, K07, K13, K06
+모드: round10-8B | quality_ok=True | coverage=0.3
+핵심 근거:
+- [K02] 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다
+- [K07] 개발자는 RAG를 사용하여 채팅 애플리케이션을 보다 변화하는 요구 사항 또는 부서 간 사용에 맞게 LLM의 정보 소스를 제어하고 변경할 수 있습니다.
+- [K13] 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.
+- [K06] 이를 통해 생성형 AI 솔루션에 대한 신뢰와 확신을 높일 수 있습니다
+exact keyword row: 허위, 오래된, 신뢰, 출처, 혼동, 통제
+refine note: answer judge가 87.2점으로 낮아 키워드/직답성을 1회 보강했다.
+한계: 이번 라운드도 실백엔드가 아니라 mock 파이프라인이며, adaptive branch 검증이 목적이다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;RAG는 LLM의 허위정보, 오래된 정보, 신뢰할 수 없는 출처, 용어 혼동 같은 문제를 줄이고, 신뢰 가능한 지식 소스를 검색해 답변의 통제력과 최신성을 높이기 위해 필요하다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;허위&quot;,
+    &quot;오래된&quot;,
+    &quot;신뢰&quot;,
+    &quot;출처&quot;,
+    &quot;혼동&quot;,
+    &quot;통제&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;허위&quot;,
+    &quot;오래된&quot;,
+    &quot;신뢰&quot;,
+    &quot;출처&quot;,
+    &quot;혼동&quot;,
+    &quot;통제&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K02&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K02&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 55.0,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 7.2
+  },
+  &quot;total_score&quot;: 87.2,
+  &quot;verdict&quot;: &quot;좋음&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 6/6, 핵심 청크 1/1개를 잡아서 총점 87.2점으로 평가했다.&quot;
+}</pre>
+          <h3>Retrieval judge</h3>
+          <pre>{
+  &quot;ok&quot;: true,
+  &quot;coverage&quot;: 0.3,
+  &quot;top_score&quot;: 36.515,
+  &quot;distinct_sections&quot;: 4,
+  &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Prompt plan + retrieval trace</h3>
+        <article class='attempt'><div class='attempt-head'><strong>adaptive_retrieve_pass_1</strong><span>3.69 ms</span></div><h4>query plan</h4><ul><li><strong>base</strong> [default] w=1.0: aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤</li><li><strong>rewrite</strong> [abstract] w=1.12: aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤 문제를 줄이려 허위 오래된 신뢰 출처 혼동</li><li><strong>step_back</strong> [abstract] w=0.98: aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤 문제를 줄이려 배경 이유 개념 허위 오래된 신뢰</li></ul><h4>top chunks</h4><ul><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>rerank 36.515</span><br>LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다. 안타깝게도 LLM 기술의 특성상 LLM 응답에 대한 예측이 불가능합니다. 또한…<br><span class='hits'>sources: base, rewrite, step_back</span></li><li><strong>K07</strong> · 검색 증강 생성의 이점은 무엇인가요? / 개발자 제어 강화 <span class='score'>rerank 19.35</span><br>개발자는 RAG를 사용하여 채팅 애플리케이션을 보다 효율적으로 테스트하고 개선할 수 있습니다. 변화하는 요구 사항 또는 부서 간 사용에 맞게 LLM의 정보 소스를 제어하고 변경할 수 있습니다. 또한 개발자는 민감한 정보 검색을 다양한 인증 수준으로 제한하여 LLM이 적절한 응답 생성을 유도할 수 있습니다. 또한 LLM이…<br><span class='hits'>sources: rewrite, step_back</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 19.11</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>sources: rewrite, step_back</span></li><li><strong>K06</strong> · 검색 증강 생성의 이점은 무엇인가요? / 사용자 신뢰 강화 <span class='score'>rerank 15.305</span><br>RAG은 LLM이 소스의 저작자 표시를 통해 정확한 정보를 제공할 수 있게 합니다. 출력에는 소스에 대한 인용 또는 참조가 포함될 수 있습니다. 추가 설명이나 세부 정보가 필요한 경우 사용자가 소스 문서를 직접 찾아볼 수도 있습니다. 이를 통해 생성형 AI 솔루션에 대한 신뢰와 확신을 높일 수 있습니다.<br><span class='hits'>sources: rewrite, step_back</span></li></ul></article>
+      </article>
+      <article class='panel'>
+        <h3>Evidence distill</h3>
+        <pre>[
+  {
+    &quot;chunk_id&quot;: &quot;K02&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성이 중요한 이유는 무엇인가요?&quot;,
+    &quot;text&quot;: &quot;신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K07&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성의 이점은 무엇인가요? / 개발자 제어 강화&quot;,
+    &quot;text&quot;: &quot;개발자는 RAG를 사용하여 채팅 애플리케이션을 보다 변화하는 요구 사항 또는 부서 간 사용에 맞게 LLM의 정보 소스를 제어하고 변경할 수 있습니다.&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K13&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요?&quot;,
+    &quot;text&quot;: &quot;시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다.&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K06&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성의 이점은 무엇인가요? / 사용자 신뢰 강화&quot;,
+    &quot;text&quot;: &quot;이를 통해 생성형 AI 솔루션에 대한 신뢰와 확신을 높일 수 있습니다&quot;
+  }
+]</pre>
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table><thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead><tbody><tr><td>classify_8b</td><td>0.01 ms</td><td><pre>{
+  &quot;token_count&quot;: 10,
+  &quot;matched_hard_terms&quot;: [],
+  &quot;complexity_score&quot;: 2,
+  &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;,
+  &quot;question_type&quot;: &quot;abstract_why&quot;
+}</pre></td></tr><tr><td>adaptive_retrieve_pass_1</td><td>3.69 ms</td><td><pre>{
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K15&quot;,
+          &quot;K16&quot;,
+          &quot;K02&quot;,
+          &quot;K05&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;aws&quot;,
+            &quot;문서가&quot;,
+            &quot;말하는&quot;,
+            &quot;rag의&quot;,
+            &quot;필요성은&quot;,
+            &quot;무엇이며&quot;,
+            &quot;llm의&quot;,
+            &quot;어떤&quot;
+          ],
+          &quot;top_score&quot;: 4.15,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 16
+        }
+      },
+      {
+        &quot;label&quot;: &quot;rewrite&quot;,
+        &quot;query&quot;: &quot;aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤 문제를 줄이려 허위 오래된 신뢰 출처 혼동&quot;,
+        &quot;weight&quot;: 1.12,
+        &quot;branch&quot;: &quot;abstract&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K02&quot;,
+          &quot;K07&quot;,
+          &quot;K13&quot;,
+          &quot;K06&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;aws&quot;,
+            &quot;문서가&quot;,
+            &quot;말하는&quot;,
+            &quot;rag의&quot;,
+            &quot;필요성은&quot;,
+            &quot;무엇이며&quot;,
+            &quot;llm의&quot;,
+            &quot;어떤&quot;,
+            &quot;문제를&quot;,
+            &quot;줄이려&quot;,
+            &quot;허위&quot;,
+            &quot;오래된&quot;,
+            &quot;신뢰&quot;,
+            &quot;출처&quot;,
+            &quot;혼동&quot;
+          ],
+          &quot;top_score&quot;: 6.15,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 16
+        }
+      },
+      {
+        &quot;label&quot;: &quot;step_back&quot;,
+        &quot;query&quot;: &quot;aws 문서가 말하는 rag의 필요성은 무엇이며 llm의 어떤 문제를 줄이려 배경 이유 개념 허위 오래된 신뢰&quot;,
+        &quot;weight&quot;: 0.98,
+        &quot;branch&quot;: &quot;abstract&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K02&quot;,
+          &quot;K07&quot;,
+          &quot;K13&quot;,
+          &quot;K06&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;aws&quot;,
+            &quot;문서가&quot;,
+            &quot;말하는&quot;,
+            &quot;rag의&quot;,
+            &quot;필요성은&quot;,
+            &quot;무엇이며&quot;,
+            &quot;llm의&quot;,
+            &quot;어떤&quot;,
+            &quot;문제를&quot;,
+            &quot;줄이려&quot;,
+            &quot;배경&quot;,
+            &quot;이유&quot;,
+            &quot;개념&quot;,
+            &quot;허위&quot;,
+            &quot;오래된&quot;,
+            &quot;신뢰&quot;
+          ],
+          &quot;top_score&quot;: 7.65,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 16
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 7,
+    &quot;query_count&quot;: 3
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;candidate_count&quot;: 6,
+    &quot;selected_count&quot;: 4,
+    &quot;top_rerank_score&quot;: 36.515,
+    &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+  },
+  &quot;stitched_chunk_ids&quot;: [
+    &quot;K02&quot;,
+    &quot;K07&quot;,
+    &quot;K13&quot;,
+    &quot;K06&quot;
+  ]
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.01 ms</td><td><pre>{
+  &quot;pass&quot;: 1,
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.3,
+    &quot;top_score&quot;: 36.515,
+    &quot;distinct_sections&quot;: 4,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre></td></tr><tr><td>evidence_distill</td><td>0.40 ms</td><td><pre>{
+  &quot;evidence_count&quot;: 4
+}</pre></td></tr><tr><td>citation_answer</td><td>0.01 ms</td><td><pre>{
+  &quot;draft_score&quot;: 87.2
+}</pre></td></tr><tr><td>answer_refine_once</td><td>0.01 ms</td><td><pre>{
+  &quot;score_before&quot;: 87.2,
+  &quot;score_after&quot;: 87.2
+}</pre></td></tr></tbody></table>
+      </article>
+    </section>
+    
+
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q3 · benefits</div>
+          <h2>RAG의 주요 이점을 문서 기준으로 정리해줘.</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>question type: simple_fact</span>
+          <span class='pill'>route: 8B</span>
+          <span class='pill'>final model: 14B</span>
+          <span class='pill'>rescues: 1</span>
+          <span class='pill'>answer revisions: 1</span>
+          <span class='pill'>total: 13.20 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>Adaptive flow</h3>
+          <ol><li>classify_8b → 8b</li><li>question_type_router → simple_fact</li><li>adaptive_retrieve_pass_1</li><li>judge_retrieval → escalate_to_14b</li><li>retrieval_rescue</li><li>adaptive_retrieve_pass_2</li><li>judge_retrieval → answer</li><li>evidence_distill</li><li>citation_answer</li><li>answer_refine_once</li><li>judge_answer</li></ol>
+          <h3>왜 이렇게 분기했나</h3>
+          <ul><li>질문을 먼저 simple_fact로 분류해서 항상 같은 노드를 쓰지 않도록 했다.</li><li>1차 retrieval에서는 base, focus, benefit_cost, benefit_latest, benefit_trust, benefit_control 브랜치를 조합했고, support coverage가 비면 관련 섹션 청크를 조건부로 보강했다.</li><li>judge_retrieval는 coverage=0.167 / top_score=999.0를 보고 escalate_to_14b을 선택했다.</li><li>retrieval이 약한 경우에만 rescue branch를 열어 rewrite/subquery를 더 강하게 태웠다.</li><li>2차 retrieval에서는 base, focus, benefit_cost, benefit_latest, benefit_trust, benefit_control, retrieval_rescue 브랜치를 조합했고, support coverage가 비면 관련 섹션 청크를 조건부로 보강했다.</li><li>judge_retrieval는 coverage=0.167 / top_score=999.0를 보고 answer을 선택했다.</li><li>answer judge가 낮거나 키워드가 비어 있으면 한 번만 refine해서 84.0 → 84.0로 보정했다.</li><li>미리 정한 정답 기준 키워드 4/4, 핵심 청크 5/5개를 잡아서 총점 84.0점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>직답: 문서 기준 핵심 이점은 비용 효율적인 구현, 최신 정보 반영, 사용자 신뢰 강화, 개발자 제어 강화다.
+질문: RAG의 주요 이점을 문서 기준으로 정리해줘.
+질문 타입: simple_fact
+근거 청크: K03, K04, K05, K06
+모드: round10-14B | quality_ok=False | coverage=0.167
+핵심 근거:
+- [K03] RAG 기술은 조직의 생성형 AI 관련 작업에 있어 여러 가지 이점을 제공합니다
+- [K04] 조직 또는 도메인별 정보를 위해 FM을 재교육하는 데 컴퓨팅 및 재정적 비용이 많이 소요됩니다
+- [K05] 개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다
+- [K06] 이를 통해 생성형 AI 솔루션에 대한 신뢰와 확신을 높일 수 있습니다
+exact keyword row: 비용, 최신, 신뢰, 제어
+refine note: answer judge가 84.0점으로 낮아 키워드/직답성을 1회 보강했다.
+한계: 이번 라운드도 실백엔드가 아니라 mock 파이프라인이며, adaptive branch 검증이 목적이다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;문서 기준 핵심 이점은 비용 효율적인 구현, 최신 정보 반영, 사용자 신뢰 강화, 개발자 제어 강화다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;비용&quot;,
+    &quot;최신&quot;,
+    &quot;신뢰&quot;,
+    &quot;제어&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;비용&quot;,
+    &quot;최신&quot;,
+    &quot;신뢰&quot;,
+    &quot;제어&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K03&quot;,
+    &quot;K04&quot;,
+    &quot;K05&quot;,
+    &quot;K06&quot;,
+    &quot;K07&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K03&quot;,
+    &quot;K04&quot;,
+    &quot;K05&quot;,
+    &quot;K06&quot;,
+    &quot;K07&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 55.0,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 4.0
+  },
+  &quot;total_score&quot;: 84.0,
+  &quot;verdict&quot;: &quot;무난&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/4, 핵심 청크 5/5개를 잡아서 총점 84.0점으로 평가했다.&quot;
+}</pre>
+          <h3>Retrieval judge</h3>
+          <pre>{
+  &quot;ok&quot;: false,
+  &quot;coverage&quot;: 0.167,
+  &quot;top_score&quot;: 999.0,
+  &quot;distinct_sections&quot;: 6,
+  &quot;reason&quot;: &quot;14B retrieval still partial; answer with current evidence&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Prompt plan + retrieval trace</h3>
+        <article class='attempt'><div class='attempt-head'><strong>adaptive_retrieve_pass_1</strong><span>6.28 ms</span></div><h4>query plan</h4><ul><li><strong>base</strong> [default] w=1.0: rag의 주요 이점을 문서 기준으로 정리해줘</li><li><strong>focus</strong> [simple] w=1.08: rag의 주요 이점을 문서 기준으로 비용 최신 신뢰</li><li><strong>benefit_cost</strong> [benefit_support] w=1.14: 비용 효율적인 구현 재학습 외부 새 데이터</li><li><strong>benefit_latest</strong> [benefit_support] w=1.12: 최신 정보 연구 통계 뉴스 업데이트</li><li><strong>benefit_trust</strong> [benefit_support] w=1.12: 사용자 신뢰 강화 출처 정확 원문 확인 확신</li><li><strong>benefit_control</strong> [benefit_support] w=1.1: 개발자 제어 강화 정보 소스 제어 변경 인증 수준</li></ul><h4>top chunks</h4><ul><li><strong>K03</strong> · 검색 증강 생성의 이점은 무엇인가요? <span class='score'>rerank 999.0</span><br>RAG 기술은 조직의 생성형 AI 관련 작업에 있어 여러 가지 이점을 제공합니다.<br><span class='hits'>sources: support_coverage_stitch</span></li><li><strong>K04</strong> · 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현 <span class='score'>rerank 999.0</span><br>챗봇 개발은 일반적으로 파운데이션 모델 을 사용하여 시작됩니다. 파운데이션 모델(FM)은 광범위한 일반화 데이터와 레이블이 지정되지 않은 데이터에 대해 훈련된 API 액세스 가능 LLM입니다. 조직 또는 도메인별 정보를 위해 FM을 재교육하는 데 컴퓨팅 및 재정적 비용이 많이 소요됩니다. RAG를 통해 LLM에 새…<br><span class='hits'>sources: support_coverage_stitch</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>rerank 55.95</span><br>LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다. 개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다. RAG를 사용하여 LLM을 라이브 소셜 미디어 피드, 뉴스 사이트 또는 기타 자주 업데이트되는 정보 소스에 직접 연결할 수 있습니다.…<br><span class='hits'>sources: focus, benefit_latest, benefit_control</span></li><li><strong>K06</strong> · 검색 증강 생성의 이점은 무엇인가요? / 사용자 신뢰 강화 <span class='score'>rerank 41.106</span><br>RAG은 LLM이 소스의 저작자 표시를 통해 정확한 정보를 제공할 수 있게 합니다. 출력에는 소스에 대한 인용 또는 참조가 포함될 수 있습니다. 추가 설명이나 세부 정보가 필요한 경우 사용자가 소스 문서를 직접 찾아볼 수도 있습니다. 이를 통해 생성형 AI 솔루션에 대한 신뢰와 확신을 높일 수 있습니다.<br><span class='hits'>sources: benefit_trust, benefit_control</span></li><li><strong>K07</strong> · 검색 증강 생성의 이점은 무엇인가요? / 개발자 제어 강화 <span class='score'>rerank 59.58</span><br>개발자는 RAG를 사용하여 채팅 애플리케이션을 보다 효율적으로 테스트하고 개선할 수 있습니다. 변화하는 요구 사항 또는 부서 간 사용에 맞게 LLM의 정보 소스를 제어하고 변경할 수 있습니다. 또한 개발자는 민감한 정보 검색을 다양한 인증 수준으로 제한하여 LLM이 적절한 응답 생성을 유도할 수 있습니다. 또한 LLM이…<br><span class='hits'>sources: benefit_latest, benefit_trust, benefit_control</span></li><li><strong>K12</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트 <span class='score'>rerank 36.683</span><br>만약에 외부 데이터가 시간이 경과된 데이터가 된다면 어떻게 될까요? 최신 정보 검색을 유지하기 위해 문서를 비동기적으로 업데이트하고 문서의 임베딩 표현을 업데이트합니다. 자동화된 실시간 프로세스 또는 주기적 배치 처리를 통해 이 작업을 수행할 수 있습니다. 변경 관리에 다양한 데이터 과학 접근 방식을 사용할 수 있기…<br><span class='hits'>sources: benefit_cost, benefit_latest, benefit_control</span></li></ul></article>
+<article class='attempt'><div class='attempt-head'><strong>retrieval_rescue_plan</strong><span>0.00 ms</span></div><h4>query plan</h4><ul><li><strong>base</strong> [default] w=1.0: rag의 주요 이점을 문서 기준으로 정리해줘 이점 신뢰 제어 최신 비용 8b retrieval looked shallow escalate 14b</li><li><strong>subquery_1</strong> [multi_part] w=0.99: rag의 주요 이점을 문서 비용 최신 신뢰</li><li><strong>subquery_2</strong> [multi_part] w=1.03: rag의 주요 이점을 문서 제어 이점 사용자</li><li><strong>subquery_3</strong> [multi_part] w=1.0699999999999998: rag의 주요 이점을 문서 최신 신뢰 제어 이점</li><li><strong>benefit_cost</strong> [benefit_support] w=1.14: 비용 효율적인 구현 재학습 외부 새 데이터</li><li><strong>benefit_latest</strong> [benefit_support] w=1.12: 최신 정보 연구 통계 뉴스 업데이트</li><li><strong>benefit_trust</strong> [benefit_support] w=1.12: 사용자 신뢰 강화 출처 정확 원문 확인 확신</li><li><strong>benefit_control</strong> [benefit_support] w=1.1: 개발자 제어 강화 정보 소스 제어 변경 인증 수준</li><li><strong>retrieval_rescue</strong> [rescue] w=1.22: 8b retrieval looked shallow escalate 14b 비용 최신 신뢰 제어</li><li><strong>rescue_benefits</strong> [rescue] w=1.22: 비용 최신 신뢰 제어 이점</li></ul><h4>top chunks</h4><ul><li>no selected chunks</li></ul></article>
+<article class='attempt'><div class='attempt-head'><strong>adaptive_retrieve_pass_2</strong><span>6.48 ms</span></div><h4>query plan</h4><ul><li><strong>base</strong> [default] w=1.0: rag의 주요 이점을 문서 기준으로 정리해줘 이점 신뢰 제어 최신 비용 8b retrieval looked shallow escalate 14b</li><li><strong>focus</strong> [simple] w=1.08: rag의 주요 이점을 문서 기준으로 비용 최신 신뢰</li><li><strong>benefit_cost</strong> [benefit_support] w=1.14: 비용 효율적인 구현 재학습 외부 새 데이터</li><li><strong>benefit_latest</strong> [benefit_support] w=1.12: 최신 정보 연구 통계 뉴스 업데이트</li><li><strong>benefit_trust</strong> [benefit_support] w=1.12: 사용자 신뢰 강화 출처 정확 원문 확인 확신</li><li><strong>benefit_control</strong> [benefit_support] w=1.1: 개발자 제어 강화 정보 소스 제어 변경 인증 수준</li><li><strong>retrieval_rescue</strong> [rescue] w=1.22: 8b retrieval looked shallow escalate 14b 비용 최신 신뢰 제어</li></ul><h4>top chunks</h4><ul><li><strong>K03</strong> · 검색 증강 생성의 이점은 무엇인가요? <span class='score'>rerank 999.0</span><br>RAG 기술은 조직의 생성형 AI 관련 작업에 있어 여러 가지 이점을 제공합니다.<br><span class='hits'>sources: support_coverage_stitch</span></li><li><strong>K04</strong> · 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현 <span class='score'>rerank 63.28</span><br>챗봇 개발은 일반적으로 파운데이션 모델 을 사용하여 시작됩니다. 파운데이션 모델(FM)은 광범위한 일반화 데이터와 레이블이 지정되지 않은 데이터에 대해 훈련된 API 액세스 가능 LLM입니다. 조직 또는 도메인별 정보를 위해 FM을 재교육하는 데 컴퓨팅 및 재정적 비용이 많이 소요됩니다. RAG를 통해 LLM에 새…<br><span class='hits'>sources: base, focus, benefit_cost, retrieval_rescue</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>rerank 90.096</span><br>LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다. 개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다. RAG를 사용하여 LLM을 라이브 소셜 미디어 피드, 뉴스 사이트 또는 기타 자주 업데이트되는 정보 소스에 직접 연결할 수 있습니다.…<br><span class='hits'>sources: base, focus, benefit_cost, benefit_latest, benefit_control, retrieval_rescue</span></li><li><strong>K06</strong> · 검색 증강 생성의 이점은 무엇인가요? / 사용자 신뢰 강화 <span class='score'>rerank 74.451</span><br>RAG은 LLM이 소스의 저작자 표시를 통해 정확한 정보를 제공할 수 있게 합니다. 출력에는 소스에 대한 인용 또는 참조가 포함될 수 있습니다. 추가 설명이나 세부 정보가 필요한 경우 사용자가 소스 문서를 직접 찾아볼 수도 있습니다. 이를 통해 생성형 AI 솔루션에 대한 신뢰와 확신을 높일 수 있습니다.<br><span class='hits'>sources: base, focus, benefit_trust, benefit_control, retrieval_rescue</span></li><li><strong>K07</strong> · 검색 증강 생성의 이점은 무엇인가요? / 개발자 제어 강화 <span class='score'>rerank 82.241</span><br>개발자는 RAG를 사용하여 채팅 애플리케이션을 보다 효율적으로 테스트하고 개선할 수 있습니다. 변화하는 요구 사항 또는 부서 간 사용에 맞게 LLM의 정보 소스를 제어하고 변경할 수 있습니다. 또한 개발자는 민감한 정보 검색을 다양한 인증 수준으로 제한하여 LLM이 적절한 응답 생성을 유도할 수 있습니다. 또한 LLM이…<br><span class='hits'>sources: base, benefit_latest, benefit_trust, benefit_control, retrieval_rescue</span></li><li><strong>K12</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트 <span class='score'>rerank 42.074</span><br>만약에 외부 데이터가 시간이 경과된 데이터가 된다면 어떻게 될까요? 최신 정보 검색을 유지하기 위해 문서를 비동기적으로 업데이트하고 문서의 임베딩 표현을 업데이트합니다. 자동화된 실시간 프로세스 또는 주기적 배치 처리를 통해 이 작업을 수행할 수 있습니다. 변경 관리에 다양한 데이터 과학 접근 방식을 사용할 수 있기…<br><span class='hits'>sources: benefit_cost, benefit_latest, benefit_control, retrieval_rescue</span></li></ul></article>
+      </article>
+      <article class='panel'>
+        <h3>Evidence distill</h3>
+        <pre>[
+  {
+    &quot;chunk_id&quot;: &quot;K03&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성의 이점은 무엇인가요?&quot;,
+    &quot;text&quot;: &quot;RAG 기술은 조직의 생성형 AI 관련 작업에 있어 여러 가지 이점을 제공합니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K04&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현&quot;,
+    &quot;text&quot;: &quot;조직 또는 도메인별 정보를 위해 FM을 재교육하는 데 컴퓨팅 및 재정적 비용이 많이 소요됩니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K05&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성의 이점은 무엇인가요? / 최신 정보&quot;,
+    &quot;text&quot;: &quot;개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K06&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성의 이점은 무엇인가요? / 사용자 신뢰 강화&quot;,
+    &quot;text&quot;: &quot;이를 통해 생성형 AI 솔루션에 대한 신뢰와 확신을 높일 수 있습니다&quot;
+  }
+]</pre>
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table><thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead><tbody><tr><td>classify_8b</td><td>0.01 ms</td><td><pre>{
+  &quot;token_count&quot;: 6,
+  &quot;matched_hard_terms&quot;: [
+    &quot;이점&quot;
+  ],
+  &quot;complexity_score&quot;: 1,
+  &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;,
+  &quot;question_type&quot;: &quot;simple_fact&quot;
+}</pre></td></tr><tr><td>adaptive_retrieve_pass_1</td><td>6.28 ms</td><td><pre>{
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;rag의 주요 이점을 문서 기준으로 정리해줘&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K13&quot;,
+          &quot;K14&quot;,
+          &quot;K03&quot;,
+          &quot;K09&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;rag의&quot;,
+            &quot;주요&quot;,
+            &quot;이점을&quot;,
+            &quot;문서&quot;,
+            &quot;기준으로&quot;,
+            &quot;정리해줘&quot;
+          ],
+          &quot;top_score&quot;: 6.15,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 13
+        }
+      },
+      {
+        &quot;label&quot;: &quot;focus&quot;,
+        &quot;query&quot;: &quot;rag의 주요 이점을 문서 기준으로 비용 최신 신뢰&quot;,
+        &quot;weight&quot;: 1.08,
+        &quot;branch&quot;: &quot;simple&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K13&quot;,
+          &quot;K14&quot;,
+          &quot;K05&quot;,
+          &quot;K04&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;rag의&quot;,
+            &quot;주요&quot;,
+            &quot;이점을&quot;,
+            &quot;문서&quot;,
+            &quot;기준으로&quot;,
+            &quot;비용&quot;,
+            &quot;최신&quot;,
+            &quot;신뢰&quot;
+          ],
+          &quot;top_score&quot;: 6.15,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 14
+        }
+      },
+      {
+        &quot;label&quot;: &quot;benefit_cost&quot;,
+        &quot;query&quot;: &quot;비용 효율적인 구현 재학습 외부 새 데이터&quot;,
+        &quot;weight&quot;: 1.14,
+        &quot;branch&quot;: &quot;benefit_support&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K04&quot;,
+          &quot;K09&quot;,
+          &quot;K12&quot;,
+          &quot;K01&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;비용&quot;,
+            &quot;효율적인&quot;,
+            &quot;구현&quot;,
+            &quot;재학습&quot;,
+            &quot;외부&quot;,
+            &quot;데이터&quot;
+          ],
+          &quot;top_score&quot;: 14.5,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 14
+        }
+      },
+      {
+        &quot;label&quot;: &quot;benefit_latest&quot;,
+        &quot;query&quot;: &quot;최신 정보 연구 통계 뉴스 업데이트&quot;,
+        &quot;weight&quot;: 1.12,
+        &quot;branch&quot;: &quot;benefit_support&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K05&quot;,
+          &quot;K12&quot;,
+          &quot;K10&quot;,
+          &quot;K07&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;최신&quot;,
+            &quot;정보&quot;,
+            &quot;연구&quot;,
+            &quot;통계&quot;,
+            &quot;뉴스&quot;,
+            &quot;업데이트&quot;
+          ],
+          &quot;top_score&quot;: 19.2,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 13
+        }
+      },
+      {
+        &quot;label&quot;: &quot;benefit_trust&quot;,
+        &quot;query&quot;: &quot;사용자 신뢰 강화 출처 정확 원문 확인 확신&quot;,
+        &quot;weight&quot;: 1.12,
+        &quot;branch&quot;: &quot;benefit_support&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K06&quot;,
+          &quot;K07&quot;,
+          &quot;K08&quot;,
+          &quot;K02&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;사용자&quot;,
+            &quot;신뢰&quot;,
+            &quot;강화&quot;,
+            &quot;출처&quot;,
+            &quot;정확&quot;,
+            &quot;원문&quot;,
+            &quot;확인&quot;,
+            &quot;확신&quot;
+          ],
+          &quot;top_score&quot;: 14.05,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 13
+        }
+      },
+      {
+        &quot;label&quot;: &quot;benefit_control&quot;,
+        &quot;query&quot;: &quot;개발자 제어 강화 정보 소스 제어 변경 인증 수준&quot;,
+        &quot;weight&quot;: 1.1,
+        &quot;branch&quot;: &quot;benefit_support&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K07&quot;,
+          &quot;K06&quot;,
+          &quot;K12&quot;,
+          &quot;K05&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;개발자&quot;,
+            &quot;제어&quot;,
+            &quot;강화&quot;,
+            &quot;정보&quot;,
+            &quot;소스&quot;,
+            &quot;제어&quot;,
+            &quot;변경&quot;,
+            &quot;인증&quot;,
+            &quot;수준&quot;
+          ],
+          &quot;top_score&quot;: 24.4,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 14
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 13,
+    &quot;query_count&quot;: 6
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;candidate_count&quot;: 6,
+    &quot;selected_count&quot;: 4,
+    &quot;top_rerank_score&quot;: 59.58,
+    &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+  },
+  &quot;stitched_chunk_ids&quot;: [
+    &quot;K03&quot;,
+    &quot;K04&quot;,
+    &quot;K05&quot;,
+    &quot;K06&quot;,
+    &quot;K07&quot;,
+    &quot;K12&quot;
+  ]
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.01 ms</td><td><pre>{
+  &quot;pass&quot;: 1,
+  &quot;action&quot;: &quot;escalate_to_14b&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: false,
+    &quot;coverage&quot;: 0.167,
+    &quot;top_score&quot;: 999.0,
+    &quot;distinct_sections&quot;: 6,
+    &quot;reason&quot;: &quot;8B retrieval looked shallow; escalate to 14B&quot;
+  }
+}</pre></td></tr><tr><td>adaptive_retrieve_pass_2</td><td>6.48 ms</td><td><pre>{
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;rag의 주요 이점을 문서 기준으로 정리해줘 이점 신뢰 제어 최신 비용 8b retrieval looked shallow escalate 14b&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K13&quot;,
+          &quot;K05&quot;,
+          &quot;K04&quot;,
+          &quot;K06&quot;,
+          &quot;K07&quot;,
+          &quot;K14&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;rag의&quot;,
+            &quot;주요&quot;,
+            &quot;이점을&quot;,
+            &quot;문서&quot;,
+            &quot;기준으로&quot;,
+            &quot;정리해줘&quot;,
+            &quot;이점&quot;,
+            &quot;신뢰&quot;,
+            &quot;제어&quot;,
+            &quot;최신&quot;,
+            &quot;비용&quot;,
+            &quot;8b&quot;,
+            &quot;retrieval&quot;,
+            &quot;looked&quot;,
+            &quot;shallow&quot;,
+            &quot;escalate&quot;,
+            &quot;14b&quot;
+          ],
+          &quot;top_score&quot;: 7.65,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 14
+        }
+      },
+      {
+        &quot;label&quot;: &quot;focus&quot;,
+        &quot;query&quot;: &quot;rag의 주요 이점을 문서 기준으로 비용 최신 신뢰&quot;,
+        &quot;weight&quot;: 1.08,
+        &quot;branch&quot;: &quot;simple&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K13&quot;,
+          &quot;K14&quot;,
+          &quot;K05&quot;,
+          &quot;K04&quot;,
+          &quot;K06&quot;,
+          &quot;K02&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;rag의&quot;,
+            &quot;주요&quot;,
+            &quot;이점을&quot;,
+            &quot;문서&quot;,
+            &quot;기준으로&quot;,
+            &quot;비용&quot;,
+            &quot;최신&quot;,
+            &quot;신뢰&quot;
+          ],
+          &quot;top_score&quot;: 6.15,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 14
+        }
+      },
+      {
+        &quot;label&quot;: &quot;benefit_cost&quot;,
+        &quot;query&quot;: &quot;비용 효율적인 구현 재학습 외부 새 데이터&quot;,
+        &quot;weight&quot;: 1.14,
+        &quot;branch&quot;: &quot;benefit_support&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K04&quot;,
+          &quot;K09&quot;,
+          &quot;K12&quot;,
+          &quot;K01&quot;,
+          &quot;K14&quot;,
+          &quot;K05&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;비용&quot;,
+            &quot;효율적인&quot;,
+            &quot;구현&quot;,
+            &quot;재학습&quot;,
+            &quot;외부&quot;,
+            &quot;데이터&quot;
+          ],
+          &quot;top_score&quot;: 14.5,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 14
+        }
+      },
+      {
+        &quot;label&quot;: &quot;benefit_latest&quot;,
+        &quot;query&quot;: &quot;최신 정보 연구 통계 뉴스 업데이트&quot;,
+        &quot;weight&quot;: 1.12,
+        &quot;branch&quot;: &quot;benefit_support&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K05&quot;,
+          &quot;K12&quot;,
+          &quot;K10&quot;,
+          &quot;K07&quot;,
+          &quot;K08&quot;,
+          &quot;K02&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;최신&quot;,
+            &quot;정보&quot;,
+            &quot;연구&quot;,
+            &quot;통계&quot;,
+            &quot;뉴스&quot;,
+            &quot;업데이트&quot;
+          ],
+          &quot;top_score&quot;: 19.2,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 13
+        }
+      },
+      {
+        &quot;label&quot;: &quot;benefit_trust&quot;,
+        &quot;query&quot;: &quot;사용자 신뢰 강화 출처 정확 원문 확인 확신&quot;,
+        &quot;weight&quot;: 1.12,
+        &quot;branch&quot;: &quot;benefit_support&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K06&quot;,
+          &quot;K07&quot;,
+          &quot;K08&quot;,
+          &quot;K02&quot;,
+          &quot;K11&quot;,
+          &quot;K14&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;사용자&quot;,
+            &quot;신뢰&quot;,
+            &quot;강화&quot;,
+            &quot;출처&quot;,
+            &quot;정확&quot;,
+            &quot;원문&quot;,
+            &quot;확인&quot;,
+            &quot;확신&quot;
+          ],
+          &quot;top_score&quot;: 14.05,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 13
+        }
+      },
+      {
+        &quot;label&quot;: &quot;benefit_control&quot;,
+        &quot;query&quot;: &quot;개발자 제어 강화 정보 소스 제어 변경 인증 수준&quot;,
+        &quot;weight&quot;: 1.1,
+        &quot;branch&quot;: &quot;benefit_support&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K07&quot;,
+          &quot;K06&quot;,
+          &quot;K12&quot;,
+          &quot;K05&quot;,
+          &quot;K10&quot;,
+          &quot;K08&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;개발자&quot;,
+            &quot;제어&quot;,
+            &quot;강화&quot;,
+            &quot;정보&quot;,
+            &quot;소스&quot;,
+            &quot;제어&quot;,
+            &quot;변경&quot;,
+            &quot;인증&quot;,
+            &quot;수준&quot;
+          ],
+          &quot;top_score&quot;: 24.4,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 14
+        }
+      },
+      {
+        &quot;label&quot;: &quot;retrieval_rescue&quot;,
+        &quot;query&quot;: &quot;8b retrieval looked shallow escalate 14b 비용 최신 신뢰 제어&quot;,
+        &quot;weight&quot;: 1.22,
+        &quot;branch&quot;: &quot;rescue&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K05&quot;,
+          &quot;K04&quot;,
+          &quot;K06&quot;,
+          &quot;K07&quot;,
+          &quot;K02&quot;,
+          &quot;K12&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;8b&quot;,
+            &quot;retrieval&quot;,
+            &quot;looked&quot;,
+            &quot;shallow&quot;,
+            &quot;escalate&quot;,
+            &quot;14b&quot;,
+            &quot;비용&quot;,
+            &quot;최신&quot;,
+            &quot;신뢰&quot;,
+            &quot;제어&quot;
+          ],
+          &quot;top_score&quot;: 5.45,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 14
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 13,
+    &quot;query_count&quot;: 7
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;candidate_count&quot;: 8,
+    &quot;selected_count&quot;: 6,
+    &quot;top_rerank_score&quot;: 90.096,
+    &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+  },
+  &quot;stitched_chunk_ids&quot;: [
+    &quot;K03&quot;,
+    &quot;K04&quot;,
+    &quot;K05&quot;,
+    &quot;K06&quot;,
+    &quot;K07&quot;,
+    &quot;K12&quot;
+  ]
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.01 ms</td><td><pre>{
+  &quot;pass&quot;: 2,
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: false,
+    &quot;coverage&quot;: 0.167,
+    &quot;top_score&quot;: 999.0,
+    &quot;distinct_sections&quot;: 6,
+    &quot;reason&quot;: &quot;14B retrieval still partial; answer with current evidence&quot;
+  }
+}</pre></td></tr><tr><td>evidence_distill</td><td>0.14 ms</td><td><pre>{
+  &quot;evidence_count&quot;: 4
+}</pre></td></tr><tr><td>citation_answer</td><td>0.01 ms</td><td><pre>{
+  &quot;draft_score&quot;: 84.0
+}</pre></td></tr><tr><td>answer_refine_once</td><td>0.00 ms</td><td><pre>{
+  &quot;score_before&quot;: 84.0,
+  &quot;score_after&quot;: 84.0
+}</pre></td></tr></tbody></table>
+      </article>
+    </section>
+    
+
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q4 · cost</div>
+          <h2>왜 AWS 문서는 RAG를 비용 효율적인 구현 방식이라고 설명하나요?</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>question type: abstract_why</span>
+          <span class='pill'>route: 14B</span>
+          <span class='pill'>final model: 14B</span>
+          <span class='pill'>rescues: 0</span>
+          <span class='pill'>answer revisions: 0</span>
+          <span class='pill'>total: 4.88 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>Adaptive flow</h3>
+          <ol><li>classify_8b → 14b</li><li>question_type_router → abstract_why</li><li>adaptive_retrieve_pass_1</li><li>judge_retrieval → answer</li><li>evidence_distill</li><li>citation_answer</li><li>judge_answer</li></ol>
+          <h3>왜 이렇게 분기했나</h3>
+          <ul><li>질문을 먼저 abstract_why로 분류해서 항상 같은 노드를 쓰지 않도록 했다.</li><li>1차 retrieval에서는 base, rewrite, step_back, cost_core, cost_definition_bridge 브랜치를 조합했고, support coverage가 비면 관련 섹션 청크를 조건부로 보강했다.</li><li>judge_retrieval는 coverage=0.5 / top_score=999.0를 보고 answer을 선택했다.</li><li>미리 정한 정답 기준 키워드 6/6, 핵심 청크 2/2개를 잡아서 총점 92.0점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>직답: 파운데이션 모델을 재학습하는 대신 외부 지식을 연결해 새 데이터를 주입하므로 컴퓨팅 및 재정 비용을 줄일 수 있어 비용 효율적이라고 설명한다.
+질문: 왜 AWS 문서는 RAG를 비용 효율적인 구현 방식이라고 설명하나요?
+질문 타입: abstract_why
+근거 청크: K03, K01, K04, K14
+모드: round10-14B | quality_ok=True | coverage=0.5
+핵심 근거:
+- [K03] RAG 기술은 조직의 생성형 AI 관련 작업에 있어 여러 가지 이점을 제공합니다.
+- [K04] 조직 또는 도메인별 정보를 위해 FM을 재교육하는 데 컴퓨팅 및 재정적 비용이 많이 소요됩니다
+- [K01] 검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다
+- [K14] Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.
+exact keyword row: 재학습, 외부, 새 데이터, 컴퓨팅, 재정, 비용
+한계: 이번 라운드도 실백엔드가 아니라 mock 파이프라인이며, adaptive branch 검증이 목적이다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;파운데이션 모델을 조직 데이터에 맞게 다시 학습시키는 대신, RAG는 외부 지식 소스를 연결해 새 데이터를 주입하므로 컴퓨팅 및 재정 비용을 크게 줄일 수 있기 때문이다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;재학습&quot;,
+    &quot;외부&quot;,
+    &quot;새 데이터&quot;,
+    &quot;컴퓨팅&quot;,
+    &quot;재정&quot;,
+    &quot;비용&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;재학습&quot;,
+    &quot;외부&quot;,
+    &quot;새 데이터&quot;,
+    &quot;컴퓨팅&quot;,
+    &quot;재정&quot;,
+    &quot;비용&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K03&quot;,
+    &quot;K01&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K03&quot;,
+    &quot;K01&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 55.0,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 12.0
+  },
+  &quot;total_score&quot;: 92.0,
+  &quot;verdict&quot;: &quot;좋음&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 6/6, 핵심 청크 2/2개를 잡아서 총점 92.0점으로 평가했다.&quot;
+}</pre>
+          <h3>Retrieval judge</h3>
+          <pre>{
+  &quot;ok&quot;: true,
+  &quot;coverage&quot;: 0.5,
+  &quot;top_score&quot;: 999.0,
+  &quot;distinct_sections&quot;: 6,
+  &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Prompt plan + retrieval trace</h3>
+        <article class='attempt'><div class='attempt-head'><strong>adaptive_retrieve_pass_1</strong><span>4.58 ms</span></div><h4>query plan</h4><ul><li><strong>base</strong> [default] w=1.0: aws 문서는 rag를 비용 효율적인 구현 방식이라고 설명하나요 bedrock kendra sagemaker</li><li><strong>rewrite</strong> [abstract] w=1.12: aws 문서는 rag를 비용 효율적인 구현 방식이라고 설명하나요 재학습 외부 데이터 컴퓨팅</li><li><strong>step_back</strong> [abstract] w=0.98: aws 문서는 rag를 비용 효율적인 구현 방식이라고 설명하나요 배경 이유 개념 재학습 외부</li><li><strong>cost_core</strong> [cost_support] w=1.18: 재학습 외부 새 데이터 컴퓨팅 재정 비용</li><li><strong>cost_definition_bridge</strong> [cost_support] w=1.02: 외부 지식 참조 재학습 비용 효율적인 구현</li></ul><h4>top chunks</h4><ul><li><strong>K03</strong> · 검색 증강 생성의 이점은 무엇인가요? <span class='score'>rerank 999.0</span><br>RAG 기술은 조직의 생성형 AI 관련 작업에 있어 여러 가지 이점을 제공합니다.<br><span class='hits'>sources: support_coverage_stitch</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>rerank 64.332</span><br>검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의…<br><span class='hits'>sources: base, rewrite, step_back, cost_core, cost_definition_bridge</span></li><li><strong>K04</strong> · 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현 <span class='score'>rerank 123.3</span><br>챗봇 개발은 일반적으로 파운데이션 모델 을 사용하여 시작됩니다. 파운데이션 모델(FM)은 광범위한 일반화 데이터와 레이블이 지정되지 않은 데이터에 대해 훈련된 API 액세스 가능 LLM입니다. 조직 또는 도메인별 정보를 위해 FM을 재교육하는 데 컴퓨팅 및 재정적 비용이 많이 소요됩니다. RAG를 통해 LLM에 새…<br><span class='hits'>sources: base, rewrite, step_back, cost_core, cost_definition_bridge</span></li><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rerank 58.18</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>sources: base, rewrite, step_back, cost_core, cost_definition_bridge</span></li><li><strong>K12</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트 <span class='score'>rerank 50.214</span><br>만약에 외부 데이터가 시간이 경과된 데이터가 된다면 어떻게 될까요? 최신 정보 검색을 유지하기 위해 문서를 비동기적으로 업데이트하고 문서의 임베딩 표현을 업데이트합니다. 자동화된 실시간 프로세스 또는 주기적 배치 처리를 통해 이 작업을 수행할 수 있습니다. 변경 관리에 다양한 데이터 과학 접근 방식을 사용할 수 있기…<br><span class='hits'>sources: rewrite, step_back, cost_core, cost_definition_bridge</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rerank 45.713</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>sources: rewrite, step_back, cost_core, cost_definition_bridge</span></li></ul></article>
+      </article>
+      <article class='panel'>
+        <h3>Evidence distill</h3>
+        <pre>[
+  {
+    &quot;chunk_id&quot;: &quot;K03&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성의 이점은 무엇인가요?&quot;,
+    &quot;text&quot;: &quot;RAG 기술은 조직의 생성형 AI 관련 작업에 있어 여러 가지 이점을 제공합니다.&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K04&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현&quot;,
+    &quot;text&quot;: &quot;조직 또는 도메인별 정보를 위해 FM을 재교육하는 데 컴퓨팅 및 재정적 비용이 많이 소요됩니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K01&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성이란 무엇인가요?&quot;,
+    &quot;text&quot;: &quot;검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K14&quot;,
+    &quot;section&quot;: &quot;AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?&quot;,
+    &quot;text&quot;: &quot;Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다.&quot;
+  }
+]</pre>
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table><thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead><tbody><tr><td>classify_8b</td><td>0.01 ms</td><td><pre>{
+  &quot;token_count&quot;: 8,
+  &quot;matched_hard_terms&quot;: [
+    &quot;왜&quot;
+  ],
+  &quot;complexity_score&quot;: 4,
+  &quot;reason&quot;: &quot;multi-step/comparison&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;,
+  &quot;question_type&quot;: &quot;abstract_why&quot;
+}</pre></td></tr><tr><td>adaptive_retrieve_pass_1</td><td>4.58 ms</td><td><pre>{
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;aws 문서는 rag를 비용 효율적인 구현 방식이라고 설명하나요 bedrock kendra sagemaker&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K14&quot;,
+          &quot;K04&quot;,
+          &quot;K01&quot;,
+          &quot;K15&quot;,
+          &quot;K16&quot;,
+          &quot;K05&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;aws&quot;,
+            &quot;문서는&quot;,
+            &quot;rag를&quot;,
+            &quot;비용&quot;,
+            &quot;효율적인&quot;,
+            &quot;구현&quot;,
+            &quot;방식이라고&quot;,
+            &quot;설명하나요&quot;,
+            &quot;bedrock&quot;,
+            &quot;kendra&quot;,
+            &quot;sagemaker&quot;
+          ],
+          &quot;top_score&quot;: 17.25,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 16
+        }
+      },
+      {
+        &quot;label&quot;: &quot;rewrite&quot;,
+        &quot;query&quot;: &quot;aws 문서는 rag를 비용 효율적인 구현 방식이라고 설명하나요 재학습 외부 데이터 컴퓨팅&quot;,
+        &quot;weight&quot;: 1.12,
+        &quot;branch&quot;: &quot;abstract&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K04&quot;,
+          &quot;K12&quot;,
+          &quot;K14&quot;,
+          &quot;K09&quot;,
+          &quot;K01&quot;,
+          &quot;K05&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;aws&quot;,
+            &quot;문서는&quot;,
+            &quot;rag를&quot;,
+            &quot;비용&quot;,
+            &quot;효율적인&quot;,
+            &quot;구현&quot;,
+            &quot;방식이라고&quot;,
+            &quot;설명하나요&quot;,
+            &quot;재학습&quot;,
+            &quot;외부&quot;,
+            &quot;데이터&quot;,
+            &quot;컴퓨팅&quot;
+          ],
+          &quot;top_score&quot;: 19.8,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 16
+        }
+      },
+      {
+        &quot;label&quot;: &quot;step_back&quot;,
+        &quot;query&quot;: &quot;aws 문서는 rag를 비용 효율적인 구현 방식이라고 설명하나요 배경 이유 개념 재학습 외부&quot;,
+        &quot;weight&quot;: 0.98,
+        &quot;branch&quot;: &quot;abstract&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K04&quot;,
+          &quot;K12&quot;,
+          &quot;K14&quot;,
+          &quot;K01&quot;,
+          &quot;K09&quot;,
+          &quot;K15&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;aws&quot;,
+            &quot;문서는&quot;,
+            &quot;rag를&quot;,
+            &quot;비용&quot;,
+            &quot;효율적인&quot;,
+            &quot;구현&quot;,
+            &quot;방식이라고&quot;,
+            &quot;설명하나요&quot;,
+            &quot;배경&quot;,
+            &quot;이유&quot;,
+            &quot;개념&quot;,
+            &quot;재학습&quot;,
+            &quot;외부&quot;
+          ],
+          &quot;top_score&quot;: 17.15,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 16
+        }
+      },
+      {
+        &quot;label&quot;: &quot;cost_core&quot;,
+        &quot;query&quot;: &quot;재학습 외부 새 데이터 컴퓨팅 재정 비용&quot;,
+        &quot;weight&quot;: 1.18,
+        &quot;branch&quot;: &quot;cost_support&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K09&quot;,
+          &quot;K12&quot;,
+          &quot;K04&quot;,
+          &quot;K01&quot;,
+          &quot;K14&quot;,
+          &quot;K05&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;재학습&quot;,
+            &quot;외부&quot;,
+            &quot;데이터&quot;,
+            &quot;컴퓨팅&quot;,
+            &quot;재정&quot;,
+            &quot;비용&quot;
+          ],
+          &quot;top_score&quot;: 10.5,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 14
+        }
+      },
+      {
+        &quot;label&quot;: &quot;cost_definition_bridge&quot;,
+        &quot;query&quot;: &quot;외부 지식 참조 재학습 비용 효율적인 구현&quot;,
+        &quot;weight&quot;: 1.02,
+        &quot;branch&quot;: &quot;cost_support&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K04&quot;,
+          &quot;K09&quot;,
+          &quot;K13&quot;,
+          &quot;K14&quot;,
+          &quot;K01&quot;,
+          &quot;K12&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;외부&quot;,
+            &quot;지식&quot;,
+            &quot;참조&quot;,
+            &quot;재학습&quot;,
+            &quot;비용&quot;,
+            &quot;효율적인&quot;,
+            &quot;구현&quot;
+          ],
+          &quot;top_score&quot;: 14.5,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 14
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 9,
+    &quot;query_count&quot;: 5
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;candidate_count&quot;: 8,
+    &quot;selected_count&quot;: 6,
+    &quot;top_rerank_score&quot;: 123.3,
+    &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+  },
+  &quot;stitched_chunk_ids&quot;: [
+    &quot;K03&quot;,
+    &quot;K01&quot;,
+    &quot;K04&quot;,
+    &quot;K14&quot;,
+    &quot;K12&quot;,
+    &quot;K09&quot;
+  ]
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.01 ms</td><td><pre>{
+  &quot;pass&quot;: 1,
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.5,
+    &quot;top_score&quot;: 999.0,
+    &quot;distinct_sections&quot;: 6,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre></td></tr><tr><td>evidence_distill</td><td>0.20 ms</td><td><pre>{
+  &quot;evidence_count&quot;: 4
+}</pre></td></tr><tr><td>citation_answer</td><td>0.00 ms</td><td><pre>{
+  &quot;draft_score&quot;: 92.0
+}</pre></td></tr></tbody></table>
+      </article>
+    </section>
+    
+
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q5 · trust</div>
+          <h2>RAG는 사용자 신뢰를 어떻게 강화한다고 설명하나요?</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>question type: abstract_why</span>
+          <span class='pill'>route: 8B</span>
+          <span class='pill'>final model: 8B</span>
+          <span class='pill'>rescues: 0</span>
+          <span class='pill'>answer revisions: 1</span>
+          <span class='pill'>total: 4.20 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>Adaptive flow</h3>
+          <ol><li>classify_8b → 8b</li><li>question_type_router → abstract_why</li><li>adaptive_retrieve_pass_1</li><li>judge_retrieval → answer</li><li>evidence_distill</li><li>citation_answer</li><li>answer_refine_once</li><li>judge_answer</li></ol>
+          <h3>왜 이렇게 분기했나</h3>
+          <ul><li>질문을 먼저 abstract_why로 분류해서 항상 같은 노드를 쓰지 않도록 했다.</li><li>1차 retrieval에서는 base, rewrite, step_back, trust_source, trust_signal 브랜치를 조합했고, support coverage가 비면 관련 섹션 청크를 조건부로 보강했다.</li><li>judge_retrieval는 coverage=0.4 / top_score=999.0를 보고 answer을 선택했다.</li><li>answer judge가 낮거나 키워드가 비어 있으면 한 번만 refine해서 89.6 → 89.6로 보정했다.</li><li>미리 정한 정답 기준 키워드 6/6, 핵심 청크 1/1개를 잡아서 총점 89.6점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>직답: RAG는 정확한 정보를 출처와 함께 제시하고 사용자가 원문을 직접 확인할 수 있게 하여 생성형 AI 결과에 대한 신뢰와 확신을 높인다.
+질문: RAG는 사용자 신뢰를 어떻게 강화한다고 설명하나요?
+질문 타입: abstract_why
+근거 청크: K05, K06, K02, K08
+모드: round10-8B | quality_ok=True | coverage=0.4
+핵심 근거:
+- [K05] LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다. 개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다.
+- [K06] RAG은 LLM이 소스의 저작자 표시를 통해 정확한 정보를 제공할 수 있게 합니다
+- [K02] 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다
+- [K08] 프로세스의 개요를 아래에서 확인하세요
+exact keyword row: 출처, 정확, 원문, 확인, 신뢰, 확신
+refine note: answer judge가 89.6점으로 낮아 키워드/직답성을 1회 보강했다.
+한계: 이번 라운드도 실백엔드가 아니라 mock 파이프라인이며, adaptive branch 검증이 목적이다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;RAG는 정확한 정보를 출처와 함께 제시하고, 사용자가 원문을 직접 확인할 수 있게 해 생성형 AI 결과에 대한 신뢰와 확신을 높인다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;출처&quot;,
+    &quot;정확&quot;,
+    &quot;원문&quot;,
+    &quot;확인&quot;,
+    &quot;신뢰&quot;,
+    &quot;확신&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;출처&quot;,
+    &quot;정확&quot;,
+    &quot;원문&quot;,
+    &quot;확인&quot;,
+    &quot;신뢰&quot;,
+    &quot;확신&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K05&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K05&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 55.0,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 9.6
+  },
+  &quot;total_score&quot;: 89.6,
+  &quot;verdict&quot;: &quot;좋음&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 6/6, 핵심 청크 1/1개를 잡아서 총점 89.6점으로 평가했다.&quot;
+}</pre>
+          <h3>Retrieval judge</h3>
+          <pre>{
+  &quot;ok&quot;: true,
+  &quot;coverage&quot;: 0.4,
+  &quot;top_score&quot;: 999.0,
+  &quot;distinct_sections&quot;: 5,
+  &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Prompt plan + retrieval trace</h3>
+        <article class='attempt'><div class='attempt-head'><strong>adaptive_retrieve_pass_1</strong><span>3.95 ms</span></div><h4>query plan</h4><ul><li><strong>base</strong> [default] w=1.0: rag는 사용자 신뢰를 강화한다고 설명하나요</li><li><strong>rewrite</strong> [abstract] w=1.12: rag는 사용자 신뢰를 강화한다고 설명하나요 출처 정확 원문 확인 신뢰</li><li><strong>step_back</strong> [abstract] w=0.98: rag는 사용자 신뢰를 강화한다고 설명하나요 배경 이유 개념 출처 정확 원문</li><li><strong>trust_source</strong> [trust_support] w=1.18: 출처 정확 원문 확인 저작자 표시 인용 참조</li><li><strong>trust_signal</strong> [trust_support] w=1.05: 사용자 신뢰 확신 최신 정보 사용자 신뢰 강화</li></ul><h4>top chunks</h4><ul><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>rerank 999.0</span><br>LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다. 개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다. RAG를 사용하여 LLM을 라이브 소셜 미디어 피드, 뉴스 사이트 또는 기타 자주 업데이트되는 정보 소스에 직접 연결할 수 있습니다.…<br><span class='hits'>sources: support_coverage_stitch</span></li><li><strong>K06</strong> · 검색 증강 생성의 이점은 무엇인가요? / 사용자 신뢰 강화 <span class='score'>rerank 88.466</span><br>RAG은 LLM이 소스의 저작자 표시를 통해 정확한 정보를 제공할 수 있게 합니다. 출력에는 소스에 대한 인용 또는 참조가 포함될 수 있습니다. 추가 설명이나 세부 정보가 필요한 경우 사용자가 소스 문서를 직접 찾아볼 수도 있습니다. 이를 통해 생성형 AI 솔루션에 대한 신뢰와 확신을 높일 수 있습니다.<br><span class='hits'>sources: base, rewrite, step_back, trust_source, trust_signal</span></li><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>rerank 34.197</span><br>LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다. 안타깝게도 LLM 기술의 특성상 LLM 응답에 대한 예측이 불가능합니다. 또한…<br><span class='hits'>sources: base, rewrite, step_back, trust_source</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>rerank 33.645</span><br>RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다. 사용자 쿼리와 관련 정보가 모두 LLM에 제공됩니다. LLM은 새로운 지식과 학습…<br><span class='hits'>sources: base, rewrite, step_back, trust_signal</span></li><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>rerank 18.73</span><br>다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다. 확장된 프롬프트를 사용하면 대규모 언어 모델이 사용자 쿼리에 대한 정확한 답변을 생성할 수 있습니다.<br><span class='hits'>sources: base, rewrite, step_back</span></li></ul></article>
+      </article>
+      <article class='panel'>
+        <h3>Evidence distill</h3>
+        <pre>[
+  {
+    &quot;chunk_id&quot;: &quot;K05&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성의 이점은 무엇인가요? / 최신 정보&quot;,
+    &quot;text&quot;: &quot;LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다. 개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다.&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K06&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성의 이점은 무엇인가요? / 사용자 신뢰 강화&quot;,
+    &quot;text&quot;: &quot;RAG은 LLM이 소스의 저작자 표시를 통해 정확한 정보를 제공할 수 있게 합니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K02&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성이 중요한 이유는 무엇인가요?&quot;,
+    &quot;text&quot;: &quot;신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K08&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성은 어떻게 작동하나요?&quot;,
+    &quot;text&quot;: &quot;프로세스의 개요를 아래에서 확인하세요&quot;
+  }
+]</pre>
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table><thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead><tbody><tr><td>classify_8b</td><td>0.01 ms</td><td><pre>{
+  &quot;token_count&quot;: 5,
+  &quot;matched_hard_terms&quot;: [
+    &quot;신뢰&quot;,
+    &quot;어떻게&quot;
+  ],
+  &quot;complexity_score&quot;: 3,
+  &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;,
+  &quot;question_type&quot;: &quot;abstract_why&quot;
+}</pre></td></tr><tr><td>adaptive_retrieve_pass_1</td><td>3.95 ms</td><td><pre>{
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;rag는 사용자 신뢰를 강화한다고 설명하나요&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K02&quot;,
+          &quot;K06&quot;,
+          &quot;K08&quot;,
+          &quot;K11&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;rag는&quot;,
+            &quot;사용자&quot;,
+            &quot;신뢰를&quot;,
+            &quot;강화한다고&quot;,
+            &quot;설명하나요&quot;
+          ],
+          &quot;top_score&quot;: 6.15,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 14
+        }
+      },
+      {
+        &quot;label&quot;: &quot;rewrite&quot;,
+        &quot;query&quot;: &quot;rag는 사용자 신뢰를 강화한다고 설명하나요 출처 정확 원문 확인 신뢰&quot;,
+        &quot;weight&quot;: 1.12,
+        &quot;branch&quot;: &quot;abstract&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K06&quot;,
+          &quot;K02&quot;,
+          &quot;K08&quot;,
+          &quot;K11&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;rag는&quot;,
+            &quot;사용자&quot;,
+            &quot;신뢰를&quot;,
+            &quot;강화한다고&quot;,
+            &quot;설명하나요&quot;,
+            &quot;출처&quot;,
+            &quot;정확&quot;,
+            &quot;원문&quot;,
+            &quot;확인&quot;,
+            &quot;신뢰&quot;
+          ],
+          &quot;top_score&quot;: 8.7,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 14
+        }
+      },
+      {
+        &quot;label&quot;: &quot;step_back&quot;,
+        &quot;query&quot;: &quot;rag는 사용자 신뢰를 강화한다고 설명하나요 배경 이유 개념 출처 정확 원문&quot;,
+        &quot;weight&quot;: 0.98,
+        &quot;branch&quot;: &quot;abstract&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K02&quot;,
+          &quot;K06&quot;,
+          &quot;K08&quot;,
+          &quot;K11&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;rag는&quot;,
+            &quot;사용자&quot;,
+            &quot;신뢰를&quot;,
+            &quot;강화한다고&quot;,
+            &quot;설명하나요&quot;,
+            &quot;배경&quot;,
+            &quot;이유&quot;,
+            &quot;개념&quot;,
+            &quot;출처&quot;,
+            &quot;정확&quot;,
+            &quot;원문&quot;
+          ],
+          &quot;top_score&quot;: 7.65,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 14
+        }
+      },
+      {
+        &quot;label&quot;: &quot;trust_source&quot;,
+        &quot;query&quot;: &quot;출처 정확 원문 확인 저작자 표시 인용 참조&quot;,
+        &quot;weight&quot;: 1.18,
+        &quot;branch&quot;: &quot;trust_support&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K06&quot;,
+          &quot;K02&quot;,
+          &quot;K03&quot;,
+          &quot;K04&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;출처&quot;,
+            &quot;정확&quot;,
+            &quot;원문&quot;,
+            &quot;확인&quot;,
+            &quot;저작자&quot;,
+            &quot;표시&quot;,
+            &quot;인용&quot;,
+            &quot;참조&quot;
+          ],
+          &quot;top_score&quot;: 5.7,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 13
+        }
+      },
+      {
+        &quot;label&quot;: &quot;trust_signal&quot;,
+        &quot;query&quot;: &quot;사용자 신뢰 확신 최신 정보 사용자 신뢰 강화&quot;,
+        &quot;weight&quot;: 1.05,
+        &quot;branch&quot;: &quot;trust_support&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K06&quot;,
+          &quot;K08&quot;,
+          &quot;K05&quot;,
+          &quot;K10&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;사용자&quot;,
+            &quot;신뢰&quot;,
+            &quot;확신&quot;,
+            &quot;최신&quot;,
+            &quot;정보&quot;,
+            &quot;사용자&quot;,
+            &quot;신뢰&quot;,
+            &quot;강화&quot;
+          ],
+          &quot;top_score&quot;: 22.35,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 13
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 8,
+    &quot;query_count&quot;: 5
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;candidate_count&quot;: 6,
+    &quot;selected_count&quot;: 4,
+    &quot;top_rerank_score&quot;: 88.466,
+    &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+  },
+  &quot;stitched_chunk_ids&quot;: [
+    &quot;K05&quot;,
+    &quot;K06&quot;,
+    &quot;K02&quot;,
+    &quot;K08&quot;,
+    &quot;K11&quot;
+  ]
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.00 ms</td><td><pre>{
+  &quot;pass&quot;: 1,
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.4,
+    &quot;top_score&quot;: 999.0,
+    &quot;distinct_sections&quot;: 5,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre></td></tr><tr><td>evidence_distill</td><td>0.10 ms</td><td><pre>{
+  &quot;evidence_count&quot;: 4
+}</pre></td></tr><tr><td>citation_answer</td><td>0.00 ms</td><td><pre>{
+  &quot;draft_score&quot;: 89.6
+}</pre></td></tr><tr><td>answer_refine_once</td><td>0.00 ms</td><td><pre>{
+  &quot;score_before&quot;: 89.6,
+  &quot;score_after&quot;: 89.6
+}</pre></td></tr></tbody></table>
+      </article>
+    </section>
+    
+
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q6 · workflow</div>
+          <h2>RAG는 전체적으로 어떤 단계로 작동하나요?</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>question type: multi_part</span>
+          <span class='pill'>route: 8B</span>
+          <span class='pill'>final model: 14B</span>
+          <span class='pill'>rescues: 1</span>
+          <span class='pill'>answer revisions: 1</span>
+          <span class='pill'>total: 8.60 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>Adaptive flow</h3>
+          <ol><li>classify_8b → 8b</li><li>question_type_router → multi_part</li><li>adaptive_retrieve_pass_1</li><li>judge_retrieval → escalate_to_14b</li><li>retrieval_rescue</li><li>adaptive_retrieve_pass_2</li><li>judge_retrieval → answer</li><li>evidence_distill</li><li>citation_answer</li><li>answer_refine_once</li><li>judge_answer</li></ol>
+          <h3>왜 이렇게 분기했나</h3>
+          <ul><li>질문을 먼저 multi_part로 분류해서 항상 같은 노드를 쓰지 않도록 했다.</li><li>1차 retrieval에서는 base, subquery_1, subquery_2, subquery_3, workflow_stages 브랜치를 조합했고, support coverage가 비면 관련 섹션 청크를 조건부로 보강했다.</li><li>judge_retrieval는 coverage=0.2 / top_score=999.0를 보고 escalate_to_14b을 선택했다.</li><li>retrieval이 약한 경우에만 rescue branch를 열어 rewrite/subquery를 더 강하게 태웠다.</li><li>2차 retrieval에서는 base, subquery_1, subquery_2, subquery_3, workflow_stages, retrieval_rescue 브랜치를 조합했고, support coverage가 비면 관련 섹션 청크를 조건부로 보강했다.</li><li>judge_retrieval는 coverage=0.4 / top_score=65.508를 보고 answer을 선택했다.</li><li>answer judge가 낮거나 키워드가 비어 있으면 한 번만 refine해서 89.6 → 89.6로 보정했다.</li><li>미리 정한 정답 기준 키워드 4/4, 핵심 청크 5/5개를 잡아서 총점 89.6점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>직답: 문서는 외부 데이터 생성, 관련 정보 검색, LLM 프롬프트 확장, 외부 데이터 업데이트의 흐름으로 RAG를 설명한다.
+질문: RAG는 전체적으로 어떤 단계로 작동하나요?
+질문 타입: multi_part
+근거 청크: K08, K09, K10, K11
+모드: round10-14B | quality_ok=True | coverage=0.4
+핵심 근거:
+- [K08] RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다
+- [K09] LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다
+- [K10] 연관성 검색을 수행하는 단계는 다음과 같습니다
+- [K11] 다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다
+exact keyword row: 외부 데이터, 검색, 프롬프트, 업데이트
+refine note: answer judge가 89.6점으로 낮아 키워드/직답성을 1회 보강했다.
+한계: 이번 라운드도 실백엔드가 아니라 mock 파이프라인이며, adaptive branch 검증이 목적이다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;문서는 외부 데이터 생성, 관련 정보 검색, LLM 프롬프트 확장, 외부 데이터 업데이트의 흐름으로 설명한다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;외부 데이터&quot;,
+    &quot;검색&quot;,
+    &quot;프롬프트&quot;,
+    &quot;업데이트&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;외부 데이터&quot;,
+    &quot;검색&quot;,
+    &quot;프롬프트&quot;,
+    &quot;업데이트&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K08&quot;,
+    &quot;K09&quot;,
+    &quot;K10&quot;,
+    &quot;K11&quot;,
+    &quot;K12&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K08&quot;,
+    &quot;K09&quot;,
+    &quot;K10&quot;,
+    &quot;K11&quot;,
+    &quot;K12&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 55.0,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 9.6
+  },
+  &quot;total_score&quot;: 89.6,
+  &quot;verdict&quot;: &quot;좋음&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 4/4, 핵심 청크 5/5개를 잡아서 총점 89.6점으로 평가했다.&quot;
+}</pre>
+          <h3>Retrieval judge</h3>
+          <pre>{
+  &quot;ok&quot;: true,
+  &quot;coverage&quot;: 0.4,
+  &quot;top_score&quot;: 65.508,
+  &quot;distinct_sections&quot;: 6,
+  &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Prompt plan + retrieval trace</h3>
+        <article class='attempt'><div class='attempt-head'><strong>adaptive_retrieve_pass_1</strong><span>3.81 ms</span></div><h4>query plan</h4><ul><li><strong>base</strong> [default] w=1.0: rag는 전체적으로 어떤 단계로 작동하나요</li><li><strong>subquery_1</strong> [multi_part] w=0.99: rag는 전체적으로 어떤 단계로 외부 데이터 검색 프롬프트</li><li><strong>subquery_2</strong> [multi_part] w=1.03: rag는 전체적으로 어떤 단계로 업데이트 단계 흐름</li><li><strong>subquery_3</strong> [multi_part] w=1.0699999999999998: rag는 전체적으로 어떤 단계로 검색 프롬프트 업데이트 단계</li><li><strong>workflow_stages</strong> [workflow_support] w=1.18: 외부 데이터 생성 관련 정보 검색 LLM 프롬프트 확장 외부 데이터 업데이트</li></ul><h4>top chunks</h4><ul><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>rerank 999.0</span><br>RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다. 사용자 쿼리와 관련 정보가 모두 LLM에 제공됩니다. LLM은 새로운 지식과 학습…<br><span class='hits'>sources: support_coverage_stitch</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rerank 80.329</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>sources: base, subquery_1, workflow_stages</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rerank 999.0</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>sources: support_coverage_stitch</span></li><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>rerank 81.501</span><br>다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다. 확장된 프롬프트를 사용하면 대규모 언어 모델이 사용자 쿼리에 대한 정확한 답변을 생성할 수 있습니다.<br><span class='hits'>sources: base, subquery_1, subquery_3, workflow_stages</span></li><li><strong>K12</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트 <span class='score'>rerank 99.345</span><br>만약에 외부 데이터가 시간이 경과된 데이터가 된다면 어떻게 될까요? 최신 정보 검색을 유지하기 위해 문서를 비동기적으로 업데이트하고 문서의 임베딩 표현을 업데이트합니다. 자동화된 실시간 프로세스 또는 주기적 배치 처리를 통해 이 작업을 수행할 수 있습니다. 변경 관리에 다양한 데이터 과학 접근 방식을 사용할 수 있기…<br><span class='hits'>sources: subquery_1, subquery_2, subquery_3, workflow_stages</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 25.176</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>sources: workflow_stages</span></li></ul></article>
+<article class='attempt'><div class='attempt-head'><strong>retrieval_rescue_plan</strong><span>0.00 ms</span></div><h4>query plan</h4><ul><li><strong>base</strong> [default] w=1.0: rag는 전체적으로 어떤 단계로 작동하나요 작동 단계 검색 프롬프트 업데이트 8b retrieval looked shallow escalate 14b</li><li><strong>subquery_1</strong> [multi_part] w=0.99: rag는 전체적으로 어떤 단계로 외부 데이터 검색 프롬프트</li><li><strong>subquery_2</strong> [multi_part] w=1.03: rag는 전체적으로 어떤 단계로 업데이트 단계 흐름</li><li><strong>subquery_3</strong> [multi_part] w=1.0699999999999998: rag는 전체적으로 어떤 단계로 검색 프롬프트 업데이트 단계</li><li><strong>workflow_stages</strong> [workflow_support] w=1.18: 외부 데이터 생성 관련 정보 검색 LLM 프롬프트 확장 외부 데이터 업데이트</li><li><strong>retrieval_rescue</strong> [rescue] w=1.22: 8b retrieval looked shallow escalate 14b 외부 데이터 검색 프롬프트 업데이트</li></ul><h4>top chunks</h4><ul><li>no selected chunks</li></ul></article>
+<article class='attempt'><div class='attempt-head'><strong>adaptive_retrieve_pass_2</strong><span>4.44 ms</span></div><h4>query plan</h4><ul><li><strong>base</strong> [default] w=1.0: rag는 전체적으로 어떤 단계로 작동하나요 작동 단계 검색 프롬프트 업데이트 8b retrieval looked shallow escalate 14b</li><li><strong>subquery_1</strong> [multi_part] w=0.99: rag는 전체적으로 어떤 단계로 외부 데이터 검색 프롬프트</li><li><strong>subquery_2</strong> [multi_part] w=1.03: rag는 전체적으로 어떤 단계로 업데이트 단계 흐름</li><li><strong>subquery_3</strong> [multi_part] w=1.0699999999999998: rag는 전체적으로 어떤 단계로 검색 프롬프트 업데이트 단계</li><li><strong>workflow_stages</strong> [workflow_support] w=1.18: 외부 데이터 생성 관련 정보 검색 LLM 프롬프트 확장 외부 데이터 업데이트</li><li><strong>retrieval_rescue</strong> [rescue] w=1.22: 8b retrieval looked shallow escalate 14b 외부 데이터 검색 프롬프트 업데이트</li></ul><h4>top chunks</h4><ul><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>rerank 65.508</span><br>RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다. 사용자 쿼리와 관련 정보가 모두 LLM에 제공됩니다. LLM은 새로운 지식과 학습…<br><span class='hits'>sources: base, workflow_stages, retrieval_rescue</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rerank 110.727</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>sources: base, subquery_1, workflow_stages, retrieval_rescue</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rerank 999.0</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>sources: support_coverage_stitch</span></li><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>rerank 110.923</span><br>다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다. 확장된 프롬프트를 사용하면 대규모 언어 모델이 사용자 쿼리에 대한 정확한 답변을 생성할 수 있습니다.<br><span class='hits'>sources: base, subquery_1, subquery_3, workflow_stages, retrieval_rescue</span></li><li><strong>K12</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 업데이트 <span class='score'>rerank 149.965</span><br>만약에 외부 데이터가 시간이 경과된 데이터가 된다면 어떻게 될까요? 최신 정보 검색을 유지하기 위해 문서를 비동기적으로 업데이트하고 문서의 임베딩 표현을 업데이트합니다. 자동화된 실시간 프로세스 또는 주기적 배치 처리를 통해 이 작업을 수행할 수 있습니다. 변경 관리에 다양한 데이터 과학 접근 방식을 사용할 수 있기…<br><span class='hits'>sources: base, subquery_1, subquery_2, subquery_3, workflow_stages, retrieval_rescue</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>rerank 61.839</span><br>검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의…<br><span class='hits'>sources: base, subquery_1, subquery_2, subquery_3, workflow_stages</span></li></ul></article>
+      </article>
+      <article class='panel'>
+        <h3>Evidence distill</h3>
+        <pre>[
+  {
+    &quot;chunk_id&quot;: &quot;K08&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성은 어떻게 작동하나요?&quot;,
+    &quot;text&quot;: &quot;RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K09&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성&quot;,
+    &quot;text&quot;: &quot;LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K10&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색&quot;,
+    &quot;text&quot;: &quot;연관성 검색을 수행하는 단계는 다음과 같습니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K11&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장&quot;,
+    &quot;text&quot;: &quot;다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다&quot;
+  }
+]</pre>
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table><thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead><tbody><tr><td>classify_8b</td><td>0.01 ms</td><td><pre>{
+  &quot;token_count&quot;: 5,
+  &quot;matched_hard_terms&quot;: [
+    &quot;작동&quot;
+  ],
+  &quot;complexity_score&quot;: 2,
+  &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;,
+  &quot;question_type&quot;: &quot;multi_part&quot;
+}</pre></td></tr><tr><td>adaptive_retrieve_pass_1</td><td>3.81 ms</td><td><pre>{
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;rag는 전체적으로 어떤 단계로 작동하나요&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K08&quot;,
+          &quot;K09&quot;,
+          &quot;K10&quot;,
+          &quot;K11&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;rag는&quot;,
+            &quot;전체적으로&quot;,
+            &quot;어떤&quot;,
+            &quot;단계로&quot;,
+            &quot;작동하나요&quot;
+          ],
+          &quot;top_score&quot;: 4.55,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 14
+        }
+      },
+      {
+        &quot;label&quot;: &quot;subquery_1&quot;,
+        &quot;query&quot;: &quot;rag는 전체적으로 어떤 단계로 외부 데이터 검색 프롬프트&quot;,
+        &quot;weight&quot;: 0.99,
+        &quot;branch&quot;: &quot;multi_part&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K09&quot;,
+          &quot;K12&quot;,
+          &quot;K01&quot;,
+          &quot;K11&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;rag는&quot;,
+            &quot;전체적으로&quot;,
+            &quot;어떤&quot;,
+            &quot;단계로&quot;,
+            &quot;외부&quot;,
+            &quot;데이터&quot;,
+            &quot;검색&quot;,
+            &quot;프롬프트&quot;
+          ],
+          &quot;top_score&quot;: 15.85,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 14
+        }
+      },
+      {
+        &quot;label&quot;: &quot;subquery_2&quot;,
+        &quot;query&quot;: &quot;rag는 전체적으로 어떤 단계로 업데이트 단계 흐름&quot;,
+        &quot;weight&quot;: 1.03,
+        &quot;branch&quot;: &quot;multi_part&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K12&quot;,
+          &quot;K15&quot;,
+          &quot;K16&quot;,
+          &quot;K02&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;rag는&quot;,
+            &quot;전체적으로&quot;,
+            &quot;어떤&quot;,
+            &quot;단계로&quot;,
+            &quot;업데이트&quot;,
+            &quot;단계&quot;,
+            &quot;흐름&quot;
+          ],
+          &quot;top_score&quot;: 4.55,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 16
+        }
+      },
+      {
+        &quot;label&quot;: &quot;subquery_3&quot;,
+        &quot;query&quot;: &quot;rag는 전체적으로 어떤 단계로 검색 프롬프트 업데이트 단계&quot;,
+        &quot;weight&quot;: 1.0699999999999998,
+        &quot;branch&quot;: &quot;multi_part&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K11&quot;,
+          &quot;K12&quot;,
+          &quot;K01&quot;,
+          &quot;K02&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;rag는&quot;,
+            &quot;전체적으로&quot;,
+            &quot;어떤&quot;,
+            &quot;단계로&quot;,
+            &quot;검색&quot;,
+            &quot;프롬프트&quot;,
+            &quot;업데이트&quot;,
+            &quot;단계&quot;
+          ],
+          &quot;top_score&quot;: 9.6,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 16
+        }
+      },
+      {
+        &quot;label&quot;: &quot;workflow_stages&quot;,
+        &quot;query&quot;: &quot;외부 데이터 생성 관련 정보 검색 LLM 프롬프트 확장 외부 데이터 업데이트&quot;,
+        &quot;weight&quot;: 1.18,
+        &quot;branch&quot;: &quot;workflow_support&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K12&quot;,
+          &quot;K09&quot;,
+          &quot;K11&quot;,
+          &quot;K13&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;외부&quot;,
+            &quot;데이터&quot;,
+            &quot;생성&quot;,
+            &quot;관련&quot;,
+            &quot;정보&quot;,
+            &quot;검색&quot;,
+            &quot;llm&quot;,
+            &quot;프롬프트&quot;,
+            &quot;확장&quot;,
+            &quot;외부&quot;,
+            &quot;데이터&quot;,
+            &quot;업데이트&quot;
+          ],
+          &quot;top_score&quot;: 33.35,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 14
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 10,
+    &quot;query_count&quot;: 5
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;candidate_count&quot;: 6,
+    &quot;selected_count&quot;: 4,
+    &quot;top_rerank_score&quot;: 99.345,
+    &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+  },
+  &quot;stitched_chunk_ids&quot;: [
+    &quot;K08&quot;,
+    &quot;K09&quot;,
+    &quot;K10&quot;,
+    &quot;K11&quot;,
+    &quot;K12&quot;,
+    &quot;K13&quot;
+  ]
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.00 ms</td><td><pre>{
+  &quot;pass&quot;: 1,
+  &quot;action&quot;: &quot;escalate_to_14b&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: false,
+    &quot;coverage&quot;: 0.2,
+    &quot;top_score&quot;: 999.0,
+    &quot;distinct_sections&quot;: 6,
+    &quot;reason&quot;: &quot;8B retrieval looked shallow; escalate to 14B&quot;
+  }
+}</pre></td></tr><tr><td>adaptive_retrieve_pass_2</td><td>4.44 ms</td><td><pre>{
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;rag는 전체적으로 어떤 단계로 작동하나요 작동 단계 검색 프롬프트 업데이트 8b retrieval looked shallow escalate 14b&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K11&quot;,
+          &quot;K12&quot;,
+          &quot;K08&quot;,
+          &quot;K10&quot;,
+          &quot;K09&quot;,
+          &quot;K01&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;rag는&quot;,
+            &quot;전체적으로&quot;,
+            &quot;어떤&quot;,
+            &quot;단계로&quot;,
+            &quot;작동하나요&quot;,
+            &quot;작동&quot;,
+            &quot;단계&quot;,
+            &quot;검색&quot;,
+            &quot;프롬프트&quot;,
+            &quot;업데이트&quot;,
+            &quot;8b&quot;,
+            &quot;retrieval&quot;,
+            &quot;looked&quot;,
+            &quot;shallow&quot;,
+            &quot;escalate&quot;,
+            &quot;14b&quot;
+          ],
+          &quot;top_score&quot;: 16.45,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 16
+        }
+      },
+      {
+        &quot;label&quot;: &quot;subquery_1&quot;,
+        &quot;query&quot;: &quot;rag는 전체적으로 어떤 단계로 외부 데이터 검색 프롬프트&quot;,
+        &quot;weight&quot;: 0.99,
+        &quot;branch&quot;: &quot;multi_part&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K09&quot;,
+          &quot;K12&quot;,
+          &quot;K01&quot;,
+          &quot;K11&quot;,
+          &quot;K14&quot;,
+          &quot;K13&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;rag는&quot;,
+            &quot;전체적으로&quot;,
+            &quot;어떤&quot;,
+            &quot;단계로&quot;,
+            &quot;외부&quot;,
+            &quot;데이터&quot;,
+            &quot;검색&quot;,
+            &quot;프롬프트&quot;
+          ],
+          &quot;top_score&quot;: 15.85,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 14
+        }
+      },
+      {
+        &quot;label&quot;: &quot;subquery_2&quot;,
+        &quot;query&quot;: &quot;rag는 전체적으로 어떤 단계로 업데이트 단계 흐름&quot;,
+        &quot;weight&quot;: 1.03,
+        &quot;branch&quot;: &quot;multi_part&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K12&quot;,
+          &quot;K15&quot;,
+          &quot;K16&quot;,
+          &quot;K02&quot;,
+          &quot;K01&quot;,
+          &quot;K03&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;rag는&quot;,
+            &quot;전체적으로&quot;,
+            &quot;어떤&quot;,
+            &quot;단계로&quot;,
+            &quot;업데이트&quot;,
+            &quot;단계&quot;,
+            &quot;흐름&quot;
+          ],
+          &quot;top_score&quot;: 4.55,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 16
+        }
+      },
+      {
+        &quot;label&quot;: &quot;subquery_3&quot;,
+        &quot;query&quot;: &quot;rag는 전체적으로 어떤 단계로 검색 프롬프트 업데이트 단계&quot;,
+        &quot;weight&quot;: 1.0699999999999998,
+        &quot;branch&quot;: &quot;multi_part&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K11&quot;,
+          &quot;K12&quot;,
+          &quot;K01&quot;,
+          &quot;K02&quot;,
+          &quot;K13&quot;,
+          &quot;K14&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;rag는&quot;,
+            &quot;전체적으로&quot;,
+            &quot;어떤&quot;,
+            &quot;단계로&quot;,
+            &quot;검색&quot;,
+            &quot;프롬프트&quot;,
+            &quot;업데이트&quot;,
+            &quot;단계&quot;
+          ],
+          &quot;top_score&quot;: 9.6,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 16
+        }
+      },
+      {
+        &quot;label&quot;: &quot;workflow_stages&quot;,
+        &quot;query&quot;: &quot;외부 데이터 생성 관련 정보 검색 LLM 프롬프트 확장 외부 데이터 업데이트&quot;,
+        &quot;weight&quot;: 1.18,
+        &quot;branch&quot;: &quot;workflow_support&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K12&quot;,
+          &quot;K09&quot;,
+          &quot;K11&quot;,
+          &quot;K13&quot;,
+          &quot;K08&quot;,
+          &quot;K01&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;외부&quot;,
+            &quot;데이터&quot;,
+            &quot;생성&quot;,
+            &quot;관련&quot;,
+            &quot;정보&quot;,
+            &quot;검색&quot;,
+            &quot;llm&quot;,
+            &quot;프롬프트&quot;,
+            &quot;확장&quot;,
+            &quot;외부&quot;,
+            &quot;데이터&quot;,
+            &quot;업데이트&quot;
+          ],
+          &quot;top_score&quot;: 33.35,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 14
+        }
+      },
+      {
+        &quot;label&quot;: &quot;retrieval_rescue&quot;,
+        &quot;query&quot;: &quot;8b retrieval looked shallow escalate 14b 외부 데이터 검색 프롬프트 업데이트&quot;,
+        &quot;weight&quot;: 1.22,
+        &quot;branch&quot;: &quot;rescue&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K12&quot;,
+          &quot;K09&quot;,
+          &quot;K11&quot;,
+          &quot;K14&quot;,
+          &quot;K13&quot;,
+          &quot;K08&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;8b&quot;,
+            &quot;retrieval&quot;,
+            &quot;looked&quot;,
+            &quot;shallow&quot;,
+            &quot;escalate&quot;,
+            &quot;14b&quot;,
+            &quot;외부&quot;,
+            &quot;데이터&quot;,
+            &quot;검색&quot;,
+            &quot;프롬프트&quot;,
+            &quot;업데이트&quot;
+          ],
+          &quot;top_score&quot;: 19.55,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 14
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 12,
+    &quot;query_count&quot;: 6
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;candidate_count&quot;: 8,
+    &quot;selected_count&quot;: 6,
+    &quot;top_rerank_score&quot;: 149.965,
+    &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+  },
+  &quot;stitched_chunk_ids&quot;: [
+    &quot;K08&quot;,
+    &quot;K09&quot;,
+    &quot;K10&quot;,
+    &quot;K11&quot;,
+    &quot;K12&quot;,
+    &quot;K01&quot;
+  ]
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.00 ms</td><td><pre>{
+  &quot;pass&quot;: 2,
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.4,
+    &quot;top_score&quot;: 65.508,
+    &quot;distinct_sections&quot;: 6,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre></td></tr><tr><td>evidence_distill</td><td>0.06 ms</td><td><pre>{
+  &quot;evidence_count&quot;: 4
+}</pre></td></tr><tr><td>citation_answer</td><td>0.00 ms</td><td><pre>{
+  &quot;draft_score&quot;: 89.6
+}</pre></td></tr><tr><td>answer_refine_once</td><td>0.00 ms</td><td><pre>{
+  &quot;score_before&quot;: 89.6,
+  &quot;score_after&quot;: 89.6
+}</pre></td></tr></tbody></table>
+      </article>
+    </section>
+    
+
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q7 · retrieval</div>
+          <h2>문서에서 말하는 관련 정보 검색 단계는 어떤 식으로 이뤄지나요?</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>question type: simple_fact</span>
+          <span class='pill'>route: 8B</span>
+          <span class='pill'>final model: 8B</span>
+          <span class='pill'>rescues: 0</span>
+          <span class='pill'>answer revisions: 0</span>
+          <span class='pill'>total: 1.68 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>Adaptive flow</h3>
+          <ol><li>classify_8b → 8b</li><li>question_type_router → simple_fact</li><li>adaptive_retrieve_pass_1</li><li>judge_retrieval → answer</li><li>evidence_distill</li><li>citation_answer</li><li>judge_answer</li></ol>
+          <h3>왜 이렇게 분기했나</h3>
+          <ul><li>질문을 먼저 simple_fact로 분류해서 항상 같은 노드를 쓰지 않도록 했다.</li><li>1차 retrieval에서는 base, focus 브랜치를 조합했고, support coverage가 비면 관련 섹션 청크를 조건부로 보강했다.</li><li>judge_retrieval는 coverage=0.444 / top_score=60.57를 보고 answer을 선택했다.</li><li>미리 정한 정답 기준 키워드 6/6, 핵심 청크 1/1개를 잡아서 총점 90.7점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>직답: 관련 정보 검색 단계에서는 사용자 쿼리를 벡터 표현으로 바꾸고 벡터 데이터베이스와 매칭해 연관성이 높은 문서나 구절을 찾는다.
+질문: 문서에서 말하는 관련 정보 검색 단계는 어떤 식으로 이뤄지나요?
+질문 타입: simple_fact
+근거 청크: K10, K08, K05, K09
+모드: round10-8B | quality_ok=True | coverage=0.444
+핵심 근거:
+- [K10] 연관성 검색을 수행하는 단계는 다음과 같습니다
+- [K08] RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다.
+- [K05] LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다
+- [K09] API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다
+exact keyword row: 벡터, 데이터베이스, 매칭, 연관성, 문서, 구절
+한계: 이번 라운드도 실백엔드가 아니라 mock 파이프라인이며, adaptive branch 검증이 목적이다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;사용자 쿼리를 벡터 표현으로 바꾸고 벡터 데이터베이스와 매칭해, 연관성이 높은 문서나 구절을 검색하는 방식으로 이뤄진다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;벡터&quot;,
+    &quot;데이터베이스&quot;,
+    &quot;매칭&quot;,
+    &quot;연관성&quot;,
+    &quot;문서&quot;,
+    &quot;구절&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;벡터&quot;,
+    &quot;데이터베이스&quot;,
+    &quot;매칭&quot;,
+    &quot;연관성&quot;,
+    &quot;문서&quot;,
+    &quot;구절&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K10&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K10&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 55.0,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 10.7
+  },
+  &quot;total_score&quot;: 90.7,
+  &quot;verdict&quot;: &quot;좋음&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 6/6, 핵심 청크 1/1개를 잡아서 총점 90.7점으로 평가했다.&quot;
+}</pre>
+          <h3>Retrieval judge</h3>
+          <pre>{
+  &quot;ok&quot;: true,
+  &quot;coverage&quot;: 0.444,
+  &quot;top_score&quot;: 60.57,
+  &quot;distinct_sections&quot;: 4,
+  &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Prompt plan + retrieval trace</h3>
+        <article class='attempt'><div class='attempt-head'><strong>adaptive_retrieve_pass_1</strong><span>1.53 ms</span></div><h4>query plan</h4><ul><li><strong>base</strong> [default] w=1.0: 문서에서 말하는 관련 정보 검색 단계는 어떤 식으로</li><li><strong>focus</strong> [simple] w=1.08: 문서에서 말하는 관련 정보 검색 벡터 데이터베이스 매칭</li></ul><h4>top chunks</h4><ul><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rerank 60.57</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>sources: base, focus</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>rerank 34.056</span><br>RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다. 사용자 쿼리와 관련 정보가 모두 LLM에 제공됩니다. LLM은 새로운 지식과 학습…<br><span class='hits'>sources: base, focus</span></li><li><strong>K05</strong> · 검색 증강 생성의 이점은 무엇인가요? / 최신 정보 <span class='score'>rerank 26.862</span><br>LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다. 개발자는 RAG를 사용하여 생성형 모델에 최신 연구, 통계 또는 뉴스를 제공할 수 있습니다. RAG를 사용하여 LLM을 라이브 소셜 미디어 피드, 뉴스 사이트 또는 기타 자주 업데이트되는 정보 소스에 직접 연결할 수 있습니다.…<br><span class='hits'>sources: base, focus</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rerank 19.14</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>sources: focus</span></li></ul></article>
+      </article>
+      <article class='panel'>
+        <h3>Evidence distill</h3>
+        <pre>[
+  {
+    &quot;chunk_id&quot;: &quot;K10&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색&quot;,
+    &quot;text&quot;: &quot;연관성 검색을 수행하는 단계는 다음과 같습니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K08&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성은 어떻게 작동하나요?&quot;,
+    &quot;text&quot;: &quot;RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다.&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K05&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성의 이점은 무엇인가요? / 최신 정보&quot;,
+    &quot;text&quot;: &quot;LLM의 원본 훈련 데이터 소스가 요구 사항에 적합하더라도 연관성을 유지하기가 어렵습니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K09&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성&quot;,
+    &quot;text&quot;: &quot;API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다&quot;
+  }
+]</pre>
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table><thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead><tbody><tr><td>classify_8b</td><td>0.01 ms</td><td><pre>{
+  &quot;token_count&quot;: 9,
+  &quot;matched_hard_terms&quot;: [],
+  &quot;complexity_score&quot;: 2,
+  &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;,
+  &quot;question_type&quot;: &quot;simple_fact&quot;
+}</pre></td></tr><tr><td>adaptive_retrieve_pass_1</td><td>1.53 ms</td><td><pre>{
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;문서에서 말하는 관련 정보 검색 단계는 어떤 식으로&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K10&quot;,
+          &quot;K08&quot;,
+          &quot;K05&quot;,
+          &quot;K13&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;문서에서&quot;,
+            &quot;말하는&quot;,
+            &quot;관련&quot;,
+            &quot;정보&quot;,
+            &quot;검색&quot;,
+            &quot;단계는&quot;,
+            &quot;어떤&quot;,
+            &quot;식으로&quot;
+          ],
+          &quot;top_score&quot;: 17.6,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 14
+        }
+      },
+      {
+        &quot;label&quot;: &quot;focus&quot;,
+        &quot;query&quot;: &quot;문서에서 말하는 관련 정보 검색 벡터 데이터베이스 매칭&quot;,
+        &quot;weight&quot;: 1.08,
+        &quot;branch&quot;: &quot;simple&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K10&quot;,
+          &quot;K08&quot;,
+          &quot;K09&quot;,
+          &quot;K05&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;문서에서&quot;,
+            &quot;말하는&quot;,
+            &quot;관련&quot;,
+            &quot;정보&quot;,
+            &quot;검색&quot;,
+            &quot;벡터&quot;,
+            &quot;데이터베이스&quot;,
+            &quot;매칭&quot;
+          ],
+          &quot;top_score&quot;: 18.5,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 14
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 5,
+    &quot;query_count&quot;: 2
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;candidate_count&quot;: 5,
+    &quot;selected_count&quot;: 4,
+    &quot;top_rerank_score&quot;: 60.57,
+    &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+  },
+  &quot;stitched_chunk_ids&quot;: [
+    &quot;K10&quot;,
+    &quot;K08&quot;,
+    &quot;K05&quot;,
+    &quot;K09&quot;
+  ]
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.00 ms</td><td><pre>{
+  &quot;pass&quot;: 1,
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.444,
+    &quot;top_score&quot;: 60.57,
+    &quot;distinct_sections&quot;: 4,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre></td></tr><tr><td>evidence_distill</td><td>0.09 ms</td><td><pre>{
+  &quot;evidence_count&quot;: 4
+}</pre></td></tr><tr><td>citation_answer</td><td>0.00 ms</td><td><pre>{
+  &quot;draft_score&quot;: 90.7
+}</pre></td></tr></tbody></table>
+      </article>
+    </section>
+    
+
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q8 · prompting</div>
+          <h2>LLM 프롬프트 확장 단계는 왜 필요하고 무엇을 추가하나요?</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>question type: simple_fact</span>
+          <span class='pill'>route: 8B</span>
+          <span class='pill'>final model: 8B</span>
+          <span class='pill'>rescues: 0</span>
+          <span class='pill'>answer revisions: 0</span>
+          <span class='pill'>total: 1.64 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>Adaptive flow</h3>
+          <ol><li>classify_8b → 8b</li><li>question_type_router → simple_fact</li><li>adaptive_retrieve_pass_1</li><li>judge_retrieval → answer</li><li>evidence_distill</li><li>citation_answer</li><li>judge_answer</li></ol>
+          <h3>왜 이렇게 분기했나</h3>
+          <ul><li>질문을 먼저 simple_fact로 분류해서 항상 같은 노드를 쓰지 않도록 했다.</li><li>1차 retrieval에서는 base, focus 브랜치를 조합했고, support coverage가 비면 관련 섹션 청크를 조건부로 보강했다.</li><li>judge_retrieval는 coverage=0.571 / top_score=58.56를 보고 answer을 선택했다.</li><li>미리 정한 정답 기준 키워드 6/6, 핵심 청크 1/1개를 잡아서 총점 93.7점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>직답: 검색된 관련 데이터를 사용자 입력에 붙여 프롬프트를 확장해야 LLM이 더 정확하고 근거 있는 답변을 만들 수 있다.
+질문: LLM 프롬프트 확장 단계는 왜 필요하고 무엇을 추가하나요?
+질문 타입: simple_fact
+근거 청크: K11, K02, K10, K09
+모드: round10-8B | quality_ok=True | coverage=0.571
+핵심 근거:
+- [K11] 다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다
+- [K02] 다양한 훈련 소스에서 동일한 용어를 사용하여 다른 내용을 설명하면서 용어 혼동으로 인해 응답이 부정확합니다
+- [K10] 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.
+- [K09] LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다.
+exact keyword row: 검색된, 관련 데이터, 프롬프트, 확장, 정확, 답변
+한계: 이번 라운드도 실백엔드가 아니라 mock 파이프라인이며, adaptive branch 검증이 목적이다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;검색된 관련 데이터를 사용자 입력에 붙여 프롬프트를 확장함으로써, LLM이 더 정확하고 근거 있는 답변을 생성하게 하기 위해 필요하다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;검색된&quot;,
+    &quot;관련 데이터&quot;,
+    &quot;프롬프트&quot;,
+    &quot;확장&quot;,
+    &quot;정확&quot;,
+    &quot;답변&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;검색된&quot;,
+    &quot;관련 데이터&quot;,
+    &quot;프롬프트&quot;,
+    &quot;확장&quot;,
+    &quot;정확&quot;,
+    &quot;답변&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K11&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K11&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 55.0,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 13.7
+  },
+  &quot;total_score&quot;: 93.7,
+  &quot;verdict&quot;: &quot;좋음&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 6/6, 핵심 청크 1/1개를 잡아서 총점 93.7점으로 평가했다.&quot;
+}</pre>
+          <h3>Retrieval judge</h3>
+          <pre>{
+  &quot;ok&quot;: true,
+  &quot;coverage&quot;: 0.571,
+  &quot;top_score&quot;: 58.56,
+  &quot;distinct_sections&quot;: 4,
+  &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Prompt plan + retrieval trace</h3>
+        <article class='attempt'><div class='attempt-head'><strong>adaptive_retrieve_pass_1</strong><span>1.48 ms</span></div><h4>query plan</h4><ul><li><strong>base</strong> [default] w=1.0: llm 프롬프트 확장 단계는 필요하고 무엇을 추가하나요</li><li><strong>focus</strong> [simple] w=1.08: llm 프롬프트 확장 단계는 필요하고 검색된 관련 데이터</li></ul><h4>top chunks</h4><ul><li><strong>K11</strong> · 검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장 <span class='score'>rerank 58.56</span><br>다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다. 이 단계에서는 프롬프트 엔지니어링 기술을 사용하여 LLM과 효과적으로 통신합니다. 확장된 프롬프트를 사용하면 대규모 언어 모델이 사용자 쿼리에 대한 정확한 답변을 생성할 수 있습니다.<br><span class='hits'>sources: base, focus</span></li><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>rerank 17.418</span><br>LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다. 안타깝게도 LLM 기술의 특성상 LLM 응답에 대한 예측이 불가능합니다. 또한…<br><span class='hits'>sources: base, focus</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rerank 17.402</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>sources: base, focus</span></li><li><strong>K09</strong> · 검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성 <span class='score'>rerank 9.062</span><br>LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다. 데이터의 형식은 파일, 데이터베이스 레코드 또는 긴 형식의 텍스트와 같이 다양합니다. 임베딩 언어 모델 이라고 하는 또 다른 AI 기법은…<br><span class='hits'>sources: focus</span></li></ul></article>
+      </article>
+      <article class='panel'>
+        <h3>Evidence distill</h3>
+        <pre>[
+  {
+    &quot;chunk_id&quot;: &quot;K11&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성은 어떻게 작동하나요? / LLM 프롬프트 확장&quot;,
+    &quot;text&quot;: &quot;다음으로 RAG 모델은 검색된 관련 데이터를 컨텍스트에 추가하여 사용자 입력(또는 프롬프트)을 보강합니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K02&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성이 중요한 이유는 무엇인가요?&quot;,
+    &quot;text&quot;: &quot;다양한 훈련 소스에서 동일한 용어를 사용하여 다른 내용을 설명하면서 용어 혼동으로 인해 응답이 부정확합니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K10&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색&quot;,
+    &quot;text&quot;: &quot;연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K09&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성은 어떻게 작동하나요? / 외부 데이터 생성&quot;,
+    &quot;text&quot;: &quot;LLM의 원래 학습 데이터 세트 외부에 있는 새 데이터를 외부 데이터 라고 합니다. API, 데이터베이스 또는 문서 리포지토리와 같은 여러 데이터 소스에서 가져올 수 있습니다.&quot;
+  }
+]</pre>
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table><thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead><tbody><tr><td>classify_8b</td><td>0.01 ms</td><td><pre>{
+  &quot;token_count&quot;: 7,
+  &quot;matched_hard_terms&quot;: [
+    &quot;왜&quot;
+  ],
+  &quot;complexity_score&quot;: 2,
+  &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;,
+  &quot;question_type&quot;: &quot;simple_fact&quot;
+}</pre></td></tr><tr><td>adaptive_retrieve_pass_1</td><td>1.48 ms</td><td><pre>{
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;llm 프롬프트 확장 단계는 필요하고 무엇을 추가하나요&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K11&quot;,
+          &quot;K02&quot;,
+          &quot;K01&quot;,
+          &quot;K10&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;llm&quot;,
+            &quot;프롬프트&quot;,
+            &quot;확장&quot;,
+            &quot;단계는&quot;,
+            &quot;필요하고&quot;,
+            &quot;무엇을&quot;,
+            &quot;추가하나요&quot;
+          ],
+          &quot;top_score&quot;: 14.95,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 14
+        }
+      },
+      {
+        &quot;label&quot;: &quot;focus&quot;,
+        &quot;query&quot;: &quot;llm 프롬프트 확장 단계는 필요하고 검색된 관련 데이터&quot;,
+        &quot;weight&quot;: 1.08,
+        &quot;branch&quot;: &quot;simple&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K11&quot;,
+          &quot;K10&quot;,
+          &quot;K02&quot;,
+          &quot;K09&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;llm&quot;,
+            &quot;프롬프트&quot;,
+            &quot;확장&quot;,
+            &quot;단계는&quot;,
+            &quot;필요하고&quot;,
+            &quot;검색된&quot;,
+            &quot;관련&quot;,
+            &quot;데이터&quot;
+          ],
+          &quot;top_score&quot;: 20.25,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 14
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 5,
+    &quot;query_count&quot;: 2
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;candidate_count&quot;: 5,
+    &quot;selected_count&quot;: 4,
+    &quot;top_rerank_score&quot;: 58.56,
+    &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+  },
+  &quot;stitched_chunk_ids&quot;: [
+    &quot;K11&quot;,
+    &quot;K02&quot;,
+    &quot;K10&quot;,
+    &quot;K09&quot;
+  ]
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.00 ms</td><td><pre>{
+  &quot;pass&quot;: 1,
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.571,
+    &quot;top_score&quot;: 58.56,
+    &quot;distinct_sections&quot;: 4,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre></td></tr><tr><td>evidence_distill</td><td>0.10 ms</td><td><pre>{
+  &quot;evidence_count&quot;: 4
+}</pre></td></tr><tr><td>citation_answer</td><td>0.00 ms</td><td><pre>{
+  &quot;draft_score&quot;: 93.7
+}</pre></td></tr></tbody></table>
+      </article>
+    </section>
+    
+
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q9 · comparison</div>
+          <h2>AWS 문서 기준으로 RAG와 시맨틱 검색의 차이를 비교해줘.</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>question type: multi_part</span>
+          <span class='pill'>route: 14B</span>
+          <span class='pill'>final model: 14B</span>
+          <span class='pill'>rescues: 0</span>
+          <span class='pill'>answer revisions: 0</span>
+          <span class='pill'>total: 2.27 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>Adaptive flow</h3>
+          <ol><li>classify_8b → 14b</li><li>question_type_router → multi_part</li><li>adaptive_retrieve_pass_1</li><li>judge_retrieval → answer</li><li>evidence_distill</li><li>citation_answer</li><li>judge_answer</li></ol>
+          <h3>왜 이렇게 분기했나</h3>
+          <ul><li>질문을 먼저 multi_part로 분류해서 항상 같은 노드를 쓰지 않도록 했다.</li><li>1차 retrieval에서는 base, subquery_1, subquery_2 브랜치를 조합했고, support coverage가 비면 관련 섹션 청크를 조건부로 보강했다.</li><li>judge_retrieval는 coverage=0.5 / top_score=68.191를 보고 answer을 선택했다.</li><li>미리 정한 정답 기준 키워드 6/6, 핵심 청크 1/1개를 잡아서 총점 92.0점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>직답: RAG는 외부 지식을 붙여 답변을 생성하는 전체 접근이고, 시맨틱 검색은 그 과정에서 더 정확한 관련 구절을 찾는 검색 기술이다.
+질문: AWS 문서 기준으로 RAG와 시맨틱 검색의 차이를 비교해줘.
+질문 타입: multi_part
+근거 청크: K13, K14, K10, K01
+모드: round10-14B | quality_ok=True | coverage=0.5
+핵심 근거:
+- [K13] 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다
+- [K14] 자체 RAG를 관리하는 조직을 위한 Amazon Kendra 는 기계 학습 기반의 매우 정확한 엔터프라이즈 검색 서비스입니다
+- [K10] 연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.
+- [K01] 이는 LLM 결과를 개선하여 다양한 상황에서 연관성, 정확성 및 유용성을 유지하기 위한 비용 효율적인 접근 방식입니다
+exact keyword row: 전체 접근, 시맨틱 검색, 관련 구절, 정확, 준비 작업, 성능
+한계: 이번 라운드도 실백엔드가 아니라 mock 파이프라인이며, adaptive branch 검증이 목적이다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;RAG는 외부 지식을 붙여 답변을 생성하는 전체 접근이고, 시맨틱 검색은 그 RAG 성능을 높이기 위해 대규모 데이터에서 더 정확한 관련 구절을 찾고 지식 준비 작업을 줄여주는 검색 기술이다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;전체 접근&quot;,
+    &quot;시맨틱 검색&quot;,
+    &quot;관련 구절&quot;,
+    &quot;정확&quot;,
+    &quot;준비 작업&quot;,
+    &quot;성능&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;전체 접근&quot;,
+    &quot;시맨틱 검색&quot;,
+    &quot;관련 구절&quot;,
+    &quot;정확&quot;,
+    &quot;준비 작업&quot;,
+    &quot;성능&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K13&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K13&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 55.0,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 12.0
+  },
+  &quot;total_score&quot;: 92.0,
+  &quot;verdict&quot;: &quot;좋음&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 6/6, 핵심 청크 1/1개를 잡아서 총점 92.0점으로 평가했다.&quot;
+}</pre>
+          <h3>Retrieval judge</h3>
+          <pre>{
+  &quot;ok&quot;: true,
+  &quot;coverage&quot;: 0.5,
+  &quot;top_score&quot;: 68.191,
+  &quot;distinct_sections&quot;: 6,
+  &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Prompt plan + retrieval trace</h3>
+        <article class='attempt'><div class='attempt-head'><strong>adaptive_retrieve_pass_1</strong><span>2.13 ms</span></div><h4>query plan</h4><ul><li><strong>base</strong> [default] w=1.0: aws 문서 기준으로 rag와 시맨틱 검색의 차이를 비교해줘 차이 비교 검색 bedrock kendra sagemaker</li><li><strong>subquery_1</strong> [multi_part] w=0.99: aws 문서 기준으로 rag와 전체 접근 시맨틱 검색 관련 구절</li><li><strong>subquery_2</strong> [multi_part] w=1.03: aws 문서 기준으로 rag와 정확 준비 작업 성능</li></ul><h4>top chunks</h4><ul><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 68.191</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>sources: base, subquery_1, subquery_2</span></li><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rerank 64.986</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>sources: base, subquery_1, subquery_2</span></li><li><strong>K10</strong> · 검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색 <span class='score'>rerank 19.164</span><br>연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다. 예를 들어 조직의 인사 관련 질문에 답변할 수 있는 스마트 챗봇을 생각할 수 있습니다. 직원이 “연차휴가는 얼마나 남았나요?“ 라고 검색하면 시스템은 개별 직원의 과거 휴가 기록과 함께 연차 휴가 정책…<br><span class='hits'>sources: base, subquery_1</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>rerank 15.967</span><br>검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의…<br><span class='hits'>sources: base, subquery_1</span></li><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>rerank 15.701</span><br>LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다. 안타깝게도 LLM 기술의 특성상 LLM 응답에 대한 예측이 불가능합니다. 또한…<br><span class='hits'>sources: subquery_1, subquery_2</span></li><li><strong>K08</strong> · 검색 증강 생성은 어떻게 작동하나요? <span class='score'>rerank 14.594</span><br>RAG가 없는 경우 LLM은 사용자 입력을 바탕으로 훈련한 정보 또는 이미 알고 있는 정보를 기반으로 응답을 생성합니다. RAG에는 사용자 입력을 활용하여 먼저 새 데이터 소스에서 정보를 가져오는 정보 검색 구성 요소가 도입되었습니다. 사용자 쿼리와 관련 정보가 모두 LLM에 제공됩니다. LLM은 새로운 지식과 학습…<br><span class='hits'>sources: base, subquery_1</span></li></ul></article>
+      </article>
+      <article class='panel'>
+        <h3>Evidence distill</h3>
+        <pre>[
+  {
+    &quot;chunk_id&quot;: &quot;K13&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요?&quot;,
+    &quot;text&quot;: &quot;시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K14&quot;,
+    &quot;section&quot;: &quot;AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?&quot;,
+    &quot;text&quot;: &quot;자체 RAG를 관리하는 조직을 위한 Amazon Kendra 는 기계 학습 기반의 매우 정확한 엔터프라이즈 검색 서비스입니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K10&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성은 어떻게 작동하나요? / 관련 정보 검색&quot;,
+    &quot;text&quot;: &quot;연관성 검색을 수행하는 단계는 다음과 같습니다. 사용자 쿼리는 벡터 표현으로 변환되고 벡터 데이터베이스와 매칭됩니다.&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K01&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성이란 무엇인가요?&quot;,
+    &quot;text&quot;: &quot;이는 LLM 결과를 개선하여 다양한 상황에서 연관성, 정확성 및 유용성을 유지하기 위한 비용 효율적인 접근 방식입니다&quot;
+  }
+]</pre>
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table><thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead><tbody><tr><td>classify_8b</td><td>0.00 ms</td><td><pre>{
+  &quot;token_count&quot;: 8,
+  &quot;matched_hard_terms&quot;: [
+    &quot;비교&quot;,
+    &quot;시맨틱&quot;,
+    &quot;차이&quot;
+  ],
+  &quot;complexity_score&quot;: 4,
+  &quot;reason&quot;: &quot;multi-step/comparison&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;,
+  &quot;question_type&quot;: &quot;multi_part&quot;
+}</pre></td></tr><tr><td>adaptive_retrieve_pass_1</td><td>2.13 ms</td><td><pre>{
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;aws 문서 기준으로 rag와 시맨틱 검색의 차이를 비교해줘 차이 비교 검색 bedrock kendra sagemaker&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K14&quot;,
+          &quot;K13&quot;,
+          &quot;K09&quot;,
+          &quot;K08&quot;,
+          &quot;K10&quot;,
+          &quot;K01&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;aws&quot;,
+            &quot;문서&quot;,
+            &quot;기준으로&quot;,
+            &quot;rag와&quot;,
+            &quot;시맨틱&quot;,
+            &quot;검색의&quot;,
+            &quot;차이를&quot;,
+            &quot;비교해줘&quot;,
+            &quot;차이&quot;,
+            &quot;비교&quot;,
+            &quot;검색&quot;,
+            &quot;bedrock&quot;,
+            &quot;kendra&quot;,
+            &quot;sagemaker&quot;
+          ],
+          &quot;top_score&quot;: 25.85,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 16
+        }
+      },
+      {
+        &quot;label&quot;: &quot;subquery_1&quot;,
+        &quot;query&quot;: &quot;aws 문서 기준으로 rag와 전체 접근 시맨틱 검색 관련 구절&quot;,
+        &quot;weight&quot;: 0.99,
+        &quot;branch&quot;: &quot;multi_part&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K13&quot;,
+          &quot;K14&quot;,
+          &quot;K02&quot;,
+          &quot;K10&quot;,
+          &quot;K08&quot;,
+          &quot;K01&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;aws&quot;,
+            &quot;문서&quot;,
+            &quot;기준으로&quot;,
+            &quot;rag와&quot;,
+            &quot;전체&quot;,
+            &quot;접근&quot;,
+            &quot;시맨틱&quot;,
+            &quot;검색&quot;,
+            &quot;관련&quot;,
+            &quot;구절&quot;
+          ],
+          &quot;top_score&quot;: 18.35,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 16
+        }
+      },
+      {
+        &quot;label&quot;: &quot;subquery_2&quot;,
+        &quot;query&quot;: &quot;aws 문서 기준으로 rag와 정확 준비 작업 성능&quot;,
+        &quot;weight&quot;: 1.03,
+        &quot;branch&quot;: &quot;multi_part&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K14&quot;,
+          &quot;K13&quot;,
+          &quot;K15&quot;,
+          &quot;K16&quot;,
+          &quot;K09&quot;,
+          &quot;K02&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;aws&quot;,
+            &quot;문서&quot;,
+            &quot;기준으로&quot;,
+            &quot;rag와&quot;,
+            &quot;정확&quot;,
+            &quot;준비&quot;,
+            &quot;작업&quot;,
+            &quot;성능&quot;
+          ],
+          &quot;top_score&quot;: 7.2,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 15
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 9,
+    &quot;query_count&quot;: 3
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;candidate_count&quot;: 8,
+    &quot;selected_count&quot;: 6,
+    &quot;top_rerank_score&quot;: 68.191,
+    &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+  },
+  &quot;stitched_chunk_ids&quot;: [
+    &quot;K13&quot;,
+    &quot;K14&quot;,
+    &quot;K10&quot;,
+    &quot;K01&quot;,
+    &quot;K02&quot;,
+    &quot;K08&quot;
+  ]
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.00 ms</td><td><pre>{
+  &quot;pass&quot;: 1,
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.5,
+    &quot;top_score&quot;: 68.191,
+    &quot;distinct_sections&quot;: 6,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre></td></tr><tr><td>evidence_distill</td><td>0.09 ms</td><td><pre>{
+  &quot;evidence_count&quot;: 4
+}</pre></td></tr><tr><td>citation_answer</td><td>0.00 ms</td><td><pre>{
+  &quot;draft_score&quot;: 92.0
+}</pre></td></tr></tbody></table>
+      </article>
+    </section>
+    
+
+    <section class='card run'>
+      <div class='run-head'>
+        <div>
+          <div class='eyebrow'>Q10 · aws-support</div>
+          <h2>AWS는 RAG 구축을 위해 어떤 서비스들을 어떻게 지원한다고 설명하나요?</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>question type: multi_part</span>
+          <span class='pill'>route: 14B</span>
+          <span class='pill'>final model: 14B</span>
+          <span class='pill'>rescues: 0</span>
+          <span class='pill'>answer revisions: 1</span>
+          <span class='pill'>total: 2.91 ms</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>Adaptive flow</h3>
+          <ol><li>classify_8b → 14b</li><li>question_type_router → multi_part</li><li>adaptive_retrieve_pass_1</li><li>judge_retrieval → answer</li><li>evidence_distill</li><li>citation_answer</li><li>answer_refine_once</li><li>judge_answer</li></ol>
+          <h3>왜 이렇게 분기했나</h3>
+          <ul><li>질문을 먼저 multi_part로 분류해서 항상 같은 노드를 쓰지 않도록 했다.</li><li>1차 retrieval에서는 base, subquery_1, subquery_2, aws_services 브랜치를 조합했고, support coverage가 비면 관련 섹션 청크를 조건부로 보강했다.</li><li>judge_retrieval는 coverage=0.375 / top_score=106.482를 보고 answer을 선택했다.</li><li>answer judge가 낮거나 키워드가 비어 있으면 한 번만 refine해서 89.0 → 89.0로 보정했다.</li><li>미리 정한 정답 기준 키워드 6/6, 핵심 청크 1/1개를 잡아서 총점 89.0점으로 평가했다.</li></ul>
+        </article>
+        <article class='panel'>
+          <h3>Final answer</h3>
+          <pre>직답: AWS는 Amazon Bedrock 지식 기반, Amazon Kendra, SageMaker JumpStart를 통해 RAG 구축의 데이터 연결, 검색, 배포를 지원한다고 설명한다.
+질문: AWS는 RAG 구축을 위해 어떤 서비스들을 어떻게 지원한다고 설명하나요?
+질문 타입: multi_part
+근거 청크: K14, K13, K02, K03
+모드: round10-14B | quality_ok=True | coverage=0.375
+핵심 근거:
+- [K14] Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다
+- [K13] 시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다
+- [K02] LLM을 리디렉션하여 신뢰할 수 있는 사전 결정된 지식 출처에서 관련 정보를 검색합니다
+- [K03] RAG 기술은 조직의 생성형 AI 관련 작업에 있어 여러 가지 이점을 제공합니다.
+exact keyword row: bedrock, kendra, sagemaker, 지식 기반, 검색, 배포
+refine note: answer judge가 89.0점으로 낮아 키워드/직답성을 1회 보강했다.
+한계: 이번 라운드도 실백엔드가 아니라 mock 파이프라인이며, adaptive branch 검증이 목적이다.</pre>
+          <h3>Judge score</h3>
+          <pre>{
+  &quot;gold_answer&quot;: &quot;AWS는 Amazon Bedrock 지식 기반으로 데이터 소스 연결과 생성형 앱 개발을 단순화하고, Amazon Kendra로 엔터프라이즈 검색과 시맨틱 랭킹을 제공하며, SageMaker JumpStart로 빠른 배포와 예시 기반 구현 가속을 지원한다고 설명한다.&quot;,
+  &quot;rubric_keywords&quot;: [
+    &quot;bedrock&quot;,
+    &quot;kendra&quot;,
+    &quot;sagemaker&quot;,
+    &quot;지식 기반&quot;,
+    &quot;검색&quot;,
+    &quot;배포&quot;
+  ],
+  &quot;keyword_hits&quot;: [
+    &quot;bedrock&quot;,
+    &quot;kendra&quot;,
+    &quot;sagemaker&quot;,
+    &quot;지식 기반&quot;,
+    &quot;검색&quot;,
+    &quot;배포&quot;
+  ],
+  &quot;support_chunks_expected&quot;: [
+    &quot;K14&quot;
+  ],
+  &quot;support_chunks_hit&quot;: [
+    &quot;K14&quot;
+  ],
+  &quot;score_breakdown&quot;: {
+    &quot;keyword_score&quot;: 55.0,
+    &quot;support_score&quot;: 25.0,
+    &quot;quality_score&quot;: 9.0
+  },
+  &quot;total_score&quot;: 89.0,
+  &quot;verdict&quot;: &quot;좋음&quot;,
+  &quot;judge_comment&quot;: &quot;미리 정한 정답 기준 키워드 6/6, 핵심 청크 1/1개를 잡아서 총점 89.0점으로 평가했다.&quot;
+}</pre>
+          <h3>Retrieval judge</h3>
+          <pre>{
+  &quot;ok&quot;: true,
+  &quot;coverage&quot;: 0.375,
+  &quot;top_score&quot;: 106.482,
+  &quot;distinct_sections&quot;: 6,
+  &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+}</pre>
+        </article>
+      </div>
+      <article class='panel'>
+        <h3>Prompt plan + retrieval trace</h3>
+        <article class='attempt'><div class='attempt-head'><strong>adaptive_retrieve_pass_1</strong><span>2.72 ms</span></div><h4>query plan</h4><ul><li><strong>base</strong> [default] w=1.0: aws는 rag 구축을 위해 어떤 서비스들을 지원한다고 설명하나요 aws bedrock kendra sagemaker</li><li><strong>subquery_1</strong> [multi_part] w=0.99: aws는 rag 구축을 위해 bedrock kendra sagemaker</li><li><strong>subquery_2</strong> [multi_part] w=1.03: aws는 rag 구축을 위해 지식 기반 검색 배포</li><li><strong>aws_services</strong> [aws_support] w=1.16: bedrock 지식 기반 kendra 검색 sagemaker 배포</li></ul><h4>top chunks</h4><ul><li><strong>K14</strong> · AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요? <span class='score'>rerank 106.482</span><br>Amazon Bedrock 은 개발을 간소화하고 프라이버시 및 보안을 유지 관리하는 동시에, 생성형 AI 애플리케이션을 구축할 수 있는 다양한 기능과 함께 고성능 기반 모델을 제공하는 완전관리형 서비스입니다. Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수…<br><span class='hits'>sources: base, subquery_1, subquery_2, aws_services</span></li><li><strong>K13</strong> · 검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요? <span class='score'>rerank 60.028</span><br>시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다. 오늘날의 기업들은 매뉴얼, FAQ, 연구 보고서, 고객 서비스 가이드, 인사 관리 문서 리포지토리 등 방대한 양의 정보를 다양한 시스템에 저장합니다. 컨텍스트 검색은 대규모로 실행하기 어려우며, 그로 인해…<br><span class='hits'>sources: base, subquery_1, subquery_2, aws_services</span></li><li><strong>K02</strong> · 검색 증강 생성이 중요한 이유는 무엇인가요? <span class='score'>rerank 19.703</span><br>LLM은 지능형 챗봇 및 기타 자연어 처리(NLP) 애플리케이션을 지원하는 핵심 인공 지능(AI) 기술입니다. 신뢰할 수 있는 지식 소스를 상호 참조하여 다양한 상황에서 사용자 질문에 답변할 수 있는 봇을 만드는 것이 LLM의 목표입니다. 안타깝게도 LLM 기술의 특성상 LLM 응답에 대한 예측이 불가능합니다. 또한…<br><span class='hits'>sources: subquery_2, aws_services</span></li><li><strong>K03</strong> · 검색 증강 생성의 이점은 무엇인가요? <span class='score'>rerank 18.745</span><br>RAG 기술은 조직의 생성형 AI 관련 작업에 있어 여러 가지 이점을 제공합니다.<br><span class='hits'>sources: base, subquery_1, subquery_2</span></li><li><strong>K04</strong> · 검색 증강 생성의 이점은 무엇인가요? / 비용 효율적인 구현 <span class='score'>rerank 18.425</span><br>챗봇 개발은 일반적으로 파운데이션 모델 을 사용하여 시작됩니다. 파운데이션 모델(FM)은 광범위한 일반화 데이터와 레이블이 지정되지 않은 데이터에 대해 훈련된 API 액세스 가능 LLM입니다. 조직 또는 도메인별 정보를 위해 FM을 재교육하는 데 컴퓨팅 및 재정적 비용이 많이 소요됩니다. RAG를 통해 LLM에 새…<br><span class='hits'>sources: base, subquery_1, subquery_2</span></li><li><strong>K01</strong> · 검색 증강 생성이란 무엇인가요? <span class='score'>rerank 10.708</span><br>검색 증강 생성(RAG)은 대규모 언어 모델의 출력을 최적화하여 응답을 생성하기 전에 훈련 데이터 소스 외부의 신뢰할 수 있는 기술 자료를 참조하도록 하는 프로세스입니다. 대규모 언어 모델(LLM)은 방대한 양의 데이터를 기반으로 훈련되며 수십억 개의 파라미터를 사용하여 질문에 대한 답변, 언어 번역, 문장 완성 등의…<br><span class='hits'>sources: subquery_2</span></li></ul></article>
+      </article>
+      <article class='panel'>
+        <h3>Evidence distill</h3>
+        <pre>[
+  {
+    &quot;chunk_id&quot;: &quot;K14&quot;,
+    &quot;section&quot;: &quot;AWS는 검색 증강 생성 요구 사항을 어떻게 지원할 수 있나요?&quot;,
+    &quot;text&quot;: &quot;Amazon Bedrock의 지식 기반을 사용하면 클릭 몇 번으로 FM을 RAG용 데이터 소스에 연결할 수 있습니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K13&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성과 시맨틱 검색의 차이점은 무엇인가요?&quot;,
+    &quot;text&quot;: &quot;시맨틱 검색은 방대한 외부 지식 소스를 LLM 애플리케이션에 추가하려는 조직을 위해 RAG 결과를 개선해 줍니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K02&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성이 중요한 이유는 무엇인가요?&quot;,
+    &quot;text&quot;: &quot;LLM을 리디렉션하여 신뢰할 수 있는 사전 결정된 지식 출처에서 관련 정보를 검색합니다&quot;
+  },
+  {
+    &quot;chunk_id&quot;: &quot;K03&quot;,
+    &quot;section&quot;: &quot;검색 증강 생성의 이점은 무엇인가요?&quot;,
+    &quot;text&quot;: &quot;RAG 기술은 조직의 생성형 AI 관련 작업에 있어 여러 가지 이점을 제공합니다.&quot;
+  }
+]</pre>
+      </article>
+      <article class='panel'>
+        <h3>Per-node timing</h3>
+        <table><thead><tr><th>node</th><th>elapsed</th><th>details</th></tr></thead><tbody><tr><td>classify_8b</td><td>0.01 ms</td><td><pre>{
+  &quot;token_count&quot;: 8,
+  &quot;matched_hard_terms&quot;: [
+    &quot;어떻게&quot;
+  ],
+  &quot;complexity_score&quot;: 5,
+  &quot;reason&quot;: &quot;multi-step/comparison&quot;,
+  &quot;source&quot;: &quot;heuristic-mock&quot;,
+  &quot;question_type&quot;: &quot;multi_part&quot;
+}</pre></td></tr><tr><td>adaptive_retrieve_pass_1</td><td>2.72 ms</td><td><pre>{
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;aws는 rag 구축을 위해 어떤 서비스들을 지원한다고 설명하나요 aws bedrock kendra sagemaker&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K14&quot;,
+          &quot;K16&quot;,
+          &quot;K13&quot;,
+          &quot;K15&quot;,
+          &quot;K03&quot;,
+          &quot;K04&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;aws는&quot;,
+            &quot;rag&quot;,
+            &quot;구축을&quot;,
+            &quot;위해&quot;,
+            &quot;어떤&quot;,
+            &quot;서비스들을&quot;,
+            &quot;지원한다고&quot;,
+            &quot;설명하나요&quot;,
+            &quot;aws&quot;,
+            &quot;bedrock&quot;,
+            &quot;kendra&quot;,
+            &quot;sagemaker&quot;
+          ],
+          &quot;top_score&quot;: 19.2,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 16
+        }
+      },
+      {
+        &quot;label&quot;: &quot;subquery_1&quot;,
+        &quot;query&quot;: &quot;aws는 rag 구축을 위해 bedrock kendra sagemaker&quot;,
+        &quot;weight&quot;: 0.99,
+        &quot;branch&quot;: &quot;multi_part&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K14&quot;,
+          &quot;K13&quot;,
+          &quot;K03&quot;,
+          &quot;K04&quot;,
+          &quot;K11&quot;,
+          &quot;K12&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;aws는&quot;,
+            &quot;rag&quot;,
+            &quot;구축을&quot;,
+            &quot;위해&quot;,
+            &quot;bedrock&quot;,
+            &quot;kendra&quot;,
+            &quot;sagemaker&quot;
+          ],
+          &quot;top_score&quot;: 17.7,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 15
+        }
+      },
+      {
+        &quot;label&quot;: &quot;subquery_2&quot;,
+        &quot;query&quot;: &quot;aws는 rag 구축을 위해 지식 기반 검색 배포&quot;,
+        &quot;weight&quot;: 1.03,
+        &quot;branch&quot;: &quot;multi_part&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K14&quot;,
+          &quot;K13&quot;,
+          &quot;K02&quot;,
+          &quot;K01&quot;,
+          &quot;K03&quot;,
+          &quot;K04&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;aws는&quot;,
+            &quot;rag&quot;,
+            &quot;구축을&quot;,
+            &quot;위해&quot;,
+            &quot;지식&quot;,
+            &quot;기반&quot;,
+            &quot;검색&quot;,
+            &quot;배포&quot;
+          ],
+          &quot;top_score&quot;: 19.65,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 15
+        }
+      },
+      {
+        &quot;label&quot;: &quot;aws_services&quot;,
+        &quot;query&quot;: &quot;bedrock 지식 기반 kendra 검색 sagemaker 배포&quot;,
+        &quot;weight&quot;: 1.16,
+        &quot;branch&quot;: &quot;aws_support&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K14&quot;,
+          &quot;K13&quot;,
+          &quot;K02&quot;,
+          &quot;K09&quot;,
+          &quot;K08&quot;,
+          &quot;K10&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;bedrock&quot;,
+            &quot;지식&quot;,
+            &quot;기반&quot;,
+            &quot;kendra&quot;,
+            &quot;검색&quot;,
+            &quot;sagemaker&quot;,
+            &quot;배포&quot;
+          ],
+          &quot;top_score&quot;: 21.25,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 14
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 13,
+    &quot;query_count&quot;: 4
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;candidate_count&quot;: 8,
+    &quot;selected_count&quot;: 6,
+    &quot;top_rerank_score&quot;: 106.482,
+    &quot;rerank_strategy&quot;: &quot;question-token overlap + section-aware heuristic reranker&quot;
+  },
+  &quot;stitched_chunk_ids&quot;: [
+    &quot;K14&quot;,
+    &quot;K13&quot;,
+    &quot;K02&quot;,
+    &quot;K03&quot;,
+    &quot;K04&quot;,
+    &quot;K01&quot;
+  ]
+}</pre></td></tr><tr><td>judge_retrieval</td><td>0.00 ms</td><td><pre>{
+  &quot;pass&quot;: 1,
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.375,
+    &quot;top_score&quot;: 106.482,
+    &quot;distinct_sections&quot;: 6,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre></td></tr><tr><td>evidence_distill</td><td>0.10 ms</td><td><pre>{
+  &quot;evidence_count&quot;: 4
+}</pre></td></tr><tr><td>citation_answer</td><td>0.00 ms</td><td><pre>{
+  &quot;draft_score&quot;: 89.0
+}</pre></td></tr><tr><td>answer_refine_once</td><td>0.00 ms</td><td><pre>{
+  &quot;score_before&quot;: 89.0,
+  &quot;score_after&quot;: 89.0
+}</pre></td></tr></tbody></table>
+      </article>
+    </section>
+    
+  </main>
+</body>
+</html>

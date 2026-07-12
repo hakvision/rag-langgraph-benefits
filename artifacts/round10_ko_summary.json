@@ -1,0 +1,30 @@
+{
+  "round": "round10-ko",
+  "doc_title": "RAG란? - 검색 증강 생성 AI 설명 - AWS",
+  "doc_url": "https://aws.amazon.com/ko/what-is/retrieval-augmented-generation/",
+  "chunk_count": 18,
+  "provider_mode": "mock",
+  "backend_available": false,
+  "models": {
+    "router_8b": "qwen3:8b",
+    "large_14b": "qwen3:14b"
+  },
+  "question_count": 10,
+  "avg_total_ms": 4.7,
+  "avg_judge_score": 90.2,
+  "query_plan_avg": 3.9,
+  "evidence_items_avg": 4.0,
+  "retrieval_rescues": 2,
+  "answer_revisions": 5,
+  "question_type_counts": {
+    "simple_fact": 4,
+    "abstract_why": 3,
+    "multi_part": 3
+  },
+  "score_bands": {
+    "good": 9,
+    "okay": 1,
+    "weak": 0,
+    "poor": 0
+  }
+}
