@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang='ko'>
+<head>
+  <meta charset='utf-8' />
+  <meta name='viewport' content='width=device-width, initial-scale=1' />
+  <title>Rounds 1-9 Flow Chart · AWS Korean RAG</title>
+  <meta name='description' content='round1부터 round9까지 RAG 구조가 어떻게 바뀌었는지 flow chart로 설명하는 HTML' />
+  <style>
+    :root { --bg:#09101d; --panel:#121933; --panel2:#172243; --text:#eef3ff; --muted:#a9b6d3; --line:#2a3768; --accent:#7cc9ff; --ok:#8effc8; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:linear-gradient(180deg,#09101d 0%,#0b1020 100%); color:var(--text); line-height:1.6; }
+    a { color:var(--accent); }
+    .wrap { max-width:1240px; margin:0 auto; padding:28px 18px 90px; }
+    .hero,.flow-card,.panel { background:var(--panel); border:1px solid var(--line); border-radius:24px; padding:24px; box-shadow:0 14px 40px rgba(0,0,0,.2); }
+    .hero h1 { font-size:clamp(32px,4.8vw,56px); line-height:1.16; margin:0 0 10px; }
+    .eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.08em; font-size:12px; margin-bottom:8px; }
+    .pillrow,.cta,.timeline,.bottom-links { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+    .pill,.btn { border:1px solid var(--line); border-radius:999px; padding:8px 12px; background:rgba(255,255,255,.03); color:var(--muted); text-decoration:none; }
+    .btn { border-radius:14px; color:var(--text); background:var(--panel2); font-weight:600; }
+    .btn:hover { border-color:var(--accent); }
+    .grid.two { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .flow-card { margin-top:18px; overflow:hidden; }
+    .meta-row { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; flex-wrap:wrap; margin-bottom:8px; }
+    p, li { color:var(--muted); }
+    h2 { margin:0 0 8px; font-size:26px; }
+    @media (max-width: 920px) { .grid.two { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <main class='wrap'>
+    <section class='hero'>
+      <div class='eyebrow'>round1 → round9 flow chart</div>
+      <h1>round1부터 round9까지 구조가 어떻게 바뀌었는지 flow chart로 설명</h1>
+      <p>지금까지 만든 페이지들은 그대로 두고, 이 페이지는 <strong>flow chart 전용 요약본</strong>으로 만들었다. 각 라운드마다 어떤 노드가 추가됐는지, 왜 그걸 넣었는지, 점수가 어떻게 변했는지를 한 화면에서 순서대로 읽을 수 있게 정리했다.</p>
+      <div class='pillrow'>
+        <span class='pill'>source doc: AWS Korean RAG</span>
+        <span class='pill'>mock pipeline</span>
+        <span class='pill'>rounds: 1 → 9</span>
+        <span class='pill'>best score: round8 / round9 = 86.3</span>
+      </div>
+      <div class='cta'>
+        <a class='btn' href='./'>메인 허브</a>
+        <a class='btn' href='./rounds_1_to_9_summary.html'>1~9 텍스트 요약</a>
+        <a class='btn' href='./round9_ko.html'>최신 round9</a>
+      </div>
+    </section>
+
+    <section class='panel' style='margin-top:18px;'>
+      <div class='eyebrow'>how to read</div>
+      <div class='grid two'>
+        <article>
+          <h2>읽는 법</h2>
+          <ul>
+            <li>왼쪽에서 오른쪽으로 갈수록 한 라운드 내부 flow를 뜻함.</li>
+            <li>파란 pill은 해당 라운드의 avg judge score / 직전 대비 변화량을 보여줌.</li>
+            <li>각 flow chart 아래에는 왜 그 구조를 넣었는지 한 줄 설명을 붙임.</li>
+          </ul>
+        </article>
+        <article>
+          <h2>핵심 결론</h2>
+          <ul>
+            <li>round1~4는 구조 실험 축: baseline → reranker → hybrid retrieval → judge 분리.</li>
+            <li>round5~7은 prompt/query branch를 확장하는 중간 구간.</li>
+            <li>round8은 citation-constrained answer template가 크게 먹히면서 점프.</li>
+            <li>round9는 self-refine를 넣었지만 평균 점수는 round8과 동일.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    
+    <section class='flow-card' id='round1'>
+      <div class='meta-row'>
+        <div class='eyebrow'>round 1 flow</div>
+        <div class='pillrow'>
+          <span class='pill'>avg judge score 52.9</span>
+          <span class='pill'>vs prev -</span>
+          <span class='pill'>restarts 2</span>
+        </div>
+      </div>
+      <svg viewBox='0 0 1100 210' width='100%' role='img' aria-label='round 1 flow chart'><defs><marker id='arrow' markerWidth='12' markerHeight='12' refX='10' refY='6' orient='auto'><path d='M0,0 L12,6 L0,12 z' fill='#7cc9ff'/></marker></defs><rect x='0' y='0' width='1100' height='210' rx='18' fill='#0b1223' stroke='#25345b'/><text x='30' y='32' fill='#eef3ff' font-size='22' font-weight='700'>Round1 · baseline retrieval + quality gate</text><text x='30' y='56' fill='#a9b6d3' font-size='13'>score 52.9 / delta - / 첫 라운드라 추가라기보다 기준선을 세움.</text><rect x='30' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#22d3ee' stroke-width='2'/><text x='96.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>classify 8b</text><line x1='162' y1='110.0' x2='176' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='184' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#34d399' stroke-width='2'/><text x='250.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>search 8b</text><text x='250.0' y='118' text-anchor='middle' fill='#eef3ff' font-size='11'>/ search</text><text x='250.0' y='132' text-anchor='middle' fill='#eef3ff' font-size='11'>14b</text><line x1='316' y1='110.0' x2='330' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='338' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#a78bfa' stroke-width='2'/><text x='404.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>grade results</text><line x1='470' y1='110.0' x2='484' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='492' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#fbbf24' stroke-width='2'/><text x='558.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>route upgrade?</text><line x1='624' y1='110.0' x2='638' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='646' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#fb7185' stroke-width='2'/><text x='712.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>answer</text><line x1='778' y1='110.0' x2='792' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='800' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#60a5fa' stroke-width='2'/><text x='866.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>judge</text><text x='30' y='170' fill='#8effc8' font-size='13'>왜 넣었나: 가장 단순한 기준선부터 시작해서 어디가 병목인지 보려는 출발점.</text></svg>
+      <div class='bottom-links'>
+        <a class='btn' href='./round1_ko.html'>round1 상세 HTML</a>
+        <a class='btn' href='./artifacts/round1_ko_summary.json'>summary.json</a>
+      </div>
+    </section>
+    
+    <section class='flow-card' id='round2'>
+      <div class='meta-row'>
+        <div class='eyebrow'>round 2 flow</div>
+        <div class='pillrow'>
+          <span class='pill'>avg judge score 53.8</span>
+          <span class='pill'>vs prev +0.9</span>
+          <span class='pill'>restarts 2</span>
+        </div>
+      </div>
+      <svg viewBox='0 0 1100 210' width='100%' role='img' aria-label='round 2 flow chart'><defs><marker id='arrow' markerWidth='12' markerHeight='12' refX='10' refY='6' orient='auto'><path d='M0,0 L12,6 L0,12 z' fill='#7cc9ff'/></marker></defs><rect x='0' y='0' width='1100' height='210' rx='18' fill='#0b1223' stroke='#25345b'/><text x='30' y='32' fill='#eef3ff' font-size='22' font-weight='700'>Round2 · reranker 추가</text><text x='30' y='56' fill='#a9b6d3' font-size='13'>score 53.8 / delta +0.9 / round1 대비 reranker 단계가 새로 생김.</text><rect x='30' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#22d3ee' stroke-width='2'/><text x='96.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>classify 8b</text><line x1='162' y1='110.0' x2='176' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='184' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#34d399' stroke-width='2'/><text x='250.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>retrieve candidates</text><line x1='316' y1='110.0' x2='330' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='338' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#a78bfa' stroke-width='2'/><text x='404.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>rerank docs</text><line x1='470' y1='110.0' x2='484' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='492' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#fbbf24' stroke-width='2'/><text x='558.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>grade results</text><line x1='624' y1='110.0' x2='638' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='646' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#fb7185' stroke-width='2'/><text x='712.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>route upgrade?</text><line x1='778' y1='110.0' x2='792' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='800' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#60a5fa' stroke-width='2'/><text x='866.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>answer</text><line x1='932' y1='110.0' x2='946' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='954' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#f59e0b' stroke-width='2'/><text x='1020.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>judge</text><text x='30' y='170' fill='#8effc8' font-size='13'>왜 넣었나: 검색 후보는 맞는데 순서가 아쉬운 문제를 해결하려고 retrieval 뒤에 reranker를 삽입.</text></svg>
+      <div class='bottom-links'>
+        <a class='btn' href='./round2_ko.html'>round2 상세 HTML</a>
+        <a class='btn' href='./artifacts/round2_ko_summary.json'>summary.json</a>
+      </div>
+    </section>
+    
+    <section class='flow-card' id='round3'>
+      <div class='meta-row'>
+        <div class='eyebrow'>round 3 flow</div>
+        <div class='pillrow'>
+          <span class='pill'>avg judge score 64.3</span>
+          <span class='pill'>vs prev +10.5</span>
+          <span class='pill'>restarts 1</span>
+        </div>
+      </div>
+      <svg viewBox='0 0 1100 210' width='100%' role='img' aria-label='round 3 flow chart'><defs><marker id='arrow' markerWidth='12' markerHeight='12' refX='10' refY='6' orient='auto'><path d='M0,0 L12,6 L0,12 z' fill='#7cc9ff'/></marker></defs><rect x='0' y='0' width='1100' height='210' rx='18' fill='#0b1223' stroke='#25345b'/><text x='30' y='32' fill='#eef3ff' font-size='22' font-weight='700'>Round3 · hybrid retrieval + RRF + reranker</text><text x='30' y='56' fill='#a9b6d3' font-size='13'>score 64.3 / delta +10.5 / round2 대비 retrieval 앞단이 hybrid로 확장됨.</text><rect x='30' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#22d3ee' stroke-width='2'/><text x='96.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>classify 8b</text><line x1='162' y1='110.0' x2='176' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='184' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#34d399' stroke-width='2'/><text x='250.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>lexical retrieve</text><line x1='316' y1='110.0' x2='330' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='338' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#a78bfa' stroke-width='2'/><text x='404.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>semantic-like retrieve</text><line x1='470' y1='110.0' x2='484' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='492' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#fbbf24' stroke-width='2'/><text x='558.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>RRF fuse</text><line x1='624' y1='110.0' x2='638' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='646' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#fb7185' stroke-width='2'/><text x='712.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>rerank docs</text><line x1='778' y1='110.0' x2='792' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='800' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#60a5fa' stroke-width='2'/><text x='866.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>grade results</text><line x1='932' y1='110.0' x2='946' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='954' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#f59e0b' stroke-width='2'/><text x='1020.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>answer</text><text x='30' y='170' fill='#8effc8' font-size='13'>왜 넣었나: reranker만으로는 ceiling이 보여서 후보군 recall 자체를 넓히기 시작.</text></svg>
+      <div class='bottom-links'>
+        <a class='btn' href='./round3_ko.html'>round3 상세 HTML</a>
+        <a class='btn' href='./artifacts/round3_ko_summary.json'>summary.json</a>
+      </div>
+    </section>
+    
+    <section class='flow-card' id='round4'>
+      <div class='meta-row'>
+        <div class='eyebrow'>round 4 flow</div>
+        <div class='pillrow'>
+          <span class='pill'>avg judge score 67.5</span>
+          <span class='pill'>vs prev +3.2</span>
+          <span class='pill'>restarts 1</span>
+        </div>
+      </div>
+      <svg viewBox='0 0 1100 210' width='100%' role='img' aria-label='round 4 flow chart'><defs><marker id='arrow' markerWidth='12' markerHeight='12' refX='10' refY='6' orient='auto'><path d='M0,0 L12,6 L0,12 z' fill='#7cc9ff'/></marker></defs><rect x='0' y='0' width='1100' height='210' rx='18' fill='#0b1223' stroke='#25345b'/><text x='30' y='32' fill='#eef3ff' font-size='22' font-weight='700'>Round4 · retrieval judge / answer judge 분리</text><text x='30' y='56' fill='#a9b6d3' font-size='13'>score 67.5 / delta +3.2 / round3 대비 judge가 retrieval / answer 두 갈래로 분리됨.</text><rect x='30' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#22d3ee' stroke-width='2'/><text x='96.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>classify 8b</text><line x1='162' y1='110.0' x2='176' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='184' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#34d399' stroke-width='2'/><text x='250.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>hybrid retrieve</text><line x1='316' y1='110.0' x2='330' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='338' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#a78bfa' stroke-width='2'/><text x='404.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>rerank docs</text><line x1='470' y1='110.0' x2='484' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='492' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#fbbf24' stroke-width='2'/><text x='558.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>judge retrieval</text><line x1='624' y1='110.0' x2='638' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='646' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#fb7185' stroke-width='2'/><text x='712.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>answer draft</text><line x1='778' y1='110.0' x2='792' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='800' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#60a5fa' stroke-width='2'/><text x='866.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>judge answer</text><line x1='932' y1='110.0' x2='946' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='954' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#f59e0b' stroke-width='2'/><text x='1020.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>answer revise?</text><text x='30' y='170' fill='#8effc8' font-size='13'>왜 넣었나: 검색 실패와 답변 작성 실패를 구분해서 어느 쪽이 약한지 보려는 구조.</text></svg>
+      <div class='bottom-links'>
+        <a class='btn' href='./round4_ko.html'>round4 상세 HTML</a>
+        <a class='btn' href='./artifacts/round4_ko_summary.json'>summary.json</a>
+      </div>
+    </section>
+    
+    <section class='flow-card' id='round5'>
+      <div class='meta-row'>
+        <div class='eyebrow'>round 5 flow</div>
+        <div class='pillrow'>
+          <span class='pill'>avg judge score 62.6</span>
+          <span class='pill'>vs prev -4.9</span>
+          <span class='pill'>restarts 1</span>
+        </div>
+      </div>
+      <svg viewBox='0 0 1100 210' width='100%' role='img' aria-label='round 5 flow chart'><defs><marker id='arrow' markerWidth='12' markerHeight='12' refX='10' refY='6' orient='auto'><path d='M0,0 L12,6 L0,12 z' fill='#7cc9ff'/></marker></defs><rect x='0' y='0' width='1100' height='210' rx='18' fill='#0b1223' stroke='#25345b'/><text x='30' y='32' fill='#eef3ff' font-size='22' font-weight='700'>Round5 · query rewrite + step-back prompt</text><text x='30' y='56' fill='#a9b6d3' font-size='13'>score 62.6 / delta -4.9 / round4 대비 query plan 자체를 바꾸기 시작.</text><rect x='30' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#22d3ee' stroke-width='2'/><text x='96.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>classify 8b</text><line x1='162' y1='110.0' x2='176' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='184' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#34d399' stroke-width='2'/><text x='250.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>original query</text><line x1='316' y1='110.0' x2='330' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='338' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#a78bfa' stroke-width='2'/><text x='404.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>rewrite query</text><line x1='470' y1='110.0' x2='484' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='492' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#fbbf24' stroke-width='2'/><text x='558.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>step-back query</text><line x1='624' y1='110.0' x2='638' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='646' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#fb7185' stroke-width='2'/><text x='712.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>fuse results</text><line x1='778' y1='110.0' x2='792' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='800' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#60a5fa' stroke-width='2'/><text x='866.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>rerank docs</text><line x1='932' y1='110.0' x2='946' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='954' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#f59e0b' stroke-width='2'/><text x='1020.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>answer</text><text x='30' y='170' fill='#8effc8' font-size='13'>왜 넣었나: 구조 추가보다 질문을 더 잘 검색하는 쪽이 먹힐지 보려는 첫 prompt branch.</text></svg>
+      <div class='bottom-links'>
+        <a class='btn' href='./round5_ko.html'>round5 상세 HTML</a>
+        <a class='btn' href='./artifacts/round5_ko_summary.json'>summary.json</a>
+      </div>
+    </section>
+    
+    <section class='flow-card' id='round6'>
+      <div class='meta-row'>
+        <div class='eyebrow'>round 6 flow</div>
+        <div class='pillrow'>
+          <span class='pill'>avg judge score 63.9</span>
+          <span class='pill'>vs prev +1.3</span>
+          <span class='pill'>restarts 2</span>
+        </div>
+      </div>
+      <svg viewBox='0 0 1100 210' width='100%' role='img' aria-label='round 6 flow chart'><defs><marker id='arrow' markerWidth='12' markerHeight='12' refX='10' refY='6' orient='auto'><path d='M0,0 L12,6 L0,12 z' fill='#7cc9ff'/></marker></defs><rect x='0' y='0' width='1100' height='210' rx='18' fill='#0b1223' stroke='#25345b'/><text x='30' y='32' fill='#eef3ff' font-size='22' font-weight='700'>Round6 · subquery decomposition + multi-query fusion</text><text x='30' y='56' fill='#a9b6d3' font-size='13'>score 63.9 / delta +1.3 / round5 대비 subquery decomposition이 추가됨.</text><rect x='30' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#22d3ee' stroke-width='2'/><text x='96.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>classify 8b</text><line x1='162' y1='110.0' x2='176' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='184' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#34d399' stroke-width='2'/><text x='250.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>query planner</text><line x1='316' y1='110.0' x2='330' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='338' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#a78bfa' stroke-width='2'/><text x='404.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>subquery A/B/C</text><line x1='470' y1='110.0' x2='484' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='492' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#fbbf24' stroke-width='2'/><text x='558.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>multi-query fusion</text><line x1='624' y1='110.0' x2='638' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='646' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#fb7185' stroke-width='2'/><text x='712.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>rerank docs</text><line x1='778' y1='110.0' x2='792' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='800' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#60a5fa' stroke-width='2'/><text x='866.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>judge retrieval</text><line x1='932' y1='110.0' x2='946' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='954' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#f59e0b' stroke-width='2'/><text x='1020.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>answer</text><text x='30' y='170' fill='#8effc8' font-size='13'>왜 넣었나: 복합 질문을 한 번에 검색하지 말고 쪼개서 coverage를 늘리려는 단계.</text></svg>
+      <div class='bottom-links'>
+        <a class='btn' href='./round6_ko.html'>round6 상세 HTML</a>
+        <a class='btn' href='./artifacts/round6_ko_summary.json'>summary.json</a>
+      </div>
+    </section>
+    
+    <section class='flow-card' id='round7'>
+      <div class='meta-row'>
+        <div class='eyebrow'>round 7 flow</div>
+        <div class='pillrow'>
+          <span class='pill'>avg judge score 65.7</span>
+          <span class='pill'>vs prev +1.8</span>
+          <span class='pill'>restarts 2</span>
+        </div>
+      </div>
+      <svg viewBox='0 0 1100 210' width='100%' role='img' aria-label='round 7 flow chart'><defs><marker id='arrow' markerWidth='12' markerHeight='12' refX='10' refY='6' orient='auto'><path d='M0,0 L12,6 L0,12 z' fill='#7cc9ff'/></marker></defs><rect x='0' y='0' width='1100' height='210' rx='18' fill='#0b1223' stroke='#25345b'/><text x='30' y='32' fill='#eef3ff' font-size='22' font-weight='700'>Round7 · evidence distill before answer</text><text x='30' y='56' fill='#a9b6d3' font-size='13'>score 65.7 / delta +1.8 / round6 대비 evidence_distill 노드가 새로 생김.</text><rect x='30' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#22d3ee' stroke-width='2'/><text x='96.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>classify 8b</text><line x1='162' y1='110.0' x2='176' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='184' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#34d399' stroke-width='2'/><text x='250.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>query plan</text><line x1='316' y1='110.0' x2='330' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='338' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#a78bfa' stroke-width='2'/><text x='404.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>fused retrieval</text><line x1='470' y1='110.0' x2='484' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='492' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#fbbf24' stroke-width='2'/><text x='558.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>rerank docs</text><line x1='624' y1='110.0' x2='638' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='646' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#fb7185' stroke-width='2'/><text x='712.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>evidence distill</text><line x1='778' y1='110.0' x2='792' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='800' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#60a5fa' stroke-width='2'/><text x='866.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>answer</text><line x1='932' y1='110.0' x2='946' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='954' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#f59e0b' stroke-width='2'/><text x='1020.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>judge answer</text><text x='30' y='170' fill='#8effc8' font-size='13'>왜 넣었나: 긴 chunk를 그대로 answer에 주면 퍼져서, 질문 직결 문장만 압축해서 넘김.</text></svg>
+      <div class='bottom-links'>
+        <a class='btn' href='./round7_ko.html'>round7 상세 HTML</a>
+        <a class='btn' href='./artifacts/round7_ko_summary.json'>summary.json</a>
+      </div>
+    </section>
+    
+    <section class='flow-card' id='round8'>
+      <div class='meta-row'>
+        <div class='eyebrow'>round 8 flow</div>
+        <div class='pillrow'>
+          <span class='pill'>avg judge score 86.3</span>
+          <span class='pill'>vs prev +20.6</span>
+          <span class='pill'>restarts 2</span>
+        </div>
+      </div>
+      <svg viewBox='0 0 1100 210' width='100%' role='img' aria-label='round 8 flow chart'><defs><marker id='arrow' markerWidth='12' markerHeight='12' refX='10' refY='6' orient='auto'><path d='M0,0 L12,6 L0,12 z' fill='#7cc9ff'/></marker></defs><rect x='0' y='0' width='1100' height='210' rx='18' fill='#0b1223' stroke='#25345b'/><text x='30' y='32' fill='#eef3ff' font-size='22' font-weight='700'>Round8 · citation-constrained answer template</text><text x='30' y='56' fill='#a9b6d3' font-size='13'>score 86.3 / delta +20.6 / round7 대비 answer writer를 citation template로 강하게 고정.</text><rect x='30' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#22d3ee' stroke-width='2'/><text x='96.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>classify 8b</text><line x1='162' y1='110.0' x2='176' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='184' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#34d399' stroke-width='2'/><text x='250.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>query plan</text><line x1='316' y1='110.0' x2='330' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='338' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#a78bfa' stroke-width='2'/><text x='404.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>fused retrieval</text><line x1='470' y1='110.0' x2='484' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='492' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#fbbf24' stroke-width='2'/><text x='558.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>evidence distill</text><line x1='624' y1='110.0' x2='638' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='646' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#fb7185' stroke-width='2'/><text x='712.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>citation template</text><line x1='778' y1='110.0' x2='792' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='800' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#60a5fa' stroke-width='2'/><text x='866.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>exact</text><text x='866.0' y='118' text-anchor='middle' fill='#eef3ff' font-size='11'>keyword row</text><line x1='932' y1='110.0' x2='946' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='954' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#f59e0b' stroke-width='2'/><text x='1020.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>judge answer</text><text x='30' y='170' fill='#8effc8' font-size='13'>왜 넣었나: retrieval보다 answer formatting / keyword coverage가 점수에 더 크게 작용하는지 검증.</text></svg>
+      <div class='bottom-links'>
+        <a class='btn' href='./round8_ko.html'>round8 상세 HTML</a>
+        <a class='btn' href='./artifacts/round8_ko_summary.json'>summary.json</a>
+      </div>
+    </section>
+    
+    <section class='flow-card' id='round9'>
+      <div class='meta-row'>
+        <div class='eyebrow'>round 9 flow</div>
+        <div class='pillrow'>
+          <span class='pill'>avg judge score 86.3</span>
+          <span class='pill'>vs prev +0.0</span>
+          <span class='pill'>restarts 2</span>
+        </div>
+      </div>
+      <svg viewBox='0 0 1100 210' width='100%' role='img' aria-label='round 9 flow chart'><defs><marker id='arrow' markerWidth='12' markerHeight='12' refX='10' refY='6' orient='auto'><path d='M0,0 L12,6 L0,12 z' fill='#7cc9ff'/></marker></defs><rect x='0' y='0' width='1100' height='210' rx='18' fill='#0b1223' stroke='#25345b'/><text x='30' y='32' fill='#eef3ff' font-size='22' font-weight='700'>Round9 · judge-guided self refine</text><text x='30' y='56' fill='#a9b6d3' font-size='13'>score 86.3 / delta +0.0 / round8 대비 self-refine 루프가 추가됨.</text><rect x='30' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#22d3ee' stroke-width='2'/><text x='96.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>classify 8b</text><line x1='162' y1='110.0' x2='176' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='184' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#34d399' stroke-width='2'/><text x='250.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>query plan</text><line x1='316' y1='110.0' x2='330' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='338' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#a78bfa' stroke-width='2'/><text x='404.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>retrieval rescue?</text><line x1='470' y1='110.0' x2='484' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='492' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#fbbf24' stroke-width='2'/><text x='558.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>evidence distill</text><line x1='624' y1='110.0' x2='638' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='646' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#fb7185' stroke-width='2'/><text x='712.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>answer draft</text><line x1='778' y1='110.0' x2='792' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='800' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#60a5fa' stroke-width='2'/><text x='866.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>judge answer</text><line x1='932' y1='110.0' x2='946' y2='110.0' stroke='#7cc9ff' stroke-width='2.5' marker-end='url(#arrow)'/><rect x='954' y='84' width='132' height='52' rx='14' fill='rgba(18,25,51,0.95)' stroke='#f59e0b' stroke-width='2'/><text x='1020.0' y='104' text-anchor='middle' fill='#eef3ff' font-size='11'>self refine</text><text x='30' y='170' fill='#8effc8' font-size='13'>왜 넣었나: 초안 평가 뒤 missing keyword와 retrieval rescue를 1회 반영하면 더 오르는지 실험.</text></svg>
+      <div class='bottom-links'>
+        <a class='btn' href='./round9_ko.html'>round9 상세 HTML</a>
+        <a class='btn' href='./artifacts/round9_ko_summary.json'>summary.json</a>
+      </div>
+    </section>
+    
+  </main>
+</body>
+</html>
