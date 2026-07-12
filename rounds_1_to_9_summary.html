@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang='ko'>
+<head>
+  <meta charset='utf-8' />
+  <meta name='viewport' content='width=device-width, initial-scale=1' />
+  <title>Rounds 1-9 Summary · AWS Korean RAG</title>
+  <meta name='description' content='RAG round1~round9가 무엇을 추가하면서 점진적으로 어떻게 바뀌었는지 정리한 HTML 요약' />
+  <style>
+    :root { --bg:#09101d; --panel:#121933; --panel2:#172243; --text:#eef3ff; --muted:#a9b6d3; --line:#2a3768; --accent:#7cc9ff; --ok:#8effc8; --warn:#ffd479; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:linear-gradient(180deg,#09101d 0%,#0b1020 100%); color:var(--text); line-height:1.6; }
+    a { color:var(--accent); }
+    .wrap { max-width:1240px; margin:0 auto; padding:28px 18px 90px; }
+    .hero,.panel,.round-card,.table-wrap { background:var(--panel); border:1px solid var(--line); border-radius:24px; padding:24px; box-shadow:0 14px 40px rgba(0,0,0,.2); }
+    .hero h1 { font-size:clamp(32px,4.8vw,56px); line-height:1.16; margin:0 0 10px; }
+    .eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.08em; font-size:12px; margin-bottom:8px; }
+    .pillrow,.cta,.timeline { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+    .pill,.btn { border:1px solid var(--line); border-radius:999px; padding:8px 12px; background:rgba(255,255,255,.03); color:var(--muted); text-decoration:none; }
+    .btn { border-radius:14px; color:var(--text); background:var(--panel2); font-weight:600; }
+    .btn:hover { border-color:var(--accent); }
+    .grid { display:grid; gap:16px; }
+    .grid.two { grid-template-columns:1fr 1fr; }
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-top:18px; }
+    .stats .panel strong { display:block; color:var(--ok); font-size:28px; margin-bottom:6px; }
+    h2 { font-size:clamp(22px,3vw,34px); margin:0 0 10px; }
+    h3 { margin:0 0 10px; font-size:21px; }
+    p, li, td, th { color:var(--muted); }
+    .round-card { margin-top:18px; }
+    .round-head { display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; align-items:start; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { border-top:1px solid var(--line); padding:12px 10px; text-align:left; vertical-align:top; }
+    th { color:var(--accent); font-size:13px; }
+    .bar-row { display:grid; grid-template-columns:52px 1fr 70px; gap:10px; align-items:center; margin:10px 0; }
+    .bar-track { height:14px; background:#0a0f1d; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
+    .bar-fill { height:100%; background:linear-gradient(90deg, #52b6ff 0%, #8effc8 100%); }
+    .summary-note { font-size:15px; }
+    @media (max-width: 920px) { .grid.two { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <main class='wrap'>
+    <section class='hero'>
+      <div class='eyebrow'>rounds 1-9 summary · korean aws rag</div>
+      <h1>1~9라운드가 뭐를 추가하면서 어떻게 좋아졌는지 한 번에 정리</h1>
+      <p class='summary-note'>이 페이지는 round1~round9를 <strong>구조 변경 → 점수 변화 → 왜 그 변화가 났는지</strong> 순서로 요약한 비교용 HTML이다. 현재 모든 라운드는 AWS 한국어 RAG 문서를 대상으로 한 <strong>mock 파이프라인</strong> 기준이지만, HTML/JSON 산출물과 GitHub Pages 반영은 실제로 검증했다.</p>
+      <div class='pillrow'>
+        <span class='pill'>source doc: AWS Korean RAG</span>
+        <span class='pill'>question set: 10</span>
+        <span class='pill'>rounds: 1 → 9</span>
+        <span class='pill'>best avg judge score: round8 = 86.3</span>
+      </div>
+      <div class='cta'>
+        <a class='btn' href='./'>메인 허브로 가기</a>
+        <a class='btn' href='./round9_ko.html'>최신 round9 보기</a>
+        <a class='btn' href='https://github.com/hakvision/rag-langgraph-benefits'>GitHub repo</a>
+      </div>
+    </section>
+
+    <section class='table-wrap' style='margin-top:18px;'>
+      <div class='eyebrow'>timeline</div>
+      <h2>한눈에 보는 흐름</h2>
+      <div class='timeline'>
+        <span class='pill'>1 baseline</span>
+        <span class='pill'>2 reranker</span>
+        <span class='pill'>3 hybrid retrieval</span>
+        <span class='pill'>4 retrieval/answer judge 분리</span>
+        <span class='pill'>5 rewrite + step-back</span>
+        <span class='pill'>6 subquery decomposition</span>
+        <span class='pill'>7 evidence distill</span>
+        <span class='pill'>8 citation template</span>
+        <span class='pill'>9 self refine</span>
+      </div>
+    </section>
+
+    <section class='grid two' style='margin-top:18px;'>
+      <article class='panel'>
+        <div class='eyebrow'>score trend</div>
+        <h2>점수 추세</h2>
+        <div class='bar-row'><div class='bar-label'>R1</div><div class='bar-track'><div class='bar-fill' style='width:61%'></div></div><div class='bar-score'>52.9</div></div><div class='bar-row'><div class='bar-label'>R2</div><div class='bar-track'><div class='bar-fill' style='width:62%'></div></div><div class='bar-score'>53.8</div></div><div class='bar-row'><div class='bar-label'>R3</div><div class='bar-track'><div class='bar-fill' style='width:74%'></div></div><div class='bar-score'>64.3</div></div><div class='bar-row'><div class='bar-label'>R4</div><div class='bar-track'><div class='bar-fill' style='width:78%'></div></div><div class='bar-score'>67.5</div></div><div class='bar-row'><div class='bar-label'>R5</div><div class='bar-track'><div class='bar-fill' style='width:72%'></div></div><div class='bar-score'>62.6</div></div><div class='bar-row'><div class='bar-label'>R6</div><div class='bar-track'><div class='bar-fill' style='width:74%'></div></div><div class='bar-score'>63.9</div></div><div class='bar-row'><div class='bar-label'>R7</div><div class='bar-track'><div class='bar-fill' style='width:76%'></div></div><div class='bar-score'>65.7</div></div><div class='bar-row'><div class='bar-label'>R8</div><div class='bar-track'><div class='bar-fill' style='width:100%'></div></div><div class='bar-score'>86.3</div></div><div class='bar-row'><div class='bar-label'>R9</div><div class='bar-track'><div class='bar-fill' style='width:100%'></div></div><div class='bar-score'>86.3</div></div>
+      </article>
+      <article class='panel'>
+        <div class='eyebrow'>quick read</div>
+        <h2>핵심 해석</h2>
+        <ul>
+          <li>round1~4는 구조 실험 축이다. baseline → reranker → hybrid retrieval → retrieval/answer judge 분리 순으로 갔다.</li>
+          <li>round5~7은 prompt/query 브랜치 초기 단계인데, 점수는 오르긴 했지만 round4를 압도하지는 못했다.</li>
+          <li><strong>round8</strong>에서 citation-constrained answer template가 크게 먹히면서 avg judge score가 86.3으로 급상승했다.</li>
+          <li>round9는 self-refine를 얹었지만 평균은 round8과 동일해서, 이번 실험에선 <strong>round8이 가장 효율 좋은 개선점</strong>으로 보인다.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class='table-wrap' style='margin-top:18px;'>
+      <div class='eyebrow'>comparison table</div>
+      <h2>라운드별 비교표</h2>
+      <table>
+        <thead>
+          <tr><th>round</th><th>추가한 것</th><th>avg judge score</th><th>vs 이전</th><th>restarts</th><th>answer revise</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>R1</td><td>baseline retrieval + quality gate</td><td>52.9</td><td>-</td><td>2</td><td>0</td></tr><tr><td>R2</td><td>reranker 추가</td><td>53.8</td><td>+0.9</td><td>2</td><td>0</td></tr><tr><td>R3</td><td>hybrid retrieval + RRF + reranker</td><td>64.3</td><td>+10.5</td><td>1</td><td>0</td></tr><tr><td>R4</td><td>retrieval judge / answer judge 분리</td><td>67.5</td><td>+3.2</td><td>1</td><td>5</td></tr><tr><td>R5</td><td>query rewrite + step-back prompt</td><td>62.6</td><td>-4.9</td><td>1</td><td>0</td></tr><tr><td>R6</td><td>subquery decomposition + multi-query fusion</td><td>63.9</td><td>+1.3</td><td>2</td><td>0</td></tr><tr><td>R7</td><td>evidence distill before answer</td><td>65.7</td><td>+1.8</td><td>2</td><td>0</td></tr><tr><td>R8</td><td>citation-constrained answer template</td><td>86.3</td><td>+20.6</td><td>2</td><td>0</td></tr><tr><td>R9</td><td>judge-guided self refine</td><td>86.3</td><td>+0.0</td><td>2</td><td>3</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    
+    <section class='round-card' id='round1'>
+      <div class='round-head'>
+        <div>
+          <div class='eyebrow'>round 1</div>
+          <h2>Round1 · baseline retrieval + quality gate</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>avg judge score 52.9</span>
+          <span class='pill'>vs prev -</span>
+          <span class='pill'>restarts 2</span>
+          <span class='pill'>answer revise 0</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>이번에 추가한 것</h3>
+          <p>가장 단순한 baseline. 질문 분류 → lexical retrieval → quality gate → answer → judge.</p>
+          <h3>왜 넣었나</h3>
+          <p>기준선 확보용 시작점이라 retrieval 1단계만 두고 reranker는 아직 없음.</p>
+        </article>
+        <article class='panel'>
+          <h3>결과 해석</h3>
+          <p>baseline이라 workflow/prompting처럼 문서 구조가 뚜렷한 질문만 강했고 trust/comparison 쪽은 약했음.</p>
+          <h3>추가 메트릭</h3>
+          <p>baseline metrics only</p>
+        </article>
+      </div>
+      <div class='cta'>
+        <a class='btn' href='./round1_ko.html'>round1 HTML 보기</a>
+        <a class='btn' href='./artifacts/round1_ko_summary.json'>summary.json</a>
+        <a class='btn' href='./artifacts/round1_ko_results.json'>results.json</a>
+      </div>
+    </section>
+    
+    <section class='round-card' id='round2'>
+      <div class='round-head'>
+        <div>
+          <div class='eyebrow'>round 2</div>
+          <h2>Round2 · reranker 추가</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>avg judge score 53.8</span>
+          <span class='pill'>vs prev +0.9</span>
+          <span class='pill'>restarts 2</span>
+          <span class='pill'>answer revise 0</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>이번에 추가한 것</h3>
+          <p>retrieval 뒤에 reranker를 추가해서 후보를 다시 정렬.</p>
+          <h3>왜 넣었나</h3>
+          <p>후보군은 그대로 두고 순위만 더 정교하게 만들자는 실험.</p>
+        </article>
+        <article class='panel'>
+          <h3>결과 해석</h3>
+          <p>reranker 덕분에 일부 순위는 좋아졌지만 전체 평균 상승폭은 작았음.</p>
+          <h3>추가 메트릭</h3>
+          <p>avg rerank lift 6.66</p>
+        </article>
+      </div>
+      <div class='cta'>
+        <a class='btn' href='./round2_ko.html'>round2 HTML 보기</a>
+        <a class='btn' href='./artifacts/round2_ko_summary.json'>summary.json</a>
+        <a class='btn' href='./artifacts/round2_ko_results.json'>results.json</a>
+      </div>
+    </section>
+    
+    <section class='round-card' id='round3'>
+      <div class='round-head'>
+        <div>
+          <div class='eyebrow'>round 3</div>
+          <h2>Round3 · hybrid retrieval + RRF + reranker</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>avg judge score 64.3</span>
+          <span class='pill'>vs prev +10.5</span>
+          <span class='pill'>restarts 1</span>
+          <span class='pill'>answer revise 0</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>이번에 추가한 것</h3>
+          <p>lexical 하나만 쓰지 않고 hybrid retrieval과 RRF fusion을 추가.</p>
+          <h3>왜 넣었나</h3>
+          <p>reranker 앞단 후보 recall을 넓혀서 round2의 ceiling을 깨보려는 단계.</p>
+        </article>
+        <article class='panel'>
+          <h3>결과 해석</h3>
+          <p>Q3/Q4/Q10이 확 뛰었고 hybrid retrieval이 recall 측면에서 효과를 보였음.</p>
+          <h3>추가 메트릭</h3>
+          <p>avg rerank lift 8.87</p>
+        </article>
+      </div>
+      <div class='cta'>
+        <a class='btn' href='./round3_ko.html'>round3 HTML 보기</a>
+        <a class='btn' href='./artifacts/round3_ko_summary.json'>summary.json</a>
+        <a class='btn' href='./artifacts/round3_ko_results.json'>results.json</a>
+      </div>
+    </section>
+    
+    <section class='round-card' id='round4'>
+      <div class='round-head'>
+        <div>
+          <div class='eyebrow'>round 4</div>
+          <h2>Round4 · retrieval judge / answer judge 분리</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>avg judge score 67.5</span>
+          <span class='pill'>vs prev +3.2</span>
+          <span class='pill'>restarts 1</span>
+          <span class='pill'>answer revise 5</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>이번에 추가한 것</h3>
+          <p>retrieval 문제와 answer formatting 문제를 분리해서 판단.</p>
+          <h3>왜 넣었나</h3>
+          <p>검색은 괜찮은데 답변 문장이 약한 경우를 따로 잡기 시작한 라운드.</p>
+        </article>
+        <article class='panel'>
+          <h3>결과 해석</h3>
+          <p>Q6/Q7/Q9가 개선됐고 retrieval과 answer 문제를 나눠 보면서 안정화됨.</p>
+          <h3>추가 메트릭</h3>
+          <p>avg rerank lift 8.87</p>
+        </article>
+      </div>
+      <div class='cta'>
+        <a class='btn' href='./round4_ko.html'>round4 HTML 보기</a>
+        <a class='btn' href='./artifacts/round4_ko_summary.json'>summary.json</a>
+        <a class='btn' href='./artifacts/round4_ko_results.json'>results.json</a>
+      </div>
+    </section>
+    
+    <section class='round-card' id='round5'>
+      <div class='round-head'>
+        <div>
+          <div class='eyebrow'>round 5</div>
+          <h2>Round5 · query rewrite + step-back prompt</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>avg judge score 62.6</span>
+          <span class='pill'>vs prev -4.9</span>
+          <span class='pill'>restarts 1</span>
+          <span class='pill'>answer revise 0</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>이번에 추가한 것</h3>
+          <p>구조를 더 붙이기보다 질문을 다시 써서 검색하는 prompt branch 시작.</p>
+          <h3>왜 넣었나</h3>
+          <p>추상 질문에서 표면 단어 mismatch를 줄여보려는 첫 프롬프트 실험.</p>
+        </article>
+        <article class='panel'>
+          <h3>결과 해석</h3>
+          <p>prompt branch 첫 실험이라 기대보다 바로 점프하지는 못했고 round4보다 오히려 내려감.</p>
+          <h3>추가 메트릭</h3>
+          <p>avg query-plan width 3.0 · avg evidence items 2.0</p>
+        </article>
+      </div>
+      <div class='cta'>
+        <a class='btn' href='./round5_ko.html'>round5 HTML 보기</a>
+        <a class='btn' href='./artifacts/round5_ko_summary.json'>summary.json</a>
+        <a class='btn' href='./artifacts/round5_ko_results.json'>results.json</a>
+      </div>
+    </section>
+    
+    <section class='round-card' id='round6'>
+      <div class='round-head'>
+        <div>
+          <div class='eyebrow'>round 6</div>
+          <h2>Round6 · subquery decomposition + multi-query fusion</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>avg judge score 63.9</span>
+          <span class='pill'>vs prev +1.3</span>
+          <span class='pill'>restarts 2</span>
+          <span class='pill'>answer revise 0</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>이번에 추가한 것</h3>
+          <p>한 질문을 세부 질의들로 나누고 fused candidate pool을 생성.</p>
+          <h3>왜 넣었나</h3>
+          <p>복합 질문을 한 번에 검색하지 않고 쪼개서 coverage를 올리려는 단계.</p>
+        </article>
+        <article class='panel'>
+          <h3>결과 해석</h3>
+          <p>subquery 분해로 조금 회복했지만 아직 answer wording 자체는 크게 바뀌지 않았음.</p>
+          <h3>추가 메트릭</h3>
+          <p>avg query-plan width 5.2 · avg evidence items 2.0</p>
+        </article>
+      </div>
+      <div class='cta'>
+        <a class='btn' href='./round6_ko.html'>round6 HTML 보기</a>
+        <a class='btn' href='./artifacts/round6_ko_summary.json'>summary.json</a>
+        <a class='btn' href='./artifacts/round6_ko_results.json'>results.json</a>
+      </div>
+    </section>
+    
+    <section class='round-card' id='round7'>
+      <div class='round-head'>
+        <div>
+          <div class='eyebrow'>round 7</div>
+          <h2>Round7 · evidence distill before answer</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>avg judge score 65.7</span>
+          <span class='pill'>vs prev +1.8</span>
+          <span class='pill'>restarts 2</span>
+          <span class='pill'>answer revise 0</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>이번에 추가한 것</h3>
+          <p>answer 전에 질문 직결 문장만 추리는 evidence distill 노드 추가.</p>
+          <h3>왜 넣었나</h3>
+          <p>긴 청크를 통째로 넘기면 답변이 퍼지기 쉬워서 핵심 근거만 압축.</p>
+        </article>
+        <article class='panel'>
+          <h3>결과 해석</h3>
+          <p>evidence distill로 답변이 덜 퍼지면서 점수가 조금 더 올라감.</p>
+          <h3>추가 메트릭</h3>
+          <p>avg query-plan width 5.2 · avg evidence items 3.0</p>
+        </article>
+      </div>
+      <div class='cta'>
+        <a class='btn' href='./round7_ko.html'>round7 HTML 보기</a>
+        <a class='btn' href='./artifacts/round7_ko_summary.json'>summary.json</a>
+        <a class='btn' href='./artifacts/round7_ko_results.json'>results.json</a>
+      </div>
+    </section>
+    
+    <section class='round-card' id='round8'>
+      <div class='round-head'>
+        <div>
+          <div class='eyebrow'>round 8</div>
+          <h2>Round8 · citation-constrained answer template</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>avg judge score 86.3</span>
+          <span class='pill'>vs prev +20.6</span>
+          <span class='pill'>restarts 2</span>
+          <span class='pill'>answer revise 0</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>이번에 추가한 것</h3>
+          <p>직답 + 근거 청크 + exact keyword row를 강제하는 answer template로 전환.</p>
+          <h3>왜 넣었나</h3>
+          <p>retrieval도 중요하지만 judged score는 답변 형식/키워드 명시가 크게 좌우된다는 걸 보여준 라운드.</p>
+        </article>
+        <article class='panel'>
+          <h3>결과 해석</h3>
+          <p>citation template가 크게 먹혀서 avg judge score가 86.3으로 급상승.</p>
+          <h3>추가 메트릭</h3>
+          <p>avg query-plan width 5.2 · avg evidence items 3.0</p>
+        </article>
+      </div>
+      <div class='cta'>
+        <a class='btn' href='./round8_ko.html'>round8 HTML 보기</a>
+        <a class='btn' href='./artifacts/round8_ko_summary.json'>summary.json</a>
+        <a class='btn' href='./artifacts/round8_ko_results.json'>results.json</a>
+      </div>
+    </section>
+    
+    <section class='round-card' id='round9'>
+      <div class='round-head'>
+        <div>
+          <div class='eyebrow'>round 9</div>
+          <h2>Round9 · judge-guided self refine</h2>
+        </div>
+        <div class='pillrow'>
+          <span class='pill'>avg judge score 86.3</span>
+          <span class='pill'>vs prev +0.0</span>
+          <span class='pill'>restarts 2</span>
+          <span class='pill'>answer revise 3</span>
+        </div>
+      </div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>이번에 추가한 것</h3>
+          <p>초안 점수를 보고 missing keyword / retrieval rescue를 1회 반영.</p>
+          <h3>왜 넣었나</h3>
+          <p>round8 위에 self-refine를 얹었지만 평균 점수는 같아서 효율은 제한적이었음.</p>
+        </article>
+        <article class='panel'>
+          <h3>결과 해석</h3>
+          <p>self-refine는 일부 질문(Q3/Q4/Q5)에 revision이 들어갔지만 평균은 round8과 동일.</p>
+          <h3>추가 메트릭</h3>
+          <p>avg query-plan width 5.4 · avg evidence items 3.0</p>
+        </article>
+      </div>
+      <div class='cta'>
+        <a class='btn' href='./round9_ko.html'>round9 HTML 보기</a>
+        <a class='btn' href='./artifacts/round9_ko_summary.json'>summary.json</a>
+        <a class='btn' href='./artifacts/round9_ko_results.json'>results.json</a>
+      </div>
+    </section>
+    
+  </main>
+</body>
+</html>
