@@ -6,162 +6,184 @@
   <title>RAG LangGraph Rounds · GitHub Pages</title>
   <meta name="description" content="RAG LangGraph 실험 라운드별 HTML 리포트 모음" />
   <style>
-    :root {
-      --bg: #09101d;
-      --panel: #121933;
-      --panel2: #172243;
-      --text: #eef3ff;
-      --muted: #a9b6d3;
-      --line: #2a3768;
-      --accent: #7cc9ff;
-      --ok: #8effc8;
-      --warn: #ffd479;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-      background: linear-gradient(180deg, #09101d 0%, #0b1020 100%);
-      color: var(--text);
-      line-height: 1.6;
-    }
-    a { color: var(--accent); }
-    .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 18px 88px; }
-    .hero, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 24px; padding: 24px; box-shadow: 0 14px 40px rgba(0,0,0,.2); }
-    .hero h1 { font-size: clamp(32px, 4.8vw, 54px); line-height: 1.18; margin: 0 0 10px; }
-    .hero p { color: var(--muted); max-width: 920px; }
-    .eyebrow { display: inline-block; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
-    .pillrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-    .pill { border: 1px solid var(--line); background: rgba(255,255,255,.03); color: var(--muted); border-radius: 999px; padding: 7px 12px; font-size: 13px; }
-    .grid { display: grid; gap: 16px; }
-    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-    .grid-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-    h2 { font-size: clamp(22px, 3vw, 34px); margin: 34px 0 14px; }
-    h3 { margin: 0 0 10px; font-size: 22px; }
-    ul { margin: 0; padding-left: 20px; }
-    li { color: var(--muted); margin-bottom: 8px; }
-    .stats strong { display: block; color: var(--ok); font-size: 28px; margin-bottom: 6px; }
-    .cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 10px 14px;
-      background: var(--panel2);
-      color: var(--text);
-      text-decoration: none;
-      font-weight: 600;
-    }
-    .btn:hover { border-color: var(--accent); }
-    .muted { color: var(--muted); }
-    code { color: var(--warn); }
+    :root { --bg:#09101d; --panel:#121933; --panel2:#172243; --text:#eef3ff; --muted:#a9b6d3; --line:#2a3768; --accent:#7cc9ff; --ok:#8effc8; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif; background:linear-gradient(180deg,#09101d 0%,#0b1020 100%); color:var(--text); line-height:1.6; }
+    a { color:var(--accent); }
+    .wrap { max-width:1180px; margin:0 auto; padding:28px 18px 88px; }
+    .hero,.card { background:var(--panel); border:1px solid var(--line); border-radius:24px; padding:24px; box-shadow:0 14px 40px rgba(0,0,0,.2); }
+    .grid { display:grid; gap:16px; } .grid-2 { grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); } .grid-4 { grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+    .pillrow,.cta { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+    .pill,.btn { border:1px solid var(--line); border-radius:999px; padding:8px 12px; background:rgba(255,255,255,.03); color:var(--muted); text-decoration:none; }
+    .btn { border-radius:14px; color:var(--text); background:var(--panel2); font-weight:600; }
+    h1 { font-size:clamp(32px,4.8vw,54px); line-height:1.18; margin:0 0 10px; }
+    h2 { font-size:clamp(22px,3vw,34px); margin:34px 0 14px; }
+    h3 { margin:0 0 10px; font-size:22px; }
+    p, li { color:var(--muted); }
+    .stats strong { display:block; color:var(--ok); font-size:28px; margin-bottom:6px; }
   </style>
 </head>
 <body>
   <main class="wrap">
     <section class="hero">
-      <div class="eyebrow">RAG × LangGraph × Round Reports</div>
+      <div class="pillrow"><span class="pill">RAG × LangGraph × Round Reports</span><span class="pill">Prompt branch added through round9</span></div>
       <h1>라운드별 RAG 실험 리포트 모음</h1>
-      <p>AWS 한국어 RAG 문서를 기준으로 만든 round1~round4 실험 결과를 한곳에 모았다. 각 라운드는 별도 HTML/JSON 산출물과 스크립트를 유지한다. 현재 공개본은 mock 파이프라인 기반이며, 실제 문서 fetch·chunk·route·retrieval trace·judge report는 전부 포함한다.</p>
-      <div class="pillrow">
-        <span class="pill">Korean source doc</span>
-        <span class="pill">HTML reports</span>
-        <span class="pill">JSON artifacts</span>
-        <span class="pill">GitHub Pages</span>
-      </div>
+      <p>AWS 한국어 RAG 문서를 기준으로 만든 round1~round9 실험 결과를 한곳에 모았다. round5~round9는 구조만 더 붙이기보다 prompt/query branch를 실제로 늘려서 무엇이 바뀌었는지 HTML에 드러나도록 확장했다.</p>
       <div class="cta">
-        <a class="btn" href="./round4_ko.html">최신 round4 보기</a>
-        <a class="btn" href="./round3_ko.html">round3 보기</a>
+        <a class="btn" href="./round9_ko.html">최신 round9 보기</a>
+        <a class="btn" href="./round8_ko.html">round8 보기</a>
         <a class="btn" href="https://github.com/hakvision/rag-langgraph-benefits">GitHub repo</a>
       </div>
     </section>
-
     <section>
       <h2>현재 요약</h2>
       <div class="grid grid-4">
-        <article class="card stats"><strong>round4</strong><p>retrieval judge / answer judge 분리</p></article>
-        <article class="card stats"><strong>67.5</strong><p>round4 avg judge score</p></article>
-        <article class="card stats"><strong>64.3 → 67.5</strong><p>round3 대비 점수 개선</p></article>
-        <article class="card stats"><strong>5</strong><p>answer regeneration count</p></article>
+        <article class="card stats"><strong>round9</strong><p>judge-guided self refine</p></article>
+        <article class="card stats"><strong>86.3</strong><p>latest avg judge score</p></article>
+        <article class="card stats"><strong>67.5 → 86.3</strong><p>round4 대비 개선</p></article>
+        <article class="card stats"><strong>3</strong><p>latest answer revisions</p></article>
       </div>
     </section>
-
+    <section>
+      <h2>Prompt branch timeline</h2>
+      <div class="grid grid-2">
+        <article class="card"><h3>Round5</h3><p>query rewrite + step-back prompt</p></article>
+        <article class="card"><h3>Round6</h3><p>subquery decomposition + multi-query fusion</p></article>
+        <article class="card"><h3>Round7</h3><p>evidence distill before answer</p></article>
+        <article class="card"><h3>Round8</h3><p>citation-constrained answer template</p></article>
+        <article class="card"><h3>Round9</h3><p>judge-guided self refine</p></article>
+      </div>
+    </section>
     <section>
       <h2>라운드별 링크</h2>
       <div class="grid grid-2">
-        <article class="card">
-          <h3>Round1 KO</h3>
-          <ul>
-            <li>baseline retrieval + quality gate</li>
-            <li>문서: AWS 한국어 RAG 설명 페이지</li>
-          </ul>
-          <div class="cta">
-            <a class="btn" href="./round1_ko.html">HTML</a>
-            <a class="btn" href="./artifacts/round1_ko_summary.json">summary.json</a>
-            <a class="btn" href="./artifacts/round1_ko_results.json">results.json</a>
-          </div>
-        </article>
-        <article class="card">
-          <h3>Round2 KO</h3>
-          <ul>
-            <li>reranker 추가</li>
-            <li>round1 / round2 구조 비교 포함</li>
-          </ul>
-          <div class="cta">
-            <a class="btn" href="./round2_ko.html">HTML</a>
-            <a class="btn" href="./artifacts/round2_ko_summary.json">summary.json</a>
-            <a class="btn" href="./artifacts/round2_ko_results.json">results.json</a>
-          </div>
-        </article>
-        <article class="card">
-          <h3>Round3 KO</h3>
-          <ul>
-            <li>hybrid retrieval + RRF + reranker</li>
-            <li>round2 대비 avg judge score 53.8 → 64.3</li>
-          </ul>
-          <div class="cta">
-            <a class="btn" href="./round3_ko.html">HTML</a>
-            <a class="btn" href="./artifacts/round3_ko_summary.json">summary.json</a>
-            <a class="btn" href="./artifacts/round3_ko_results.json">results.json</a>
-          </div>
-        </article>
-        <article class="card">
-          <h3>Round4 KO</h3>
-          <ul>
-            <li>retrieval judge / answer judge 분리</li>
-            <li>answer judge 약점 시 regenerate once</li>
-          </ul>
-          <div class="cta">
-            <a class="btn" href="./round4_ko.html">HTML</a>
-            <a class="btn" href="./artifacts/round4_ko_summary.json">summary.json</a>
-            <a class="btn" href="./artifacts/round4_ko_results.json">results.json</a>
-          </div>
-        </article>
-      </div>
+            <article class="card">
+              <h3>Round1 KO</h3>
+              <ul>
+                <li>baseline retrieval + quality gate</li>
+                <li>avg judge score: 52.9</li>
+              </ul>
+              <div class="cta">
+                <a class="btn" href="./round1_ko.html">HTML</a>
+                <a class="btn" href="./artifacts/round1_ko_summary.json">summary.json</a>
+                <a class="btn" href="./artifacts/round1_ko_results.json">results.json</a>
+              </div>
+            </article>
+            
+            <article class="card">
+              <h3>Round2 KO</h3>
+              <ul>
+                <li>reranker 추가</li>
+                <li>avg judge score: 53.8</li>
+              </ul>
+              <div class="cta">
+                <a class="btn" href="./round2_ko.html">HTML</a>
+                <a class="btn" href="./artifacts/round2_ko_summary.json">summary.json</a>
+                <a class="btn" href="./artifacts/round2_ko_results.json">results.json</a>
+              </div>
+            </article>
+            
+            <article class="card">
+              <h3>Round3 KO</h3>
+              <ul>
+                <li>hybrid retrieval + RRF + reranker</li>
+                <li>avg judge score: 64.3</li>
+              </ul>
+              <div class="cta">
+                <a class="btn" href="./round3_ko.html">HTML</a>
+                <a class="btn" href="./artifacts/round3_ko_summary.json">summary.json</a>
+                <a class="btn" href="./artifacts/round3_ko_results.json">results.json</a>
+              </div>
+            </article>
+            
+            <article class="card">
+              <h3>Round4 KO</h3>
+              <ul>
+                <li>retrieval judge / answer judge 분리</li>
+                <li>avg judge score: 67.5</li>
+              </ul>
+              <div class="cta">
+                <a class="btn" href="./round4_ko.html">HTML</a>
+                <a class="btn" href="./artifacts/round4_ko_summary.json">summary.json</a>
+                <a class="btn" href="./artifacts/round4_ko_results.json">results.json</a>
+              </div>
+            </article>
+            
+            <article class="card">
+              <h3>Round5 KO</h3>
+              <ul>
+                <li>query rewrite + step-back prompt</li>
+                <li>avg judge score: 62.6</li>
+              </ul>
+              <div class="cta">
+                <a class="btn" href="./round5_ko.html">HTML</a>
+                <a class="btn" href="./artifacts/round5_ko_summary.json">summary.json</a>
+                <a class="btn" href="./artifacts/round5_ko_results.json">results.json</a>
+              </div>
+            </article>
+            
+            <article class="card">
+              <h3>Round6 KO</h3>
+              <ul>
+                <li>subquery decomposition + multi-query fusion</li>
+                <li>avg judge score: 63.9</li>
+              </ul>
+              <div class="cta">
+                <a class="btn" href="./round6_ko.html">HTML</a>
+                <a class="btn" href="./artifacts/round6_ko_summary.json">summary.json</a>
+                <a class="btn" href="./artifacts/round6_ko_results.json">results.json</a>
+              </div>
+            </article>
+            
+            <article class="card">
+              <h3>Round7 KO</h3>
+              <ul>
+                <li>evidence distill before answer</li>
+                <li>avg judge score: 65.7</li>
+              </ul>
+              <div class="cta">
+                <a class="btn" href="./round7_ko.html">HTML</a>
+                <a class="btn" href="./artifacts/round7_ko_summary.json">summary.json</a>
+                <a class="btn" href="./artifacts/round7_ko_results.json">results.json</a>
+              </div>
+            </article>
+            
+            <article class="card">
+              <h3>Round8 KO</h3>
+              <ul>
+                <li>citation-constrained answer template</li>
+                <li>avg judge score: 86.3</li>
+              </ul>
+              <div class="cta">
+                <a class="btn" href="./round8_ko.html">HTML</a>
+                <a class="btn" href="./artifacts/round8_ko_summary.json">summary.json</a>
+                <a class="btn" href="./artifacts/round8_ko_results.json">results.json</a>
+              </div>
+            </article>
+            
+            <article class="card">
+              <h3>Round9 KO</h3>
+              <ul>
+                <li>judge-guided self refine</li>
+                <li>avg judge score: 86.3</li>
+              </ul>
+              <div class="cta">
+                <a class="btn" href="./round9_ko.html">HTML</a>
+                <a class="btn" href="./artifacts/round9_ko_summary.json">summary.json</a>
+                <a class="btn" href="./artifacts/round9_ko_results.json">results.json</a>
+              </div>
+            </article>
+            </div>
     </section>
-
     <section>
       <h2>재현용 파일</h2>
       <div class="grid grid-2">
-        <article class="card">
-          <h3>실험 스크립트</h3>
-          <ul>
-            <li><a href="./round1_ko_experiment.py">round1_ko_experiment.py</a></li>
-            <li><a href="./round2_ko_experiment.py">round2_ko_experiment.py</a></li>
-            <li><a href="./round3_ko_experiment.py">round3_ko_experiment.py</a></li>
-            <li><a href="./round4_ko_experiment.py">round4_ko_experiment.py</a></li>
-          </ul>
-        </article>
-        <article class="card">
-          <h3>메모</h3>
-          <ul>
-            <li>현재 타이밍은 mock 파이프라인 기준이라 실제 모델 추론 속도를 뜻하지 않음</li>
-            <li>GitHub Pages 루트는 이 <code>index.html</code>을 랜딩 페이지로 사용</li>
-            <li>각 라운드는 별도 HTML/JSON으로 보존</li>
-          </ul>
-        </article>
+        <article class="card"><h3>실험 스크립트</h3><ul><li><a href="./round1_ko_experiment.py">round1_ko_experiment.py</a></li>
+<li><a href="./round2_ko_experiment.py">round2_ko_experiment.py</a></li>
+<li><a href="./round3_ko_experiment.py">round3_ko_experiment.py</a></li>
+<li><a href="./round4_ko_experiment.py">round4_ko_experiment.py</a></li>
+<li><a href="./round5_to_9_ko_experiment.py">round5_to_9_ko_experiment.py</a></li></ul></article>
+        <article class="card"><h3>메모</h3><ul><li>현재 타이밍은 mock 파이프라인 기준이라 실제 모델 추론 속도를 뜻하지 않음</li><li>GitHub Pages 루트는 이 index.html을 랜딩 페이지로 사용</li><li>round5~round9는 prompt/query branch 변화가 핵심</li></ul></article>
       </div>
     </section>
   </main>
