@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang='ko'>
+<head>
+  <meta charset='utf-8' />
+  <meta name='viewport' content='width=device-width, initial-scale=1' />
+  <title>Round11 KO · Round10 Ablation Study</title>
+  <style>
+    :root { --bg:#09101d; --panel:#121933; --panel2:#172243; --text:#eef3ff; --muted:#a9b6d3; --line:#2a3768; --accent:#7cc9ff; --ok:#8effc8; --warn:#ffd479; --bad:#ff9aa5; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:linear-gradient(180deg,#09101d 0%,#0b1020 100%); color:var(--text); line-height:1.6; }
+    .wrap { max-width:1320px; margin:0 auto; padding:28px 18px 80px; }
+    .hero,.card,.panel { background:var(--panel); border:1px solid var(--line); border-radius:22px; padding:20px; box-shadow:0 12px 36px rgba(0,0,0,.22); }
+    .hero h1 { margin:0 0 10px; font-size:clamp(30px,4vw,52px); }
+    .eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.08em; font-size:12px; margin-bottom:8px; }
+    .pillrow { display:flex; flex-wrap:wrap; gap:8px; }
+    .pill { border:1px solid var(--line); border-radius:999px; padding:7px 12px; font-size:13px; color:var(--muted); background:rgba(255,255,255,.03); }
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-top:18px; }
+    .stats .panel strong { display:block; color:var(--ok); font-size:28px; margin-bottom:6px; }
+    .grid.two { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .variant { margin-top:18px; }
+    .flowline { margin:12px 0; padding:14px 16px; border-radius:16px; border:1px solid #30457c; background:linear-gradient(180deg,rgba(124,201,255,.08),rgba(255,255,255,.02)); font-weight:800; font-size:18px; }
+    table { width:100%; border-collapse:collapse; margin-top:8px; }
+    th,td { border-top:1px solid var(--line); padding:10px; text-align:left; vertical-align:top; font-size:14px; }
+    th { color:var(--accent); font-size:13px; }
+    p, li { color:var(--muted); }
+    h2,h3,h4 { margin:0 0 10px; }
+    ul,ol { margin:0; padding-left:20px; }
+    a { color:var(--accent); }
+    @media (max-width:980px) { .grid.two { grid-template-columns:1fr; } .flowline { font-size:16px; } }
+  </style>
+</head>
+<body>
+  <main class='wrap'>
+    <section class='hero'>
+      <div class='eyebrow'>round11 · ablation study · ko</div>
+      <h1>Round11 · round10 노드 제거 실험</h1>
+      <p>round10의 adaptive combination graph에서 노드를 하나씩 빼면서 10개 질문 전부를 다시 돌렸다. 목적은 <strong>어떤 노드가 실제 평균 점수와 질문별 안정성에 가장 크게 기여했는지</strong>를 보는 것이다.</p>
+      <div class='pillrow'>
+        <span class='pill'>provider: mock</span>
+        <span class='pill'>variants: 11</span>
+        <span class='pill'>questions: 10</span>
+        <span class='pill'>baseline round10 avg: 90.2</span>
+      </div>
+      <div class='stats'>
+        <article class='panel'><strong>90.2</strong><span>round10 baseline</span></article>
+        <article class='panel'><strong>-18.9</strong><span>largest drop</span></article>
+        <article class='panel'><strong>- citation answer template</strong><span>most effective node</span></article>
+        <article class='panel'><strong>- reranker</strong><span>smallest impact ablation</span></article>
+      </div>
+    </section>
+
+    <section class='card variant'>
+      <div class='eyebrow'>round10 structure</div>
+      <h2>Round10 원본 구조를 제대로 적어두면</h2>
+      <div class='flowline'>질문 분류 → question_type_router → adaptive query plan → retrieval + rerank → retrieval judge → rescue(if needed) → support stitch → evidence distill → citation answer → answer refine(if needed) → 답변</div>
+      <div class='grid two'>
+        <article class='panel'>
+          <h3>조건부 규칙</h3>
+          <ul>
+            <li>simple_fact면 짧은 focus branch</li>
+            <li>abstract_why면 rewrite + step-back</li>
+            <li>multi_part면 subquery decomposition</li>
+            <li>retrieval quality 낮으면 14B rescue 1회</li>
+            <li>support coverage 비면 관련 섹션 청크 stitch</li>
+            <li>answer score 낮으면 refine 1회</li>
+          </ul>
+        </article>
+        <article class='panel'>
+          <h3>실험 해석법</h3>
+          <ul>
+            <li>각 ablation은 round10에서 해당 노드만 제거한 버전이다.</li>
+            <li>점수 하락폭이 클수록 그 노드가 효과적이었다는 뜻이다.</li>
+            <li>flow는 scanability 우선으로 간단한 화살표 형태로 보여준다.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class='card variant'>
+      <div class='eyebrow'>flow comparison</div>
+      <h2>노드 하나씩 제거한 전체 플로우 비교</h2>
+      
+    <article class='card variant'>
+      <div class='eyebrow'>ablation #1</div>
+      <h3>Round10 baseline</h3>
+      <div class='pillrow'>
+        <span class='pill'>avg 90.2</span>
+        <span class='pill' style='color:#8effc8;border-color:#8effc8'>vs baseline +0.0</span>
+        <span class='pill'>removed: none</span>
+      </div>
+      <div class='flowline'>질문 분류 → question_type_router → adaptive query plan → retrieval + rerank → retrieval judge → rescue(if needed) → support stitch → evidence distill → citation answer → answer refine(if needed) → 답변</div>
+      <p>round10 원본 구조. 모든 조건부 노드를 유지한 기준선.</p>
+      <div class='grid two'>
+        <article class='panel'><h4>질문별 점수</h4><ul><li>Q1: 93.7</li><li>Q2: 87.2</li><li>Q3: 84.0</li><li>Q4: 92.0</li><li>Q5: 89.6</li><li>Q6: 89.6</li><li>Q7: 90.7</li><li>Q8: 93.7</li><li>Q9: 92.0</li><li>Q10: 89.0</li></ul></article>
+        <article class='panel'><h4>메모</h4><ul><li>retrieval rescues: 2</li><li>answer revisions: 5</li></ul></article>
+      </div>
+    </article>
+    
+
+    <article class='card variant'>
+      <div class='eyebrow'>ablation #2</div>
+      <h3>- question_type_router</h3>
+      <div class='pillrow'>
+        <span class='pill'>avg 90.5</span>
+        <span class='pill' style='color:#8effc8;border-color:#8effc8'>vs baseline +0.3</span>
+        <span class='pill'>removed: question_type_router</span>
+      </div>
+      <div class='flowline'>질문 분류 → generic query plan → retrieval + rerank → retrieval judge → rescue(if needed) → support stitch → evidence distill → citation answer → answer refine(if needed) → 답변</div>
+      <p>질문 타입 분기를 제거하면 abstract/multi-part 질문도 같은 경로로 처리된다.</p>
+      <div class='grid two'>
+        <article class='panel'><h4>질문별 점수</h4><ul><li>Q1: 97.1</li><li>Q2: 89.6</li><li>Q3: 84.0</li><li>Q4: 92.0</li><li>Q5: 89.6</li><li>Q6: 84.8</li><li>Q7: 90.7</li><li>Q8: 93.7</li><li>Q9: 92.0</li><li>Q10: 92.0</li></ul></article>
+        <article class='panel'><h4>메모</h4><ul><li>retrieval rescues: 3</li><li>answer revisions: 4</li></ul></article>
+      </div>
+    </article>
+    
+
+    <article class='card variant'>
+      <div class='eyebrow'>ablation #3</div>
+      <h3>- abstract rewrite/step-back</h3>
+      <div class='pillrow'>
+        <span class='pill'>avg 90.4</span>
+        <span class='pill' style='color:#8effc8;border-color:#8effc8'>vs baseline +0.2</span>
+        <span class='pill'>removed: rewrite + step-back branch</span>
+      </div>
+      <div class='flowline'>질문 분류 → question_type_router → (abstract branch 제거) → retrieval + rerank → retrieval judge → rescue(if needed) → support stitch → evidence distill → citation answer → answer refine(if needed) → 답변</div>
+      <p>importance/trust/cost 계열에서 rewrite·step-back이 실제로 유효했는지 본다.</p>
+      <div class='grid two'>
+        <article class='panel'><h4>질문별 점수</h4><ul><li>Q1: 93.7</li><li>Q2: 89.6</li><li>Q3: 84.0</li><li>Q4: 92.0</li><li>Q5: 89.6</li><li>Q6: 89.6</li><li>Q7: 90.7</li><li>Q8: 93.7</li><li>Q9: 92.0</li><li>Q10: 89.0</li></ul></article>
+        <article class='panel'><h4>메모</h4><ul><li>retrieval rescues: 3</li><li>answer revisions: 5</li></ul></article>
+      </div>
+    </article>
+    
+
+    <article class='card variant'>
+      <div class='eyebrow'>ablation #4</div>
+      <h3>- multi-part subquery</h3>
+      <div class='pillrow'>
+        <span class='pill'>avg 90.0</span>
+        <span class='pill' style='color:#ff9aa5;border-color:#ff9aa5'>vs baseline -0.2</span>
+        <span class='pill'>removed: subquery decomposition</span>
+      </div>
+      <div class='flowline'>질문 분류 → question_type_router → (multi-part subquery 제거) → retrieval + rerank → retrieval judge → rescue(if needed) → support stitch → evidence distill → citation answer → answer refine(if needed) → 답변</div>
+      <p>workflow/comparison/aws-support에서 subquery decomposition의 기여도를 본다.</p>
+      <div class='grid two'>
+        <article class='panel'><h4>질문별 점수</h4><ul><li>Q1: 93.7</li><li>Q2: 87.2</li><li>Q3: 84.0</li><li>Q4: 92.0</li><li>Q5: 89.6</li><li>Q6: 84.8</li><li>Q7: 90.7</li><li>Q8: 93.7</li><li>Q9: 92.0</li><li>Q10: 92.0</li></ul></article>
+        <article class='panel'><h4>메모</h4><ul><li>retrieval rescues: 2</li><li>answer revisions: 4</li></ul></article>
+      </div>
+    </article>
+    
+
+    <article class='card variant'>
+      <div class='eyebrow'>ablation #5</div>
+      <h3>- reranker</h3>
+      <div class='pillrow'>
+        <span class='pill'>avg 90.7</span>
+        <span class='pill' style='color:#8effc8;border-color:#8effc8'>vs baseline +0.5</span>
+        <span class='pill'>removed: reranker</span>
+      </div>
+      <div class='flowline'>질문 분류 → question_type_router → adaptive query plan → retrieval only → retrieval judge → rescue(if needed) → support stitch → evidence distill → citation answer → answer refine(if needed) → 답변</div>
+      <p>retrieval 후보 정렬이 빠지면 어떤 질문이 가장 흔들리는지 본다.</p>
+      <div class='grid two'>
+        <article class='panel'><h4>질문별 점수</h4><ul><li>Q1: 97.1</li><li>Q2: 89.6</li><li>Q3: 84.0</li><li>Q4: 92.0</li><li>Q5: 89.6</li><li>Q6: 89.6</li><li>Q7: 90.7</li><li>Q8: 93.7</li><li>Q9: 92.0</li><li>Q10: 89.0</li></ul></article>
+        <article class='panel'><h4>메모</h4><ul><li>retrieval rescues: 2</li><li>answer revisions: 5</li></ul></article>
+      </div>
+    </article>
+    
+
+    <article class='card variant'>
+      <div class='eyebrow'>ablation #6</div>
+      <h3>- retrieval judge</h3>
+      <div class='pillrow'>
+        <span class='pill'>avg 89.7</span>
+        <span class='pill' style='color:#ff9aa5;border-color:#ff9aa5'>vs baseline -0.5</span>
+        <span class='pill'>removed: retrieval judge</span>
+      </div>
+      <div class='flowline'>질문 분류 → question_type_router → adaptive query plan → retrieval + rerank → support stitch → evidence distill → citation answer → answer refine(if needed) → 답변</div>
+      <p>검색 품질 판단 없이 바로 answer로 가면 score가 얼마나 깎이는지 본다.</p>
+      <div class='grid two'>
+        <article class='panel'><h4>질문별 점수</h4><ul><li>Q1: 93.7</li><li>Q2: 87.2</li><li>Q3: 84.0</li><li>Q4: 92.0</li><li>Q5: 89.6</li><li>Q6: 84.8</li><li>Q7: 90.7</li><li>Q8: 93.7</li><li>Q9: 92.0</li><li>Q10: 89.0</li></ul></article>
+        <article class='panel'><h4>메모</h4><ul><li>retrieval rescues: 0</li><li>answer revisions: 5</li></ul></article>
+      </div>
+    </article>
+    
+
+    <article class='card variant'>
+      <div class='eyebrow'>ablation #7</div>
+      <h3>- retrieval rescue</h3>
+      <div class='pillrow'>
+        <span class='pill'>avg 89.7</span>
+        <span class='pill' style='color:#ff9aa5;border-color:#ff9aa5'>vs baseline -0.5</span>
+        <span class='pill'>removed: retrieval rescue</span>
+      </div>
+      <div class='flowline'>질문 분류 → question_type_router → adaptive query plan → retrieval + rerank → retrieval judge → support stitch → evidence distill → citation answer → answer refine(if needed) → 답변</div>
+      <p>judge는 유지하되 검색 rescue만 빼서 conditional retry 자체의 가치를 본다.</p>
+      <div class='grid two'>
+        <article class='panel'><h4>질문별 점수</h4><ul><li>Q1: 93.7</li><li>Q2: 87.2</li><li>Q3: 84.0</li><li>Q4: 92.0</li><li>Q5: 89.6</li><li>Q6: 84.8</li><li>Q7: 90.7</li><li>Q8: 93.7</li><li>Q9: 92.0</li><li>Q10: 89.0</li></ul></article>
+        <article class='panel'><h4>메모</h4><ul><li>retrieval rescues: 0</li><li>answer revisions: 5</li></ul></article>
+      </div>
+    </article>
+    
+
+    <article class='card variant'>
+      <div class='eyebrow'>ablation #8</div>
+      <h3>- support stitch</h3>
+      <div class='pillrow'>
+        <span class='pill'>avg 85.8</span>
+        <span class='pill' style='color:#ff9aa5;border-color:#ff9aa5'>vs baseline -4.4</span>
+        <span class='pill'>removed: support coverage stitch</span>
+      </div>
+      <div class='flowline'>질문 분류 → question_type_router → adaptive query plan → retrieval + rerank → retrieval judge → rescue(if needed) → evidence distill → citation answer → answer refine(if needed) → 답변</div>
+      <p>관련 섹션 보강 없이도 충분했는지, 아니면 support coverage stitch가 실질 점프를 만들었는지 본다.</p>
+      <div class='grid two'>
+        <article class='panel'><h4>질문별 점수</h4><ul><li>Q1: 93.7</li><li>Q2: 87.2</li><li>Q3: 83.0</li><li>Q4: 79.5</li><li>Q5: 64.6</li><li>Q6: 84.6</li><li>Q7: 90.7</li><li>Q8: 93.7</li><li>Q9: 92.0</li><li>Q10: 89.0</li></ul></article>
+        <article class='panel'><h4>메모</h4><ul><li>retrieval rescues: 2</li><li>answer revisions: 6</li></ul></article>
+      </div>
+    </article>
+    
+
+    <article class='card variant'>
+      <div class='eyebrow'>ablation #9</div>
+      <h3>- evidence distill</h3>
+      <div class='pillrow'>
+        <span class='pill'>avg 90.2</span>
+        <span class='pill' style='color:#8effc8;border-color:#8effc8'>vs baseline +0.0</span>
+        <span class='pill'>removed: evidence distill</span>
+      </div>
+      <div class='flowline'>질문 분류 → question_type_router → adaptive query plan → retrieval + rerank → retrieval judge → rescue(if needed) → support stitch → citation answer → answer refine(if needed) → 답변</div>
+      <p>핵심 근거 압축 없이 원문 청크를 바로 답변에 넣으면 어떻게 되는지 본다.</p>
+      <div class='grid two'>
+        <article class='panel'><h4>질문별 점수</h4><ul><li>Q1: 93.7</li><li>Q2: 87.2</li><li>Q3: 84.0</li><li>Q4: 92.0</li><li>Q5: 89.6</li><li>Q6: 89.6</li><li>Q7: 90.7</li><li>Q8: 93.7</li><li>Q9: 92.0</li><li>Q10: 89.0</li></ul></article>
+        <article class='panel'><h4>메모</h4><ul><li>retrieval rescues: 2</li><li>answer revisions: 5</li></ul></article>
+      </div>
+    </article>
+    
+
+    <article class='card variant'>
+      <div class='eyebrow'>ablation #10</div>
+      <h3>- citation answer template</h3>
+      <div class='pillrow'>
+        <span class='pill'>avg 71.3</span>
+        <span class='pill' style='color:#ff9aa5;border-color:#ff9aa5'>vs baseline -18.9</span>
+        <span class='pill'>removed: citation answer template</span>
+      </div>
+      <div class='flowline'>질문 분류 → question_type_router → adaptive query plan → retrieval + rerank → retrieval judge → rescue(if needed) → support stitch → evidence distill → plain answer → answer refine(if needed) → 답변</div>
+      <p>round8에서 점프를 만들었던 citation template의 기여도를 다시 검증한다.</p>
+      <div class='grid two'>
+        <article class='panel'><h4>질문별 점수</h4><ul><li>Q1: 66.2</li><li>Q2: 78.0</li><li>Q3: 84.0</li><li>Q4: 82.8</li><li>Q5: 34.6</li><li>Q6: 75.8</li><li>Q7: 72.4</li><li>Q8: 75.4</li><li>Q9: 64.5</li><li>Q10: 79.8</li></ul></article>
+        <article class='panel'><h4>메모</h4><ul><li>retrieval rescues: 2</li><li>answer revisions: 10</li></ul></article>
+      </div>
+    </article>
+    
+
+    <article class='card variant'>
+      <div class='eyebrow'>ablation #11</div>
+      <h3>- answer refine</h3>
+      <div class='pillrow'>
+        <span class='pill'>avg 90.2</span>
+        <span class='pill' style='color:#8effc8;border-color:#8effc8'>vs baseline +0.0</span>
+        <span class='pill'>removed: answer refine</span>
+      </div>
+      <div class='flowline'>질문 분류 → question_type_router → adaptive query plan → retrieval + rerank → retrieval judge → rescue(if needed) → support stitch → evidence distill → citation answer → 답변</div>
+      <p>마지막 1회 refine가 실제로 평균 점수에 얼마나 기여하는지 본다.</p>
+      <div class='grid two'>
+        <article class='panel'><h4>질문별 점수</h4><ul><li>Q1: 93.7</li><li>Q2: 87.2</li><li>Q3: 84.0</li><li>Q4: 92.0</li><li>Q5: 89.6</li><li>Q6: 89.6</li><li>Q7: 90.7</li><li>Q8: 93.7</li><li>Q9: 92.0</li><li>Q10: 89.0</li></ul></article>
+        <article class='panel'><h4>메모</h4><ul><li>retrieval rescues: 2</li><li>answer revisions: 0</li></ul></article>
+      </div>
+    </article>
+    
+    </section>
+
+    <section class='card variant'>
+      <div class='eyebrow'>detailed runs</div>
+      <h2>variant별 질문 점수와 실제 flow</h2>
+      <section class='card'><div class='eyebrow'>Round10 baseline</div><h3>none</h3><table><thead><tr><th>Q</th><th>category</th><th>type</th><th>score</th><th>top chunks</th><th>flow</th></tr></thead><tbody><tr><td>Q1</td><td>definition</td><td>simple_fact</td><td>93.7</td><td>K01, K14, K13, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q2</td><td>importance</td><td>abstract_why</td><td>87.2</td><td>K02, K07, K13, K06</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q3</td><td>benefits</td><td>simple_fact</td><td>84.0</td><td>K03, K04, K05, K06</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q4</td><td>cost</td><td>abstract_why</td><td>92.0</td><td>K03, K01, K04, K14</td><td>classify_8b → 14b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q5</td><td>trust</td><td>abstract_why</td><td>89.6</td><td>K05, K06, K02, K08</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q6</td><td>workflow</td><td>multi_part</td><td>89.6</td><td>K08, K09, K10, K11</td><td>classify_8b → 8b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q7</td><td>retrieval</td><td>simple_fact</td><td>90.7</td><td>K10, K08, K05, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q8</td><td>prompting</td><td>simple_fact</td><td>93.7</td><td>K11, K02, K10, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q9</td><td>comparison</td><td>multi_part</td><td>92.0</td><td>K13, K14, K10, K01</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q10</td><td>aws-support</td><td>multi_part</td><td>89.0</td><td>K14, K13, K02, K03</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr></tbody></table></section><section class='card'><div class='eyebrow'>- question_type_router</div><h3>question_type_router</h3><table><thead><tr><th>Q</th><th>category</th><th>type</th><th>score</th><th>top chunks</th><th>flow</th></tr></thead><tbody><tr><td>Q1</td><td>definition</td><td>generic</td><td>97.1</td><td>K01, K14, K13, K10</td><td>classify_8b → 8b → question_type_router 제거 → generic path → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q2</td><td>importance</td><td>generic</td><td>89.6</td><td>K02, K14, K07, K13</td><td>classify_8b → 8b → question_type_router 제거 → generic path → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q3</td><td>benefits</td><td>generic</td><td>84.0</td><td>K03, K04, K05, K06</td><td>classify_8b → 8b → question_type_router 제거 → generic path → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q4</td><td>cost</td><td>generic</td><td>92.0</td><td>K03, K01, K04, K14</td><td>classify_8b → 14b → question_type_router 제거 → generic path → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q5</td><td>trust</td><td>generic</td><td>89.6</td><td>K05, K06, K08, K02</td><td>classify_8b → 8b → question_type_router 제거 → generic path → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q6</td><td>workflow</td><td>generic</td><td>84.8</td><td>K08, K09, K10, K11</td><td>classify_8b → 8b → question_type_router 제거 → generic path → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q7</td><td>retrieval</td><td>generic</td><td>90.7</td><td>K10, K08, K13, K05</td><td>classify_8b → 8b → question_type_router 제거 → generic path → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q8</td><td>prompting</td><td>generic</td><td>93.7</td><td>K11, K01, K02, K10</td><td>classify_8b → 8b → question_type_router 제거 → generic path → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q9</td><td>comparison</td><td>generic</td><td>92.0</td><td>K13, K14, K09, K10</td><td>classify_8b → 14b → question_type_router 제거 → generic path → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q10</td><td>aws-support</td><td>generic</td><td>92.0</td><td>K14, K13, K02, K09</td><td>classify_8b → 14b → question_type_router 제거 → generic path → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr></tbody></table></section><section class='card'><div class='eyebrow'>- abstract rewrite/step-back</div><h3>rewrite + step-back branch</h3><table><thead><tr><th>Q</th><th>category</th><th>type</th><th>score</th><th>top chunks</th><th>flow</th></tr></thead><tbody><tr><td>Q1</td><td>definition</td><td>simple_fact</td><td>93.7</td><td>K01, K14, K13, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q2</td><td>importance</td><td>abstract_why</td><td>89.6</td><td>K02, K14, K07, K13</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q3</td><td>benefits</td><td>simple_fact</td><td>84.0</td><td>K03, K04, K05, K06</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q4</td><td>cost</td><td>abstract_why</td><td>92.0</td><td>K03, K01, K04, K14</td><td>classify_8b → 14b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q5</td><td>trust</td><td>abstract_why</td><td>89.6</td><td>K05, K06, K08, K02</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q6</td><td>workflow</td><td>multi_part</td><td>89.6</td><td>K08, K09, K10, K11</td><td>classify_8b → 8b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q7</td><td>retrieval</td><td>simple_fact</td><td>90.7</td><td>K10, K08, K05, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q8</td><td>prompting</td><td>simple_fact</td><td>93.7</td><td>K11, K02, K10, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q9</td><td>comparison</td><td>multi_part</td><td>92.0</td><td>K13, K14, K10, K01</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q10</td><td>aws-support</td><td>multi_part</td><td>89.0</td><td>K14, K13, K02, K03</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr></tbody></table></section><section class='card'><div class='eyebrow'>- multi-part subquery</div><h3>subquery decomposition</h3><table><thead><tr><th>Q</th><th>category</th><th>type</th><th>score</th><th>top chunks</th><th>flow</th></tr></thead><tbody><tr><td>Q1</td><td>definition</td><td>simple_fact</td><td>93.7</td><td>K01, K14, K13, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q2</td><td>importance</td><td>abstract_why</td><td>87.2</td><td>K02, K07, K13, K06</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q3</td><td>benefits</td><td>simple_fact</td><td>84.0</td><td>K03, K04, K05, K06</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q4</td><td>cost</td><td>abstract_why</td><td>92.0</td><td>K03, K01, K04, K14</td><td>classify_8b → 14b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q5</td><td>trust</td><td>abstract_why</td><td>89.6</td><td>K05, K06, K02, K08</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q6</td><td>workflow</td><td>multi_part</td><td>84.8</td><td>K08, K09, K10, K11</td><td>classify_8b → 8b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q7</td><td>retrieval</td><td>simple_fact</td><td>90.7</td><td>K10, K08, K05, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q8</td><td>prompting</td><td>simple_fact</td><td>93.7</td><td>K11, K02, K10, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q9</td><td>comparison</td><td>multi_part</td><td>92.0</td><td>K13, K14, K09, K10</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q10</td><td>aws-support</td><td>multi_part</td><td>92.0</td><td>K14, K13, K02, K09</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr></tbody></table></section><section class='card'><div class='eyebrow'>- reranker</div><h3>reranker</h3><table><thead><tr><th>Q</th><th>category</th><th>type</th><th>score</th><th>top chunks</th><th>flow</th></tr></thead><tbody><tr><td>Q1</td><td>definition</td><td>simple_fact</td><td>97.1</td><td>K01, K14, K13, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 (reranker 제거) → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q2</td><td>importance</td><td>abstract_why</td><td>89.6</td><td>K02, K07, K13, K06</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 (reranker 제거) → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q3</td><td>benefits</td><td>simple_fact</td><td>84.0</td><td>K03, K04, K05, K06</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 (reranker 제거) → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 (reranker 제거) → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q4</td><td>cost</td><td>abstract_why</td><td>92.0</td><td>K03, K01, K04, K14</td><td>classify_8b → 14b → question_type_router → abstract_why → retrieval_pass_1 (reranker 제거) → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q5</td><td>trust</td><td>abstract_why</td><td>89.6</td><td>K05, K06, K08, K02</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 (reranker 제거) → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q6</td><td>workflow</td><td>multi_part</td><td>89.6</td><td>K08, K09, K10, K11</td><td>classify_8b → 8b → question_type_router → multi_part → retrieval_pass_1 (reranker 제거) → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 (reranker 제거) → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q7</td><td>retrieval</td><td>simple_fact</td><td>90.7</td><td>K10, K08, K05, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 (reranker 제거) → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q8</td><td>prompting</td><td>simple_fact</td><td>93.7</td><td>K11, K10, K02, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 (reranker 제거) → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q9</td><td>comparison</td><td>multi_part</td><td>92.0</td><td>K13, K14, K10, K01</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 (reranker 제거) → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q10</td><td>aws-support</td><td>multi_part</td><td>89.0</td><td>K14, K13, K02, K03</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 (reranker 제거) → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr></tbody></table></section><section class='card'><div class='eyebrow'>- retrieval judge</div><h3>retrieval judge</h3><table><thead><tr><th>Q</th><th>category</th><th>type</th><th>score</th><th>top chunks</th><th>flow</th></tr></thead><tbody><tr><td>Q1</td><td>definition</td><td>simple_fact</td><td>93.7</td><td>K01, K14, K13, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → evidence_distill → judge_answer</td></tr><tr><td>Q2</td><td>importance</td><td>abstract_why</td><td>87.2</td><td>K02, K07, K13, K06</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 + reranker → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q3</td><td>benefits</td><td>simple_fact</td><td>84.0</td><td>K03, K04, K05, K06</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q4</td><td>cost</td><td>abstract_why</td><td>92.0</td><td>K03, K01, K04, K14</td><td>classify_8b → 14b → question_type_router → abstract_why → retrieval_pass_1 + reranker → evidence_distill → judge_answer</td></tr><tr><td>Q5</td><td>trust</td><td>abstract_why</td><td>89.6</td><td>K05, K06, K02, K08</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 + reranker → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q6</td><td>workflow</td><td>multi_part</td><td>84.8</td><td>K08, K09, K10, K11</td><td>classify_8b → 8b → question_type_router → multi_part → retrieval_pass_1 + reranker → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q7</td><td>retrieval</td><td>simple_fact</td><td>90.7</td><td>K10, K08, K05, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → evidence_distill → judge_answer</td></tr><tr><td>Q8</td><td>prompting</td><td>simple_fact</td><td>93.7</td><td>K11, K02, K10, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → evidence_distill → judge_answer</td></tr><tr><td>Q9</td><td>comparison</td><td>multi_part</td><td>92.0</td><td>K13, K14, K10, K01</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 + reranker → evidence_distill → judge_answer</td></tr><tr><td>Q10</td><td>aws-support</td><td>multi_part</td><td>89.0</td><td>K14, K13, K02, K03</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 + reranker → evidence_distill → answer_refine_once → judge_answer</td></tr></tbody></table></section><section class='card'><div class='eyebrow'>- retrieval rescue</div><h3>retrieval rescue</h3><table><thead><tr><th>Q</th><th>category</th><th>type</th><th>score</th><th>top chunks</th><th>flow</th></tr></thead><tbody><tr><td>Q1</td><td>definition</td><td>simple_fact</td><td>93.7</td><td>K01, K14, K13, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q2</td><td>importance</td><td>abstract_why</td><td>87.2</td><td>K02, K07, K13, K06</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q3</td><td>benefits</td><td>simple_fact</td><td>84.0</td><td>K03, K04, K05, K06</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q4</td><td>cost</td><td>abstract_why</td><td>92.0</td><td>K03, K01, K04, K14</td><td>classify_8b → 14b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q5</td><td>trust</td><td>abstract_why</td><td>89.6</td><td>K05, K06, K02, K08</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q6</td><td>workflow</td><td>multi_part</td><td>84.8</td><td>K08, K09, K10, K11</td><td>classify_8b → 8b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q7</td><td>retrieval</td><td>simple_fact</td><td>90.7</td><td>K10, K08, K05, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q8</td><td>prompting</td><td>simple_fact</td><td>93.7</td><td>K11, K02, K10, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q9</td><td>comparison</td><td>multi_part</td><td>92.0</td><td>K13, K14, K10, K01</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q10</td><td>aws-support</td><td>multi_part</td><td>89.0</td><td>K14, K13, K02, K03</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr></tbody></table></section><section class='card'><div class='eyebrow'>- support stitch</div><h3>support coverage stitch</h3><table><thead><tr><th>Q</th><th>category</th><th>type</th><th>score</th><th>top chunks</th><th>flow</th></tr></thead><tbody><tr><td>Q1</td><td>definition</td><td>simple_fact</td><td>93.7</td><td>K14, K13, K01, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q2</td><td>importance</td><td>abstract_why</td><td>87.2</td><td>K02, K07, K13, K06</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q3</td><td>benefits</td><td>simple_fact</td><td>83.0</td><td>K05, K07, K06, K04</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q4</td><td>cost</td><td>abstract_why</td><td>79.5</td><td>K04, K01, K14, K12</td><td>classify_8b → 14b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q5</td><td>trust</td><td>abstract_why</td><td>64.6</td><td>K06, K02, K08, K11</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q6</td><td>workflow</td><td>multi_part</td><td>84.6</td><td>K12, K11, K09, K08</td><td>classify_8b → 8b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q7</td><td>retrieval</td><td>simple_fact</td><td>90.7</td><td>K10, K08, K05, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q8</td><td>prompting</td><td>simple_fact</td><td>93.7</td><td>K11, K02, K10, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q9</td><td>comparison</td><td>multi_part</td><td>92.0</td><td>K13, K14, K10, K01</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → judge_answer</td></tr><tr><td>Q10</td><td>aws-support</td><td>multi_part</td><td>89.0</td><td>K14, K13, K02, K03</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr></tbody></table></section><section class='card'><div class='eyebrow'>- evidence distill</div><h3>evidence distill</h3><table><thead><tr><th>Q</th><th>category</th><th>type</th><th>score</th><th>top chunks</th><th>flow</th></tr></thead><tbody><tr><td>Q1</td><td>definition</td><td>simple_fact</td><td>93.7</td><td>K01, K14, K13, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill 제거 → judge_answer</td></tr><tr><td>Q2</td><td>importance</td><td>abstract_why</td><td>87.2</td><td>K02, K07, K13, K06</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill 제거 → answer_refine_once → judge_answer</td></tr><tr><td>Q3</td><td>benefits</td><td>simple_fact</td><td>84.0</td><td>K03, K04, K05, K06</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 + reranker → judge_retrieval → answer → evidence_distill 제거 → answer_refine_once → judge_answer</td></tr><tr><td>Q4</td><td>cost</td><td>abstract_why</td><td>92.0</td><td>K03, K01, K04, K14</td><td>classify_8b → 14b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill 제거 → judge_answer</td></tr><tr><td>Q5</td><td>trust</td><td>abstract_why</td><td>89.6</td><td>K05, K06, K02, K08</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill 제거 → answer_refine_once → judge_answer</td></tr><tr><td>Q6</td><td>workflow</td><td>multi_part</td><td>89.6</td><td>K08, K09, K10, K11</td><td>classify_8b → 8b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 + reranker → judge_retrieval → answer → evidence_distill 제거 → answer_refine_once → judge_answer</td></tr><tr><td>Q7</td><td>retrieval</td><td>simple_fact</td><td>90.7</td><td>K10, K08, K05, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill 제거 → judge_answer</td></tr><tr><td>Q8</td><td>prompting</td><td>simple_fact</td><td>93.7</td><td>K11, K02, K10, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill 제거 → judge_answer</td></tr><tr><td>Q9</td><td>comparison</td><td>multi_part</td><td>92.0</td><td>K13, K14, K10, K01</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill 제거 → judge_answer</td></tr><tr><td>Q10</td><td>aws-support</td><td>multi_part</td><td>89.0</td><td>K14, K13, K02, K03</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill 제거 → answer_refine_once → judge_answer</td></tr></tbody></table></section><section class='card'><div class='eyebrow'>- citation answer template</div><h3>citation answer template</h3><table><thead><tr><th>Q</th><th>category</th><th>type</th><th>score</th><th>top chunks</th><th>flow</th></tr></thead><tbody><tr><td>Q1</td><td>definition</td><td>simple_fact</td><td>66.2</td><td>K01, K14, K13, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q2</td><td>importance</td><td>abstract_why</td><td>78.0</td><td>K02, K07, K13, K06</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q3</td><td>benefits</td><td>simple_fact</td><td>84.0</td><td>K03, K04, K05, K06</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q4</td><td>cost</td><td>abstract_why</td><td>82.8</td><td>K03, K01, K04, K14</td><td>classify_8b → 14b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q5</td><td>trust</td><td>abstract_why</td><td>34.6</td><td>K05, K06, K02, K08</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q6</td><td>workflow</td><td>multi_part</td><td>75.8</td><td>K08, K09, K10, K11</td><td>classify_8b → 8b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q7</td><td>retrieval</td><td>simple_fact</td><td>72.4</td><td>K10, K08, K05, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q8</td><td>prompting</td><td>simple_fact</td><td>75.4</td><td>K11, K02, K10, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q9</td><td>comparison</td><td>multi_part</td><td>64.5</td><td>K13, K14, K10, K01</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr><tr><td>Q10</td><td>aws-support</td><td>multi_part</td><td>79.8</td><td>K14, K13, K02, K03</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine_once → judge_answer</td></tr></tbody></table></section><section class='card'><div class='eyebrow'>- answer refine</div><h3>answer refine</h3><table><thead><tr><th>Q</th><th>category</th><th>type</th><th>score</th><th>top chunks</th><th>flow</th></tr></thead><tbody><tr><td>Q1</td><td>definition</td><td>simple_fact</td><td>93.7</td><td>K01, K14, K13, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine 제거 → judge_answer</td></tr><tr><td>Q2</td><td>importance</td><td>abstract_why</td><td>87.2</td><td>K02, K07, K13, K06</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine 제거 → judge_answer</td></tr><tr><td>Q3</td><td>benefits</td><td>simple_fact</td><td>84.0</td><td>K03, K04, K05, K06</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 + reranker → judge_retrieval → answer → evidence_distill → answer_refine 제거 → judge_answer</td></tr><tr><td>Q4</td><td>cost</td><td>abstract_why</td><td>92.0</td><td>K03, K01, K04, K14</td><td>classify_8b → 14b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine 제거 → judge_answer</td></tr><tr><td>Q5</td><td>trust</td><td>abstract_why</td><td>89.6</td><td>K05, K06, K02, K08</td><td>classify_8b → 8b → question_type_router → abstract_why → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine 제거 → judge_answer</td></tr><tr><td>Q6</td><td>workflow</td><td>multi_part</td><td>89.6</td><td>K08, K09, K10, K11</td><td>classify_8b → 8b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → escalate_to_14b → retrieval_rescue → retrieval_pass_2 + reranker → judge_retrieval → answer → evidence_distill → answer_refine 제거 → judge_answer</td></tr><tr><td>Q7</td><td>retrieval</td><td>simple_fact</td><td>90.7</td><td>K10, K08, K05, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine 제거 → judge_answer</td></tr><tr><td>Q8</td><td>prompting</td><td>simple_fact</td><td>93.7</td><td>K11, K02, K10, K09</td><td>classify_8b → 8b → question_type_router → simple_fact → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine 제거 → judge_answer</td></tr><tr><td>Q9</td><td>comparison</td><td>multi_part</td><td>92.0</td><td>K13, K14, K10, K01</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine 제거 → judge_answer</td></tr><tr><td>Q10</td><td>aws-support</td><td>multi_part</td><td>89.0</td><td>K14, K13, K02, K03</td><td>classify_8b → 14b → question_type_router → multi_part → retrieval_pass_1 + reranker → judge_retrieval → answer → evidence_distill → answer_refine 제거 → judge_answer</td></tr></tbody></table></section>
+    </section>
+  </main>
+</body>
+</html>

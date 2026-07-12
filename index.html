@@ -26,13 +26,13 @@
 <body>
   <main class="wrap">
     <section class="hero">
-      <div class="pillrow"><span class="pill">RAG × LangGraph × Round Reports</span><span class="pill">Prompt branch added through round10</span></div>
+      <div class="pillrow"><span class="pill">RAG × LangGraph × Round Reports</span><span class="pill">Prompt branch added through round11</span></div>
       <h1>라운드별 RAG 실험 리포트 모음</h1>
-      <p>AWS 한국어 RAG 문서를 기준으로 만든 round1~round10 실험 결과를 한곳에 모았다. round5~round9는 구조만 더 붙이기보다 prompt/query branch를 실제로 늘려서 무엇이 바뀌었는지 HTML에 드러나도록 확장했다.</p>
+      <p>AWS 한국어 RAG 문서를 기준으로 만든 round1~round11 실험 결과를 한곳에 모았다. round5~round9는 구조만 더 붙이기보다 prompt/query branch를 실제로 늘려서 무엇이 바뀌었는지 HTML에 드러나도록 확장했다.</p>
       <div class="cta">
         <a class="btn" href="./rounds_1_to_9_flowchart.html">1~9 flow chart 보기</a>
         <a class="btn" href="./rounds_1_to_9_summary.html">1~9 요약 보기</a>
-        <a class="btn" href="./round10_ko.html">최신 round10 보기</a>
+        <a class="btn" href="./round11_ko.html">최신 round11 보기</a>
         <a class="btn" href="./round8_ko.html">round8 보기</a>
         <a class="btn" href="https://github.com/hakvision/rag-langgraph-benefits">GitHub repo</a>
       </div>
@@ -40,10 +40,10 @@
     <section>
       <h2>현재 요약</h2>
       <div class="grid grid-4">
-        <article class="card stats"><strong>round10</strong><p>adaptive combination graph</p></article>
-        <article class="card stats"><strong>90.2</strong><p>latest avg judge score</p></article>
-        <article class="card stats"><strong>67.5 → 90.2</strong><p>round4 대비 개선</p></article>
-        <article class="card stats"><strong>5</strong><p>latest answer revisions</p></article>
+        <article class="card stats"><strong>round11</strong><p>round10 ablation study</p></article>
+        <article class="card stats"><strong>90.2</strong><p>latest baseline avg judge score</p></article>
+        <article class="card stats"><strong>67.5 → 90.2</strong><p>round4 대비 baseline 개선</p></article>
+        <article class="card stats"><strong>ablation</strong><p>node removal matrix</p></article>
       </div>
     </section>
     <section>
@@ -55,6 +55,7 @@
         <article class="card"><h3>Round8</h3><p>citation-constrained answer template</p></article>
         <article class="card"><h3>Round9</h3><p>judge-guided self refine</p></article>
         <article class="card"><h3>Round10</h3><p>adaptive combination graph</p></article>
+        <article class="card"><h3>Round11</h3><p>round10 ablation study</p></article>
       </div>
     </section>
     <section>
@@ -188,6 +189,18 @@
                 <a class="btn" href="./artifacts/round10_ko_results.json">results.json</a>
               </div>
             </article>
+                  <article class="card">
+              <h3>Round11 KO</h3>
+              <ul>
+                <li>round10 ablation study</li>
+                <li>baseline avg judge score: 90.2</li>
+              </ul>
+              <div class="cta">
+                <a class="btn" href="./round11_ko.html">HTML</a>
+                <a class="btn" href="./artifacts/round11_ko_summary.json">summary.json</a>
+                <a class="btn" href="./artifacts/round11_ko_results.json">results.json</a>
+              </div>
+            </article>
       </div>
     </section>
     <section>
@@ -198,7 +211,8 @@
 <li><a href="./round3_ko_experiment.py">round3_ko_experiment.py</a></li>
 <li><a href="./round4_ko_experiment.py">round4_ko_experiment.py</a></li>
 <li><a href="./round5_to_9_ko_experiment.py">round5_to_9_ko_experiment.py</a></li>
-            <li><a href="./round10_ko_experiment.py">round10_ko_experiment.py</a></li></ul></article>
+            <li><a href="./round10_ko_experiment.py">round10_ko_experiment.py</a></li>
+            <li><a href="./round11_ko_experiment.py">round11_ko_experiment.py</a></li></ul></article>
         <article class="card"><h3>메모</h3><ul><li>현재 타이밍은 mock 파이프라인 기준이라 실제 모델 추론 속도를 뜻하지 않음</li><li>GitHub Pages 루트는 이 index.html을 랜딩 페이지로 사용</li><li>round5~round9는 prompt/query branch 변화가 핵심</li></ul></article>
       </div>
     </section>
