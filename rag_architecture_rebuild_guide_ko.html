@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RAG Architecture Rebuild Guide · KO</title>
+  <meta name="description" content="현재 rag-langgraph-benefits 실험 구조를 다른 곳에서 다시 만들기 위한 상세 아키텍처 설명서" />
+  <style>
+    :root {
+      --bg:#08111d;
+      --panel:#0f1a2d;
+      --panel2:#13213a;
+      --line:#233659;
+      --text:#edf4ff;
+      --muted:#aab8d8;
+      --accent:#7ec8ff;
+      --ok:#8ef7c1;
+      --warn:#ffd479;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR",sans-serif;background:linear-gradient(180deg,#08111d,#091424 28%,#0a1627);color:var(--text);line-height:1.72}
+    a{color:var(--accent)}
+    .wrap{max-width:1220px;margin:0 auto;padding:28px 18px 88px}
+    .hero,.card{background:rgba(15,26,45,.96);border:1px solid var(--line);border-radius:24px;box-shadow:0 18px 50px rgba(0,0,0,.24)}
+    .hero{padding:28px;margin-bottom:18px}
+    .card{padding:22px;margin-top:18px}
+    .eyebrow{display:inline-flex;gap:8px;flex-wrap:wrap;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+    .pill{display:inline-flex;align-items:center;padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.03);color:var(--muted);font-size:13px}
+    h1{font-size:clamp(30px,4.8vw,56px);line-height:1.14;margin:0 0 10px}
+    h2{font-size:clamp(22px,3vw,34px);margin:0 0 12px}
+    h3{font-size:20px;margin:0 0 10px}
+    p,li{color:var(--muted)}
+    strong{color:var(--text)}
+    .grid{display:grid;gap:16px}
+    .grid-2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+    .grid-3{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+    .grid-4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+    .panel{background:var(--panel2);border:1px solid var(--line);border-radius:18px;padding:16px}
+    .panel strong.metric{display:block;color:var(--ok);font-size:30px;line-height:1.05;margin-bottom:6px}
+    .code, pre{background:#08111d;border:1px solid var(--line);border-radius:16px;padding:14px;overflow:auto;color:#dfeaff}
+    code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+    ul,ol{margin:0;padding-left:20px}
+    .toc{position:sticky;top:12px}
+    .layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start}
+    .btnrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--line);border-radius:14px;background:var(--panel2);text-decoration:none;color:var(--text);font-weight:600}
+    .mini{font-size:14px;color:var(--muted)}
+    .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .chip{padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:rgba(126,200,255,.06);color:var(--text);font-size:14px}
+    .arrow{color:var(--warn);font-weight:700}
+    @media (max-width: 980px){.layout{grid-template-columns:1fr}.toc{position:static}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <div class="eyebrow">
+        <span class="pill">RAG rebuild guide</span>
+        <span class="pill">round10 core</span>
+        <span class="pill">round13 pdf branch</span>
+        <span class="pill">judged report architecture</span>
+      </div>
+      <h1>현재 RAG 실험 구조 재구축 설명서</h1>
+      <p>이 페이지는 <strong>rag-langgraph-benefits</strong> 저장소에서 실제로 사용한 구조를 다른 저장소/다른 머신에서도 다시 만들 수 있도록, 설계 의도와 코드 레벨 역할을 함께 풀어쓴 설명 사이트다. 핵심은 <strong>round10 adaptive graph</strong>와, 이를 새 한국어 PDF 데이터셋에 옮긴 <strong>round13 PDF branch</strong>다.</p>
+      <div class="btnrow">
+        <a class="btn" href="./rag_architecture_rebuild_guide_ko.md">상세 MD 열기</a>
+        <a class="btn" href="./round10_ko.html">round10 리포트</a>
+        <a class="btn" href="./round11_ko.html">round11 ablation</a>
+        <a class="btn" href="./round13_ko_pdf.html">round13 PDF 리포트</a>
+        <a class="btn" href="https://github.com/hakvision/rag-langgraph-benefits">GitHub repo</a>
+      </div>
+    </section>
+
+    <section class="grid grid-4">
+      <article class="panel"><strong class="metric">10</strong><span class="mini">최종 구조 코어 round</span></article>
+      <article class="panel"><strong class="metric">13</strong><span class="mini">새 PDF 적용 branch</span></article>
+      <article class="panel"><strong class="metric">92.3</strong><span class="mini">round13 평균 judge score</span></article>
+      <article class="panel"><strong class="metric">7</strong><span class="mini">round13 PDF 질문 수</span></article>
+    </section>
+
+    <div class="layout">
+      <div>
+        <section class="card" id="why">
+          <h2>1. 이 저장소가 하는 일</h2>
+          <p>이 프로젝트는 단순한 "RAG 답변기"가 아니라, <strong>라운드별 구조 실험 + judged evaluation + HTML 보고</strong>를 한 세트로 운영하는 실험 프레임워크다.</p>
+          <div class="grid grid-3">
+            <article class="panel"><h3>실험 스크립트</h3><p><code>round*.py</code> 파일이 라운드별 파이프라인을 구현한다.</p></article>
+            <article class="panel"><h3>JSON 아티팩트</h3><p>질문별 점수, 청크, 흐름, 요약을 남겨 재현성과 비교 가능성을 확보한다.</p></article>
+            <article class="panel"><h3>HTML 리포트</h3><p>질문별 retrieval evidence와 구조 변화가 눈에 보이도록 Pages에 공개한다.</p></article>
+          </div>
+        </section>
+
+        <section class="card" id="evolution">
+          <h2>2. 라운드 진화</h2>
+          <div class="grid grid-2">
+            <article class="panel">
+              <h3>기반 라운드</h3>
+              <ul>
+                <li><strong>Round1</strong>: baseline retrieval + quality gate + judged answer</li>
+                <li><strong>Round2</strong>: reranker 추가</li>
+                <li><strong>Round3</strong>: hybrid retrieval / fusion</li>
+                <li><strong>Round4</strong>: retrieval judge / answer judge 분리</li>
+              </ul>
+            </article>
+            <article class="panel">
+              <h3>고급 라운드</h3>
+              <ul>
+                <li><strong>Round5</strong>: query rewrite + step-back</li>
+                <li><strong>Round6</strong>: subquery decomposition</li>
+                <li><strong>Round7</strong>: evidence distill</li>
+                <li><strong>Round8</strong>: citation answer template</li>
+                <li><strong>Round9</strong>: self-refine</li>
+                <li><strong>Round10</strong>: adaptive combination graph</li>
+                <li><strong>Round11</strong>: ablation study</li>
+                <li><strong>Round13</strong>: 한국어 PDF branch</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section class="card" id="flow">
+          <h2>3. 최종 파이프라인 한 줄 흐름</h2>
+          <div class="flow">
+            <span class="chip">source load</span><span class="arrow">→</span>
+            <span class="chip">chunk build</span><span class="arrow">→</span>
+            <span class="chip">classify_question</span><span class="arrow">→</span>
+            <span class="chip">question_type_router</span><span class="arrow">→</span>
+            <span class="chip">adaptive query plan</span><span class="arrow">→</span>
+            <span class="chip">multi-query retrieval</span><span class="arrow">→</span>
+            <span class="chip">fusion</span><span class="arrow">→</span>
+            <span class="chip">rerank</span><span class="arrow">→</span>
+            <span class="chip">judge_retrieval</span><span class="arrow">→</span>
+            <span class="chip">support stitch</span><span class="arrow">→</span>
+            <span class="chip">evidence distill</span><span class="arrow">→</span>
+            <span class="chip">citation answer</span><span class="arrow">→</span>
+            <span class="chip">judge_answer</span>
+          </div>
+          <p class="mini">질문이 쉬우면 짧은 경로로 끝내고, retrieval 품질이 낮거나 질문이 복합적일 때만 rescue/확장 분기를 연다.</p>
+        </section>
+
+        <section class="card" id="layers">
+          <h2>4. 계층별 설명</h2>
+          <div class="grid grid-2">
+            <article class="panel">
+              <h3>질문 분류 계층</h3>
+              <p><code>classify_question</code>은 질문을 <code>8b</code>/<code>14b</code> lane으로 보낸다. <code>detect_question_type</code>은 이를 다시 <code>simple_fact</code>, <code>abstract_why</code>, <code>multi_part</code>로 나눠서 query 전략을 정한다.</p>
+              <p>이렇게 분리한 이유는 모델 크기 라우팅과 쿼리 형태 라우팅이 서로 다른 문제이기 때문이다.</p>
+            </article>
+            <article class="panel">
+              <h3>Query planning 계층</h3>
+              <p><code>build_adaptive_query_plan</code>은 base query 위에 <code>focus</code>, <code>rewrite</code>, <code>step_back</code>, <code>subquery</code>, <code>retrieval_rescue</code>를 상황별로 덧붙인다.</p>
+              <p>단일 query로는 추상 질문과 복합 질문을 안정적으로 못 잡기 때문에 multi-query 설계를 택했다.</p>
+            </article>
+            <article class="panel">
+              <h3>Retrieval / fusion 계층</h3>
+              <p><code>retrieve</code>는 lexical hit와 section prior로 각 청크를 스코어링한다. <code>fuse_candidates</code>는 각 query branch의 결과를 합쳐 <code>source_queries</code>, <code>branch_hits</code>, <code>fused_score</code>를 만든다.</p>
+            </article>
+            <article class="panel">
+              <h3>Rerank / support 계층</h3>
+              <p>rerank는 retrieval 후보를 answer-friendly ordering으로 다시 정렬한다. <code>stitch_support_chunks</code>는 judged evaluation에서 반드시 필요한 support chunk를 놓치지 않도록 보강한다.</p>
+            </article>
+            <article class="panel">
+              <h3>Quality gate 계층</h3>
+              <p><code>grade_search</code>는 coverage와 top score를 기반으로 <code>answer</code> 또는 <code>escalate_to_14b</code>를 결정한다. retrieval 문제와 answer 문제를 분리하기 위해 answer judge와 독립시켰다.</p>
+            </article>
+            <article class="panel">
+              <h3>Answer / judge 계층</h3>
+              <p><code>distill_evidence</code>가 핵심 근거를 짧게 압축하고, <code>build_answer_text</code>가 citation-aware template로 답을 조립한다. 마지막으로 <code>evaluate_run</code>이 keyword/support/quality 기반 rubric 점수를 계산한다.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="card" id="pdf">
+          <h2>5. round13 PDF branch가 추가한 것</h2>
+          <div class="grid grid-2">
+            <article class="panel">
+              <h3>소스 어댑터 교체</h3>
+              <ul>
+                <li><code>ensure_pdf()</code>로 문서를 로컬 datasets 경로에 고정 저장</li>
+                <li><code>extract_pdf_text()</code>로 실제 PDF에서 텍스트 추출</li>
+                <li><code>clean_text()</code>로 머리글/쪽수/노이즈 제거</li>
+                <li><code>build_chunks()</code>로 marker-based section split 수행</li>
+              </ul>
+            </article>
+            <article class="panel">
+              <h3>왜 marker split을 썼나</h3>
+              <p>PDF는 HTML처럼 heading tree를 안정적으로 주지 않기 때문에, 이 branch는 범용성보다 <strong>재현 가능한 안정성</strong>을 우선했다. 따라서 문서 구조를 직접 읽어 <code>SECTION_SPECS</code>를 정의했다.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="card" id="judge">
+          <h2>6. 점수 체계</h2>
+          <div class="grid grid-3">
+            <article class="panel"><strong class="metric">55</strong><span class="mini">keyword score 가중치</span></article>
+            <article class="panel"><strong class="metric">25</strong><span class="mini">support chunk score 가중치</span></article>
+            <article class="panel"><strong class="metric">20</strong><span class="mini">retrieval quality score 가중치</span></article>
+          </div>
+          <p>이 평가 방식의 장점은 점수가 낮을 때 원인을 분리해서 볼 수 있다는 점이다. keyword가 빠졌는지, support chunk를 못 잡았는지, retrieval coverage가 낮았는지 바로 알 수 있다.</p>
+        </section>
+
+        <section class="card" id="rebuild">
+          <h2>7. 다른 곳에서 다시 만들 때 추천 순서</h2>
+          <ol>
+            <li>round1 수준의 baseline skeleton부터 구현</li>
+            <li>reranker 분리</li>
+            <li>question type router 추가</li>
+            <li>adaptive query plan 추가</li>
+            <li>fusion 추가</li>
+            <li>retrieval rescue / support stitch 추가</li>
+            <li>evidence distill / citation answer / refine 추가</li>
+            <li>ablation framework 추가</li>
+          </ol>
+          <p>이 순서가 좋은 이유는 각 계층의 기여도를 따로 디버깅하기 쉽기 때문이다.</p>
+        </section>
+
+        <section class="card" id="files">
+          <h2>8. 꼭 봐야 하는 파일</h2>
+          <div class="code"><code>
+round1_ko_experiment.py<br/>
+round2_ko_experiment.py<br/>
+round10_ko_experiment.py<br/>
+round11_ko_experiment.py<br/>
+round13_ko_pdf_experiment.py<br/>
+rag_architecture_rebuild_guide_ko.md<br/>
+round13_ko_pdf.html<br/>
+artifacts/round13_ko_pdf_results.json<br/>
+artifacts/round13_ko_pdf_summary.json<br/>
+artifacts/round13_ko_pdf_questions.json<br/>
+artifacts/round13_ko_pdf_source_document.json
+          </code></div>
+        </section>
+
+        <section class="card" id="ops">
+          <h2>9. 운영 규칙</h2>
+          <ul>
+            <li>mock 실험이면 report와 handoff 모두에 mock라고 명시할 것</li>
+            <li>PDF branch는 source 원문 파일과 extracted text를 모두 보관할 것</li>
+            <li>questions.json을 먼저 고정하고 evaluation을 돌릴 것</li>
+            <li>Pages에 새 산출물을 올릴 때는 <code>index.html</code>에서 접근 가능하게 만들 것</li>
+            <li>live URL 검증 시 HTTP 200만 보지 말고 실제 title/hero text까지 확인할 것</li>
+          </ul>
+        </section>
+      </div>
+
+      <aside class="toc">
+        <section class="card">
+          <h2>빠른 이동</h2>
+          <ul>
+            <li><a href="#why">이 저장소가 하는 일</a></li>
+            <li><a href="#evolution">라운드 진화</a></li>
+            <li><a href="#flow">최종 파이프라인 흐름</a></li>
+            <li><a href="#layers">계층별 설명</a></li>
+            <li><a href="#pdf">PDF branch</a></li>
+            <li><a href="#judge">점수 체계</a></li>
+            <li><a href="#rebuild">재구현 순서</a></li>
+            <li><a href="#files">핵심 파일</a></li>
+            <li><a href="#ops">운영 규칙</a></li>
+          </ul>
+        </section>
+        <section class="card">
+          <h2>실행 명령</h2>
+          <pre><code>cd /Users/hakvision/work-rag-langgraph-benefits
+uv run --with pypdf python round13_ko_pdf_experiment.py</code></pre>
+        </section>
+        <section class="card">
+          <h2>문서 링크</h2>
+          <div class="btnrow">
+            <a class="btn" href="./rag_architecture_rebuild_guide_ko.md">MD 원문</a>
+            <a class="btn" href="./artifacts/round13_ko_pdf_summary.json">summary.json</a>
+            <a class="btn" href="./artifacts/round13_ko_pdf_results.json">results.json</a>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>

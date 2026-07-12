@@ -1,0 +1,37 @@
+{
+  "round": "round13-ko-pdf",
+  "doc_title": "EU유럽의회 법제위원회, 생성형 AI와 저작권 보고서 발표",
+  "doc_url": "https://ai.wiseuser.go.kr/uploads/information/%ED%95%9C%EA%B5%AD%EC%A0%80%EC%9E%91%EA%B6%8C%EC%9C%84%EC%9B%90%ED%9A%8C_%EC%9C%A0%EB%9F%BD%EC%9D%98%ED%9A%8C_%EB%B2%95%EC%A0%9C%EC%9C%84%EC%9B%90%ED%9A%8C_%EC%83%9D%EC%84%B1%ED%98%95AI%EC%99%80%EC%A0%80%EC%9E%91%EA%B6%8C_%EB%B3%B4%EA%B3%A0%EC%84%9C_%EB%B0%9C%ED%91%9C.pdf",
+  "pdf_path": "/Users/hakvision/work-rag-langgraph-benefits/datasets/genai_copyright_report_ko.pdf",
+  "chunk_count": 7,
+  "provider_mode": "mock",
+  "backend_available": false,
+  "models": {
+    "router_8b": "qwen3:8b",
+    "large_14b": "qwen3:14b"
+  },
+  "question_count": 7,
+  "avg_judge_score": 92.3,
+  "retrieval_rescues": 0,
+  "answer_revisions": 3,
+  "question_type_counts": {
+    "simple_fact": 1,
+    "abstract_why": 3,
+    "multi_part": 3
+  },
+  "score_bands": {
+    "good": 4,
+    "okay": 3,
+    "weak": 0,
+    "poor": 0
+  },
+  "question_scores": {
+    "Q1": 88.0,
+    "Q2": 98.7,
+    "Q3": 94.0,
+    "Q4": 92.7,
+    "Q5": 100.0,
+    "Q6": 87.0,
+    "Q7": 85.6
+  }
+}

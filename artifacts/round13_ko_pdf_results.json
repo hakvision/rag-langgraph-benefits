@@ -1,0 +1,3643 @@
+{
+  "summary": {
+    "round": "round13-ko-pdf",
+    "doc_title": "EU유럽의회 법제위원회, 생성형 AI와 저작권 보고서 발표",
+    "doc_url": "https://ai.wiseuser.go.kr/uploads/information/%ED%95%9C%EA%B5%AD%EC%A0%80%EC%9E%91%EA%B6%8C%EC%9C%84%EC%9B%90%ED%9A%8C_%EC%9C%A0%EB%9F%BD%EC%9D%98%ED%9A%8C_%EB%B2%95%EC%A0%9C%EC%9C%84%EC%9B%90%ED%9A%8C_%EC%83%9D%EC%84%B1%ED%98%95AI%EC%99%80%EC%A0%80%EC%9E%91%EA%B6%8C_%EB%B3%B4%EA%B3%A0%EC%84%9C_%EB%B0%9C%ED%91%9C.pdf",
+    "pdf_path": "/Users/hakvision/work-rag-langgraph-benefits/datasets/genai_copyright_report_ko.pdf",
+    "chunk_count": 7,
+    "provider_mode": "mock",
+    "backend_available": false,
+    "models": {
+      "router_8b": "qwen3:8b",
+      "large_14b": "qwen3:14b"
+    },
+    "question_count": 7,
+    "avg_judge_score": 92.3,
+    "retrieval_rescues": 0,
+    "answer_revisions": 3,
+    "question_type_counts": {
+      "simple_fact": 1,
+      "abstract_why": 3,
+      "multi_part": 3
+    },
+    "score_bands": {
+      "good": 4,
+      "okay": 3,
+      "weak": 0,
+      "poor": 0
+    },
+    "question_scores": {
+      "Q1": 88.0,
+      "Q2": 98.7,
+      "Q3": 94.0,
+      "Q4": 92.7,
+      "Q5": 100.0,
+      "Q6": 87.0,
+      "Q7": 85.6
+    }
+  },
+  "runs": [
+    {
+      "label": "Q1",
+      "category": "overview",
+      "question": "이 보고서는 무엇을 문제로 보고, 집행위원회에 어떤 조치를 촉구하나요?",
+      "route_decision": "8b",
+      "question_analysis": {
+        "token_count": 7,
+        "matched_hard_terms": [],
+        "complexity_score": 0,
+        "reason": "direct factual retrieval",
+        "source": "heuristic-mock"
+      },
+      "question_type": "simple_fact",
+      "provider_mode": "mock",
+      "backend_available": false,
+      "search_attempts": [
+        {
+          "node": "adaptive_retrieve_pass_1",
+          "query_plan": [
+            {
+              "label": "base",
+              "query": "보고서는 문제로 보고 집행위원회에 어떤 조치를 촉구하나요",
+              "weight": 1.0,
+              "branch": "default"
+            },
+            {
+              "label": "focus",
+              "query": "보고서는 문제로 보고 집행위원회에 어떤 법적 불확실성 불공정성 집행위원회",
+              "weight": 1.08,
+              "branch": "simple"
+            }
+          ],
+          "chunks": [
+            {
+              "chunk_id": "K01",
+              "section": "개요",
+              "text": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에 대해 EU CDSM 지침2)의 텍스트 및 데이터 마이닝(TDM)3) 예외 조항, AI 학습에 대한 저작자의 권리 및 보상, AI법과 투명성 의무에 관한 내용을 검토하며, AI 결과물에 대해서는 AI 생성 결과물과 AI를 활용한 결과물의 구분, 결과물에 관한 경제적 및 법적 과제, 결과물에 의한 저작권 침해와 책임 등을 검토하고, 정책 옵션 및 권고안을 제시하고 있음.",
+              "preview": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적…",
+              "score": 31.332,
+              "term_hits": [
+                "법적",
+                "보고서는",
+                "불확실성",
+                "집행위원회에"
+              ],
+              "fused_score": 31.332,
+              "source_queries": [
+                "base",
+                "focus"
+              ],
+              "branch_hits": [
+                "default",
+                "simple"
+              ],
+              "rerank_score": 37.782,
+              "exact_hits": [
+                "법적 불확실성",
+                "불공정성",
+                "보호받는 저작물",
+                "조속히",
+                "해결"
+              ]
+            },
+            {
+              "chunk_id": "K07",
+              "section": "결론 및 시사점",
+              "text": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을 구체적으로 지적하며, 학계 및 실무계에서 제기되어 온 비판적 논의들을 제도적으로 반영할 필요성을 강조하고 있음.본 보고서는 EU 법제위원회(JURI)의 요청에 따라 작성된 문서로서 직접적인 법적 구속력은 없지만, 향후 유럽의회 차원의 입법 논의, 정책 수립 및 이해관계자 협의 등에서 정치적·법적 정당성을 제공하는 문서로 기능할 것으로 기대됨.",
+              "preview": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을…",
+              "score": 12.444,
+              "term_hits": [
+                "법적",
+                "보고서는"
+              ],
+              "fused_score": 12.444,
+              "source_queries": [
+                "base",
+                "focus"
+              ],
+              "branch_hits": [
+                "default",
+                "simple"
+              ],
+              "rerank_score": 12.894,
+              "exact_hits": [
+                "생성형 AI 학습"
+              ]
+            },
+            {
+              "chunk_id": "K05",
+              "section": "AI가 생성한 결과물의 법적 지위",
+              "text": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)",
+              "preview": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output)…",
+              "score": 9.298,
+              "term_hits": [
+                "법적",
+                "보고서는"
+              ],
+              "fused_score": 9.298,
+              "source_queries": [
+                "focus"
+              ],
+              "branch_hits": [
+                "simple"
+              ],
+              "rerank_score": 9.298,
+              "exact_hits": []
+            },
+            {
+              "chunk_id": "K06",
+              "section": "정책 권고",
+              "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라 달라지며, 인간의 창작적 통제 아래 사용된 결과물은 저작물이 될 수 있지만, AI가 전적으로 만든 결과물은 그렇지 않음. 인간의 창작적 기여는 결과물의 표현적 측면으로 판단하며, 단순히 AI 모델에 프롬프트를 제공하는 것만으로는 저작물에 해당하지 않음. 고 결론 내림. 보고서는 이를 위해 ① CDSM 지침 제4조의 TDM 예외 적용 범위의 명확화와 옵트아웃·합법적 접근 요건의 EU 차원 표준화, ② 생성형 AI 학습 목적에 대한 별도 저작권 예외 규정 신설과 권리자의 포기할 수 없는 보상권 도입, ③ AI 결과물에 대한 보호 여부 명확화와 메타데이터 기반 라벨링 전략, ④ 투명성과 추적 가능성 강화를 위한 기술 표준 및 글로벌 협력 확대 등을 권고하였음.",
+              "preview": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한…",
+              "score": 7.41,
+              "term_hits": [
+                "법적",
+                "보고서는"
+              ],
+              "fused_score": 7.41,
+              "source_queries": [
+                "focus"
+              ],
+              "branch_hits": [
+                "simple"
+              ],
+              "rerank_score": 7.86,
+              "exact_hits": [
+                "생성형 AI 학습"
+              ]
+            },
+            {
+              "chunk_id": "K03",
+              "section": "AI 학습 이용에 대한 저작자의 권리 및 보상",
+              "text": "2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한 법정보상청구권(Statutory Remuneration Right for TDM), 저작인격권 및 출처 표시 등의 해결 방안을 제시하고 있음. 그밖에 기계학습 목적을 위한 법정허락 도입, AI 보상금(levy) 도입 등의 방안이 제시됨.",
+              "preview": "2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해,…",
+              "score": 4.33,
+              "term_hits": [
+                "보고서는"
+              ],
+              "fused_score": 4.33,
+              "source_queries": [
+                "base"
+              ],
+              "branch_hits": [
+                "default"
+              ],
+              "rerank_score": 4.78,
+              "exact_hits": [
+                "해결"
+              ]
+            }
+          ],
+          "fuse_stats": {
+            "query_plan": [
+              {
+                "label": "base",
+                "query": "보고서는 문제로 보고 집행위원회에 어떤 조치를 촉구하나요",
+                "weight": 1.0,
+                "branch": "default",
+                "selected_chunk_ids": [
+                  "K01",
+                  "K07",
+                  "K02",
+                  "K03"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "보고서는",
+                    "문제로",
+                    "보고",
+                    "집행위원회에",
+                    "어떤",
+                    "조치를",
+                    "촉구하나요"
+                  ],
+                  "top_score": 5.6,
+                  "distinct_sections": 4,
+                  "candidate_count": 7
+                }
+              },
+              {
+                "label": "focus",
+                "query": "보고서는 문제로 보고 집행위원회에 어떤 법적 불확실성 불공정성 집행위원회",
+                "weight": 1.08,
+                "branch": "simple",
+                "selected_chunk_ids": [
+                  "K01",
+                  "K05",
+                  "K07",
+                  "K06"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "보고서는",
+                    "문제로",
+                    "보고",
+                    "집행위원회에",
+                    "어떤",
+                    "법적",
+                    "불확실성",
+                    "불공정성",
+                    "집행위원회"
+                  ],
+                  "top_score": 12.4,
+                  "distinct_sections": 4,
+                  "candidate_count": 7
+                }
+              }
+            ],
+            "candidate_count": 6,
+            "query_count": 2
+          },
+          "rerank_stats": {
+            "top_rerank_score": 37.782,
+            "candidate_count": 5
+          }
+        }
+      ],
+      "top_chunks": [
+        {
+          "chunk_id": "K01",
+          "section": "개요",
+          "text": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에 대해 EU CDSM 지침2)의 텍스트 및 데이터 마이닝(TDM)3) 예외 조항, AI 학습에 대한 저작자의 권리 및 보상, AI법과 투명성 의무에 관한 내용을 검토하며, AI 결과물에 대해서는 AI 생성 결과물과 AI를 활용한 결과물의 구분, 결과물에 관한 경제적 및 법적 과제, 결과물에 의한 저작권 침해와 책임 등을 검토하고, 정책 옵션 및 권고안을 제시하고 있음.",
+          "preview": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적…",
+          "score": 31.332,
+          "term_hits": [
+            "법적",
+            "보고서는",
+            "불확실성",
+            "집행위원회에"
+          ],
+          "fused_score": 31.332,
+          "source_queries": [
+            "base",
+            "focus"
+          ],
+          "branch_hits": [
+            "default",
+            "simple"
+          ],
+          "rerank_score": 37.782,
+          "exact_hits": [
+            "법적 불확실성",
+            "불공정성",
+            "보호받는 저작물",
+            "조속히",
+            "해결"
+          ]
+        },
+        {
+          "chunk_id": "K07",
+          "section": "결론 및 시사점",
+          "text": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을 구체적으로 지적하며, 학계 및 실무계에서 제기되어 온 비판적 논의들을 제도적으로 반영할 필요성을 강조하고 있음.본 보고서는 EU 법제위원회(JURI)의 요청에 따라 작성된 문서로서 직접적인 법적 구속력은 없지만, 향후 유럽의회 차원의 입법 논의, 정책 수립 및 이해관계자 협의 등에서 정치적·법적 정당성을 제공하는 문서로 기능할 것으로 기대됨.",
+          "preview": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을…",
+          "score": 12.444,
+          "term_hits": [
+            "법적",
+            "보고서는"
+          ],
+          "fused_score": 12.444,
+          "source_queries": [
+            "base",
+            "focus"
+          ],
+          "branch_hits": [
+            "default",
+            "simple"
+          ],
+          "rerank_score": 12.894,
+          "exact_hits": [
+            "생성형 AI 학습"
+          ]
+        },
+        {
+          "chunk_id": "K05",
+          "section": "AI가 생성한 결과물의 법적 지위",
+          "text": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)",
+          "preview": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output)…",
+          "score": 9.298,
+          "term_hits": [
+            "법적",
+            "보고서는"
+          ],
+          "fused_score": 9.298,
+          "source_queries": [
+            "focus"
+          ],
+          "branch_hits": [
+            "simple"
+          ],
+          "rerank_score": 9.298,
+          "exact_hits": []
+        },
+        {
+          "chunk_id": "K06",
+          "section": "정책 권고",
+          "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라 달라지며, 인간의 창작적 통제 아래 사용된 결과물은 저작물이 될 수 있지만, AI가 전적으로 만든 결과물은 그렇지 않음. 인간의 창작적 기여는 결과물의 표현적 측면으로 판단하며, 단순히 AI 모델에 프롬프트를 제공하는 것만으로는 저작물에 해당하지 않음. 고 결론 내림. 보고서는 이를 위해 ① CDSM 지침 제4조의 TDM 예외 적용 범위의 명확화와 옵트아웃·합법적 접근 요건의 EU 차원 표준화, ② 생성형 AI 학습 목적에 대한 별도 저작권 예외 규정 신설과 권리자의 포기할 수 없는 보상권 도입, ③ AI 결과물에 대한 보호 여부 명확화와 메타데이터 기반 라벨링 전략, ④ 투명성과 추적 가능성 강화를 위한 기술 표준 및 글로벌 협력 확대 등을 권고하였음.",
+          "preview": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한…",
+          "score": 7.41,
+          "term_hits": [
+            "법적",
+            "보고서는"
+          ],
+          "fused_score": 7.41,
+          "source_queries": [
+            "focus"
+          ],
+          "branch_hits": [
+            "simple"
+          ],
+          "rerank_score": 7.86,
+          "exact_hits": [
+            "생성형 AI 학습"
+          ]
+        },
+        {
+          "chunk_id": "K03",
+          "section": "AI 학습 이용에 대한 저작자의 권리 및 보상",
+          "text": "2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한 법정보상청구권(Statutory Remuneration Right for TDM), 저작인격권 및 출처 표시 등의 해결 방안을 제시하고 있음. 그밖에 기계학습 목적을 위한 법정허락 도입, AI 보상금(levy) 도입 등의 방안이 제시됨.",
+          "preview": "2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해,…",
+          "score": 4.33,
+          "term_hits": [
+            "보고서는"
+          ],
+          "fused_score": 4.33,
+          "source_queries": [
+            "base"
+          ],
+          "branch_hits": [
+            "default"
+          ],
+          "rerank_score": 4.78,
+          "exact_hits": [
+            "해결"
+          ]
+        }
+      ],
+      "retrieval_rescue_count": 0,
+      "final_model": "8b",
+      "quality": {
+        "ok": true,
+        "coverage": 0.286,
+        "top_score": 37.782,
+        "distinct_sections": 5,
+        "reason": "retrieval looks grounded"
+      },
+      "expected_answer": "보고서는 보호받는 저작물을 생성형 AI 학습에 사용하는 과정의 법적 불확실성과 불공정성을 문제로 보고, 관련 쟁점을 조속히 해결하라고 집행위원회에 권고한다.",
+      "evaluation": {
+        "gold_answer": "보고서는 보호받는 저작물을 생성형 AI 학습에 사용하는 과정의 법적 불확실성과 불공정성을 문제로 보고, 관련 쟁점을 조속히 해결하라고 집행위원회에 권고한다.",
+        "rubric_keywords": [
+          "법적 불확실성",
+          "불공정성",
+          "보호받는 저작물",
+          "생성형 AI 학습",
+          "조속히",
+          "해결"
+        ],
+        "keyword_hits": [
+          "법적 불확실성",
+          "불공정성",
+          "보호받는 저작물",
+          "생성형 AI 학습",
+          "조속히",
+          "해결"
+        ],
+        "support_chunks_expected": [
+          "K01"
+        ],
+        "support_chunks_hit": [
+          "K01"
+        ],
+        "score_breakdown": {
+          "keyword_score": 55.0,
+          "support_score": 25.0,
+          "quality_score": 8.0
+        },
+        "total_score": 88.0,
+        "verdict": "무난",
+        "judge_comment": "키워드 6/6, 핵심 청크 1/1개를 잡아 총점 88.0점으로 평가했다."
+      },
+      "final_answer": "직답: 보고서는 보호받는 저작물을 생성형 AI 학습에 사용하는 과정의 법적 불확실성과 불공정성을 문제로 보고, 관련 쟁점을 조속히 해결하라고 집행위원회에 권고한다.\n질문: 이 보고서는 무엇을 문제로 보고, 집행위원회에 어떤 조치를 촉구하나요?\n질문 타입: simple_fact\n근거 청크: K01, K07, K05, K06\n모드: round13-pdf-8B | quality_ok=True | coverage=0.286\n핵심 근거:\n- [K01] 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…\n- [K07] 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.\n- [K05] 4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)\n- [K06] 5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…\nexact keyword row: 법적 불확실성, 불공정성, 보호받는 저작물, 생성형 AI 학습, 조속히, 해결\nrefine note: answer judge가 88.0점으로 낮아 1회 보강했다.\n한계: 이번 라운드도 실백엔드 LLM이 아니라 template-based mock synthesis 실험이다.",
+      "flow": [
+        "classify_8b → 8b",
+        "question_type_router → simple_fact",
+        "adaptive_retrieve_pass_1",
+        "judge_retrieval → answer",
+        "answer_refine_once",
+        "evidence_distill",
+        "citation_answer",
+        "judge_answer"
+      ],
+      "explanation": [
+        "질문을 simple_fact로 분류해 adaptive branch를 골랐다.",
+        "1차 retrieval에서 base, focus 브랜치를 조합했다.",
+        "품질 게이트 통과: 검색 결과가 질문과 충분히 맞물림.",
+        "answer judge를 한 번 더 반영해 88.0점에서 88.0점으로 보정했다.",
+        "키워드 6/6, 핵심 청크 1/1개를 잡아 총점 88.0점으로 평가했다."
+      ],
+      "evidence": [
+        {
+          "chunk_id": "K01",
+          "section": "개요",
+          "text": "개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…"
+        },
+        {
+          "chunk_id": "K07",
+          "section": "결론 및 시사점",
+          "text": "결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음."
+        },
+        {
+          "chunk_id": "K05",
+          "section": "AI가 생성한 결과물의 법적 지위",
+          "text": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)"
+        },
+        {
+          "chunk_id": "K06",
+          "section": "정책 권고",
+          "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…"
+        }
+      ],
+      "query_plan_width": 2,
+      "answer_revision_count": 1
+    },
+    {
+      "label": "Q2",
+      "category": "tdm",
+      "question": "보고서는 왜 생성형 AI 학습이 CDSM 지침상의 TDM 예외 범위를 벗어날 수 있다고 보나요?",
+      "route_decision": "14b",
+      "question_analysis": {
+        "token_count": 12,
+        "matched_hard_terms": [
+          "예외",
+          "왜"
+        ],
+        "complexity_score": 4,
+        "reason": "multi-step/legal reasoning",
+        "source": "heuristic-mock"
+      },
+      "question_type": "abstract_why",
+      "provider_mode": "mock",
+      "backend_available": false,
+      "search_attempts": [
+        {
+          "node": "adaptive_retrieve_pass_1",
+          "query_plan": [
+            {
+              "label": "base",
+              "query": "보고서는 생성형 ai 학습이 cdsm 지침상의 tdm 예외 범위를 벗어날 있다고 보나요 이유 법적 평가 정당성",
+              "weight": 1.0,
+              "branch": "default"
+            },
+            {
+              "label": "rewrite",
+              "query": "보고서는 생성형 ai 학습이 cdsm 지침상의 tdm 예외 범위를 벗어날 있다고 보나요 분석적 목적 표현적 복제 내재화",
+              "weight": 1.12,
+              "branch": "abstract"
+            },
+            {
+              "label": "step_back",
+              "query": "보고서는 생성형 ai 학습이 cdsm 지침상의 tdm 예외 범위를 벗어날 있다고 보나요 배경 이유 법적 의미 분석적 목적 표현적 복제",
+              "weight": 0.98,
+              "branch": "abstract"
+            }
+          ],
+          "chunks": [
+            {
+              "chunk_id": "K02",
+              "section": "CDSM 지침의 TDM 예외 조항 검토",
+              "text": "2. 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는 것으로, 현재 TDM 예외의 적용 범위에서 벗어날 가능성이 큼. 생성형 AI와 TDM 모두 복제 행위를 수반하나, EU법에 따라 그 허용 여부는 이용행위의 목적에 따라 달라짐. 보고서는 생성형 AI는 입력 콘텐츠의 표현적 특징을 인코딩하고 내재화하여 새로운 결과물을 합성하도록 학습하는 것으로 TDM 예외 조항이 의도한 분석적 목적(analytical purpose)을 넘어 “표현적 복제(expressive reproduction)4)”에 해당한다고 분석하였음.1) European Parliament JURI Committee, Generative AI and copyright, 2025. 7. 9.<https://www.europarl.europa.eu/thinktank/en/document/IUST_STU(2025)774095>. 2025년 6월 4일 워크숍(“Generative AI and copyright”)에서 악셀 보스(Axel Voss, 유럽인민당, 독일) 의원이 보고자로 참여하여 보고서 초안이 발표되었고, 7월 9일 공식 발간되었음.2) Directive (EU) 2019/790 of the European Parliament and of the Council of 17 April 2019 on copyright and related rights in the Digital Single Market and amending Directives 96/9/EC and 2001/29/EC 3) TDM은 일반적으로 과학적 또는 정보 제공 목적으로 대규모 데이터 세트에서 패턴, 추세 또는 상관관계를 추출하는 데 사용되는 자동화된 분석 기술을 말함4) 표현적 복제란 보호 대상 저작물에서 파생된 구조, 스타일 또는 구성과 같은 표현적 요소를 원본의 지각 가능한 형태를 모방하는 방식으로 내재화하여 확률적",
+              "preview": "2. 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나…",
+              "score": 136.09,
+              "term_hits": [
+                "ai",
+                "cdsm",
+                "tdm",
+                "목적",
+                "벗어날",
+                "보고서는",
+                "복제",
+                "분석적",
+                "생성형",
+                "예외",
+                "표현적"
+              ],
+              "fused_score": 136.09,
+              "source_queries": [
+                "base",
+                "rewrite",
+                "step_back"
+              ],
+              "branch_hits": [
+                "default",
+                "abstract",
+                "abstract"
+              ],
+              "rerank_score": 142.99,
+              "exact_hits": [
+                "TDM",
+                "분석적 목적",
+                "표현적 복제",
+                "표현적 특징",
+                "인코딩",
+                "내재화"
+              ]
+            },
+            {
+              "chunk_id": "K06",
+              "section": "정책 권고",
+              "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라 달라지며, 인간의 창작적 통제 아래 사용된 결과물은 저작물이 될 수 있지만, AI가 전적으로 만든 결과물은 그렇지 않음. 인간의 창작적 기여는 결과물의 표현적 측면으로 판단하며, 단순히 AI 모델에 프롬프트를 제공하는 것만으로는 저작물에 해당하지 않음. 고 결론 내림. 보고서는 이를 위해 ① CDSM 지침 제4조의 TDM 예외 적용 범위의 명확화와 옵트아웃·합법적 접근 요건의 EU 차원 표준화, ② 생성형 AI 학습 목적에 대한 별도 저작권 예외 규정 신설과 권리자의 포기할 수 없는 보상권 도입, ③ AI 결과물에 대한 보호 여부 명확화와 메타데이터 기반 라벨링 전략, ④ 투명성과 추적 가능성 강화를 위한 기술 표준 및 글로벌 협력 확대 등을 권고하였음.",
+              "preview": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한…",
+              "score": 77.382,
+              "term_hits": [
+                "ai",
+                "cdsm",
+                "tdm",
+                "법적",
+                "보고서는",
+                "생성형",
+                "예외",
+                "표현적"
+              ],
+              "fused_score": 77.382,
+              "source_queries": [
+                "base",
+                "rewrite",
+                "step_back"
+              ],
+              "branch_hits": [
+                "default",
+                "abstract",
+                "abstract"
+              ],
+              "rerank_score": 77.832,
+              "exact_hits": [
+                "TDM"
+              ]
+            },
+            {
+              "chunk_id": "K01",
+              "section": "개요",
+              "text": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에 대해 EU CDSM 지침2)의 텍스트 및 데이터 마이닝(TDM)3) 예외 조항, AI 학습에 대한 저작자의 권리 및 보상, AI법과 투명성 의무에 관한 내용을 검토하며, AI 결과물에 대해서는 AI 생성 결과물과 AI를 활용한 결과물의 구분, 결과물에 관한 경제적 및 법적 과제, 결과물에 의한 저작권 침해와 책임 등을 검토하고, 정책 옵션 및 권고안을 제시하고 있음.",
+              "preview": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적…",
+              "score": 69.65,
+              "term_hits": [
+                "ai",
+                "cdsm",
+                "tdm",
+                "법적",
+                "보고서는",
+                "생성형",
+                "예외"
+              ],
+              "fused_score": 69.65000000000002,
+              "source_queries": [
+                "base",
+                "rewrite",
+                "step_back"
+              ],
+              "branch_hits": [
+                "default",
+                "abstract",
+                "abstract"
+              ],
+              "rerank_score": 70.1,
+              "exact_hits": [
+                "TDM"
+              ]
+            },
+            {
+              "chunk_id": "K07",
+              "section": "결론 및 시사점",
+              "text": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을 구체적으로 지적하며, 학계 및 실무계에서 제기되어 온 비판적 논의들을 제도적으로 반영할 필요성을 강조하고 있음.본 보고서는 EU 법제위원회(JURI)의 요청에 따라 작성된 문서로서 직접적인 법적 구속력은 없지만, 향후 유럽의회 차원의 입법 논의, 정책 수립 및 이해관계자 협의 등에서 정치적·법적 정당성을 제공하는 문서로 기능할 것으로 기대됨.",
+              "preview": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을…",
+              "score": 53.554,
+              "term_hits": [
+                "ai",
+                "tdm",
+                "법적",
+                "보고서는",
+                "생성형"
+              ],
+              "fused_score": 53.554,
+              "source_queries": [
+                "base",
+                "rewrite",
+                "step_back"
+              ],
+              "branch_hits": [
+                "default",
+                "abstract",
+                "abstract"
+              ],
+              "rerank_score": 54.004,
+              "exact_hits": [
+                "TDM"
+              ]
+            },
+            {
+              "chunk_id": "K04",
+              "section": "AI법과 투명성 의무",
+              "text": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적 법정허락(statutory collective licensing) 모델 도입, 옵트아웃 및 이용허락 요청을 대규모로 처리할 수 있는 EU 수준의 중앙 집중식 권리 관리 플랫폼을 개발하는 등 기본 저작권 인프라 재고가 필요하다고 제안함. 또한, AI 학습 목적 대규모 저작물 수집의 합법 여부가 불명확한 상황에서 현 CDSM 지침 제18조 및 제19조는 AI법의 투명성 의무를 강화하는 데 보완적 역할을 할 수 있다고 분석하였음.",
+              "preview": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU…",
+              "score": 50.17,
+              "term_hits": [
+                "ai",
+                "cdsm",
+                "목적",
+                "보고서는",
+                "있다고"
+              ],
+              "fused_score": 50.17,
+              "source_queries": [
+                "base",
+                "rewrite",
+                "step_back"
+              ],
+              "branch_hits": [
+                "default",
+                "abstract",
+                "abstract"
+              ],
+              "rerank_score": 50.17,
+              "exact_hits": []
+            },
+            {
+              "chunk_id": "K05",
+              "section": "AI가 생성한 결과물의 법적 지위",
+              "text": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)",
+              "preview": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output)…",
+              "score": 28.944,
+              "term_hits": [
+                "ai",
+                "법적",
+                "보고서는"
+              ],
+              "fused_score": 28.944000000000003,
+              "source_queries": [
+                "base",
+                "step_back"
+              ],
+              "branch_hits": [
+                "default",
+                "abstract"
+              ],
+              "rerank_score": 28.944,
+              "exact_hits": []
+            }
+          ],
+          "fuse_stats": {
+            "query_plan": [
+              {
+                "label": "base",
+                "query": "보고서는 생성형 ai 학습이 cdsm 지침상의 tdm 예외 범위를 벗어날 있다고 보나요 이유 법적 평가 정당성",
+                "weight": 1.0,
+                "branch": "default",
+                "selected_chunk_ids": [
+                  "K02",
+                  "K06",
+                  "K01",
+                  "K07",
+                  "K05",
+                  "K04"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "보고서는",
+                    "생성형",
+                    "ai",
+                    "학습이",
+                    "cdsm",
+                    "지침상의",
+                    "tdm",
+                    "예외",
+                    "범위를",
+                    "벗어날",
+                    "있다고",
+                    "보나요",
+                    "이유",
+                    "법적",
+                    "평가",
+                    "정당성"
+                  ],
+                  "top_score": 29.8,
+                  "distinct_sections": 6,
+                  "candidate_count": 7
+                }
+              },
+              {
+                "label": "rewrite",
+                "query": "보고서는 생성형 ai 학습이 cdsm 지침상의 tdm 예외 범위를 벗어날 있다고 보나요 분석적 목적 표현적 복제 내재화",
+                "weight": 1.12,
+                "branch": "abstract",
+                "selected_chunk_ids": [
+                  "K02",
+                  "K06",
+                  "K01",
+                  "K04",
+                  "K07",
+                  "K03"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "보고서는",
+                    "생성형",
+                    "ai",
+                    "학습이",
+                    "cdsm",
+                    "지침상의",
+                    "tdm",
+                    "예외",
+                    "범위를",
+                    "벗어날",
+                    "있다고",
+                    "보나요",
+                    "분석적",
+                    "목적",
+                    "표현적",
+                    "복제",
+                    "내재화"
+                  ],
+                  "top_score": 41.8,
+                  "distinct_sections": 6,
+                  "candidate_count": 7
+                }
+              },
+              {
+                "label": "step_back",
+                "query": "보고서는 생성형 ai 학습이 cdsm 지침상의 tdm 예외 범위를 벗어날 있다고 보나요 배경 이유 법적 의미 분석적 목적 표현적 복제",
+                "weight": 0.98,
+                "branch": "abstract",
+                "selected_chunk_ids": [
+                  "K02",
+                  "K06",
+                  "K01",
+                  "K07",
+                  "K04",
+                  "K05"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "보고서는",
+                    "생성형",
+                    "ai",
+                    "학습이",
+                    "cdsm",
+                    "지침상의",
+                    "tdm",
+                    "예외",
+                    "범위를",
+                    "벗어날",
+                    "있다고",
+                    "보나요",
+                    "배경",
+                    "이유",
+                    "법적",
+                    "의미",
+                    "분석적",
+                    "목적",
+                    "표현적",
+                    "복제"
+                  ],
+                  "top_score": 41.8,
+                  "distinct_sections": 6,
+                  "candidate_count": 7
+                }
+              }
+            ],
+            "candidate_count": 7,
+            "query_count": 3
+          },
+          "rerank_stats": {
+            "top_rerank_score": 142.99,
+            "candidate_count": 7
+          }
+        }
+      ],
+      "top_chunks": [
+        {
+          "chunk_id": "K02",
+          "section": "CDSM 지침의 TDM 예외 조항 검토",
+          "text": "2. 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는 것으로, 현재 TDM 예외의 적용 범위에서 벗어날 가능성이 큼. 생성형 AI와 TDM 모두 복제 행위를 수반하나, EU법에 따라 그 허용 여부는 이용행위의 목적에 따라 달라짐. 보고서는 생성형 AI는 입력 콘텐츠의 표현적 특징을 인코딩하고 내재화하여 새로운 결과물을 합성하도록 학습하는 것으로 TDM 예외 조항이 의도한 분석적 목적(analytical purpose)을 넘어 “표현적 복제(expressive reproduction)4)”에 해당한다고 분석하였음.1) European Parliament JURI Committee, Generative AI and copyright, 2025. 7. 9.<https://www.europarl.europa.eu/thinktank/en/document/IUST_STU(2025)774095>. 2025년 6월 4일 워크숍(“Generative AI and copyright”)에서 악셀 보스(Axel Voss, 유럽인민당, 독일) 의원이 보고자로 참여하여 보고서 초안이 발표되었고, 7월 9일 공식 발간되었음.2) Directive (EU) 2019/790 of the European Parliament and of the Council of 17 April 2019 on copyright and related rights in the Digital Single Market and amending Directives 96/9/EC and 2001/29/EC 3) TDM은 일반적으로 과학적 또는 정보 제공 목적으로 대규모 데이터 세트에서 패턴, 추세 또는 상관관계를 추출하는 데 사용되는 자동화된 분석 기술을 말함4) 표현적 복제란 보호 대상 저작물에서 파생된 구조, 스타일 또는 구성과 같은 표현적 요소를 원본의 지각 가능한 형태를 모방하는 방식으로 내재화하여 확률적",
+          "preview": "2. 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나…",
+          "score": 136.09,
+          "term_hits": [
+            "ai",
+            "cdsm",
+            "tdm",
+            "목적",
+            "벗어날",
+            "보고서는",
+            "복제",
+            "분석적",
+            "생성형",
+            "예외",
+            "표현적"
+          ],
+          "fused_score": 136.09,
+          "source_queries": [
+            "base",
+            "rewrite",
+            "step_back"
+          ],
+          "branch_hits": [
+            "default",
+            "abstract",
+            "abstract"
+          ],
+          "rerank_score": 142.99,
+          "exact_hits": [
+            "TDM",
+            "분석적 목적",
+            "표현적 복제",
+            "표현적 특징",
+            "인코딩",
+            "내재화"
+          ]
+        },
+        {
+          "chunk_id": "K06",
+          "section": "정책 권고",
+          "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라 달라지며, 인간의 창작적 통제 아래 사용된 결과물은 저작물이 될 수 있지만, AI가 전적으로 만든 결과물은 그렇지 않음. 인간의 창작적 기여는 결과물의 표현적 측면으로 판단하며, 단순히 AI 모델에 프롬프트를 제공하는 것만으로는 저작물에 해당하지 않음. 고 결론 내림. 보고서는 이를 위해 ① CDSM 지침 제4조의 TDM 예외 적용 범위의 명확화와 옵트아웃·합법적 접근 요건의 EU 차원 표준화, ② 생성형 AI 학습 목적에 대한 별도 저작권 예외 규정 신설과 권리자의 포기할 수 없는 보상권 도입, ③ AI 결과물에 대한 보호 여부 명확화와 메타데이터 기반 라벨링 전략, ④ 투명성과 추적 가능성 강화를 위한 기술 표준 및 글로벌 협력 확대 등을 권고하였음.",
+          "preview": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한…",
+          "score": 77.382,
+          "term_hits": [
+            "ai",
+            "cdsm",
+            "tdm",
+            "법적",
+            "보고서는",
+            "생성형",
+            "예외",
+            "표현적"
+          ],
+          "fused_score": 77.382,
+          "source_queries": [
+            "base",
+            "rewrite",
+            "step_back"
+          ],
+          "branch_hits": [
+            "default",
+            "abstract",
+            "abstract"
+          ],
+          "rerank_score": 77.832,
+          "exact_hits": [
+            "TDM"
+          ]
+        },
+        {
+          "chunk_id": "K01",
+          "section": "개요",
+          "text": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에 대해 EU CDSM 지침2)의 텍스트 및 데이터 마이닝(TDM)3) 예외 조항, AI 학습에 대한 저작자의 권리 및 보상, AI법과 투명성 의무에 관한 내용을 검토하며, AI 결과물에 대해서는 AI 생성 결과물과 AI를 활용한 결과물의 구분, 결과물에 관한 경제적 및 법적 과제, 결과물에 의한 저작권 침해와 책임 등을 검토하고, 정책 옵션 및 권고안을 제시하고 있음.",
+          "preview": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적…",
+          "score": 69.65,
+          "term_hits": [
+            "ai",
+            "cdsm",
+            "tdm",
+            "법적",
+            "보고서는",
+            "생성형",
+            "예외"
+          ],
+          "fused_score": 69.65000000000002,
+          "source_queries": [
+            "base",
+            "rewrite",
+            "step_back"
+          ],
+          "branch_hits": [
+            "default",
+            "abstract",
+            "abstract"
+          ],
+          "rerank_score": 70.1,
+          "exact_hits": [
+            "TDM"
+          ]
+        },
+        {
+          "chunk_id": "K07",
+          "section": "결론 및 시사점",
+          "text": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을 구체적으로 지적하며, 학계 및 실무계에서 제기되어 온 비판적 논의들을 제도적으로 반영할 필요성을 강조하고 있음.본 보고서는 EU 법제위원회(JURI)의 요청에 따라 작성된 문서로서 직접적인 법적 구속력은 없지만, 향후 유럽의회 차원의 입법 논의, 정책 수립 및 이해관계자 협의 등에서 정치적·법적 정당성을 제공하는 문서로 기능할 것으로 기대됨.",
+          "preview": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을…",
+          "score": 53.554,
+          "term_hits": [
+            "ai",
+            "tdm",
+            "법적",
+            "보고서는",
+            "생성형"
+          ],
+          "fused_score": 53.554,
+          "source_queries": [
+            "base",
+            "rewrite",
+            "step_back"
+          ],
+          "branch_hits": [
+            "default",
+            "abstract",
+            "abstract"
+          ],
+          "rerank_score": 54.004,
+          "exact_hits": [
+            "TDM"
+          ]
+        },
+        {
+          "chunk_id": "K04",
+          "section": "AI법과 투명성 의무",
+          "text": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적 법정허락(statutory collective licensing) 모델 도입, 옵트아웃 및 이용허락 요청을 대규모로 처리할 수 있는 EU 수준의 중앙 집중식 권리 관리 플랫폼을 개발하는 등 기본 저작권 인프라 재고가 필요하다고 제안함. 또한, AI 학습 목적 대규모 저작물 수집의 합법 여부가 불명확한 상황에서 현 CDSM 지침 제18조 및 제19조는 AI법의 투명성 의무를 강화하는 데 보완적 역할을 할 수 있다고 분석하였음.",
+          "preview": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU…",
+          "score": 50.17,
+          "term_hits": [
+            "ai",
+            "cdsm",
+            "목적",
+            "보고서는",
+            "있다고"
+          ],
+          "fused_score": 50.17,
+          "source_queries": [
+            "base",
+            "rewrite",
+            "step_back"
+          ],
+          "branch_hits": [
+            "default",
+            "abstract",
+            "abstract"
+          ],
+          "rerank_score": 50.17,
+          "exact_hits": []
+        },
+        {
+          "chunk_id": "K05",
+          "section": "AI가 생성한 결과물의 법적 지위",
+          "text": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)",
+          "preview": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output)…",
+          "score": 28.944,
+          "term_hits": [
+            "ai",
+            "법적",
+            "보고서는"
+          ],
+          "fused_score": 28.944000000000003,
+          "source_queries": [
+            "base",
+            "step_back"
+          ],
+          "branch_hits": [
+            "default",
+            "abstract"
+          ],
+          "rerank_score": 28.944,
+          "exact_hits": []
+        }
+      ],
+      "retrieval_rescue_count": 0,
+      "final_model": "14b",
+      "quality": {
+        "ok": true,
+        "coverage": 0.667,
+        "top_score": 142.99,
+        "distinct_sections": 6,
+        "reason": "retrieval looks grounded"
+      },
+      "expected_answer": "보고서는 생성형 AI가 단순한 분석 목적의 TDM과 달리 입력 저작물의 표현적 특징을 인코딩·내재화하고 새로운 결과물을 합성하도록 학습하므로, 표현적 복제에 가까워 TDM 예외 범위를 벗어날 수 있다고 본다.",
+      "evaluation": {
+        "gold_answer": "보고서는 생성형 AI가 단순한 분석 목적의 TDM과 달리 입력 저작물의 표현적 특징을 인코딩·내재화하고 새로운 결과물을 합성하도록 학습하므로, 표현적 복제에 가까워 TDM 예외 범위를 벗어날 수 있다고 본다.",
+        "rubric_keywords": [
+          "TDM",
+          "분석적 목적",
+          "표현적 복제",
+          "표현적 특징",
+          "인코딩",
+          "내재화"
+        ],
+        "keyword_hits": [
+          "TDM",
+          "분석적 목적",
+          "표현적 복제",
+          "표현적 특징",
+          "인코딩",
+          "내재화"
+        ],
+        "support_chunks_expected": [
+          "K02"
+        ],
+        "support_chunks_hit": [
+          "K02"
+        ],
+        "score_breakdown": {
+          "keyword_score": 55.0,
+          "support_score": 25.0,
+          "quality_score": 18.7
+        },
+        "total_score": 98.7,
+        "verdict": "좋음",
+        "judge_comment": "키워드 6/6, 핵심 청크 1/1개를 잡아 총점 98.7점으로 평가했다."
+      },
+      "final_answer": "직답: 보고서는 생성형 AI가 단순한 분석 목적의 TDM과 달리 입력 저작물의 표현적 특징을 인코딩·내재화하고 새로운 결과물을 합성하도록 학습하므로, 표현적 복제에 가까워 TDM 예외 범위를 벗어날 수 있다고 본다.\n질문: 보고서는 왜 생성형 AI 학습이 CDSM 지침상의 TDM 예외 범위를 벗어날 수 있다고 보나요?\n질문 타입: abstract_why\n근거 청크: K02, K06, K01, K07\n모드: round13-pdf-14B | quality_ok=True | coverage=0.667\n핵심 근거:\n- [K02] 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는…\n- [K06] 5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…\n- [K01] 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…\n- [K07] 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.\nexact keyword row: TDM, 분석적 목적, 표현적 복제, 표현적 특징, 인코딩, 내재화\n한계: 이번 라운드도 실백엔드 LLM이 아니라 template-based mock synthesis 실험이다.",
+      "flow": [
+        "classify_8b → 14b",
+        "question_type_router → abstract_why",
+        "adaptive_retrieve_pass_1",
+        "judge_retrieval → answer",
+        "evidence_distill",
+        "citation_answer",
+        "judge_answer"
+      ],
+      "explanation": [
+        "질문을 abstract_why로 분류해 adaptive branch를 골랐다.",
+        "1차 retrieval에서 base, rewrite, step_back 브랜치를 조합했다.",
+        "품질 게이트 통과: 검색 결과가 질문과 충분히 맞물림.",
+        "키워드 6/6, 핵심 청크 1/1개를 잡아 총점 98.7점으로 평가했다."
+      ],
+      "evidence": [
+        {
+          "chunk_id": "K02",
+          "section": "CDSM 지침의 TDM 예외 조항 검토",
+          "text": "주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는…"
+        },
+        {
+          "chunk_id": "K06",
+          "section": "정책 권고",
+          "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…"
+        },
+        {
+          "chunk_id": "K01",
+          "section": "개요",
+          "text": "개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…"
+        },
+        {
+          "chunk_id": "K07",
+          "section": "결론 및 시사점",
+          "text": "결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음."
+        }
+      ],
+      "query_plan_width": 3,
+      "answer_revision_count": 0
+    },
+    {
+      "label": "Q3",
+      "category": "compensation",
+      "question": "AI 학습 이용에 대한 저작자의 권리·보상 측면에서 보고서가 지적한 핵심 문제와 대안은 무엇인가요?",
+      "route_decision": "8b",
+      "question_analysis": {
+        "token_count": 12,
+        "matched_hard_terms": [
+          "보상"
+        ],
+        "complexity_score": 3,
+        "reason": "direct factual retrieval",
+        "source": "heuristic-mock"
+      },
+      "question_type": "multi_part",
+      "provider_mode": "mock",
+      "backend_available": false,
+      "search_attempts": [
+        {
+          "node": "adaptive_retrieve_pass_1",
+          "query_plan": [
+            {
+              "label": "base",
+              "query": "ai 학습 이용에 저작자의 권리 보상 측면에서 보고서가",
+              "weight": 1.0,
+              "branch": "default"
+            },
+            {
+              "label": "subquery_1",
+              "query": "ai 학습 이용에 저작자의 권리 무상 사용 정당한 보상 이용허락",
+              "weight": 1.04,
+              "branch": "multi_part"
+            },
+            {
+              "label": "subquery_2",
+              "query": "ai 학습 이용에 저작자의 ecl 법정보상청구권 보상금",
+              "weight": 1.08,
+              "branch": "multi_part"
+            }
+          ],
+          "chunks": [
+            {
+              "chunk_id": "K03",
+              "section": "AI 학습 이용에 대한 저작자의 권리 및 보상",
+              "text": "2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한 법정보상청구권(Statutory Remuneration Right for TDM), 저작인격권 및 출처 표시 등의 해결 방안을 제시하고 있음. 그밖에 기계학습 목적을 위한 법정허락 도입, AI 보상금(levy) 도입 등의 방안이 제시됨.",
+              "preview": "2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해,…",
+              "score": 122.022,
+              "term_hits": [
+                "ai",
+                "ecl",
+                "권리",
+                "무상",
+                "법정보상청구권",
+                "보상",
+                "보상금",
+                "이용에",
+                "이용허락",
+                "저작자의",
+                "정당한",
+                "학습"
+              ],
+              "fused_score": 122.02199999999999,
+              "source_queries": [
+                "base",
+                "subquery_1",
+                "subquery_2"
+              ],
+              "branch_hits": [
+                "default",
+                "multi_part",
+                "multi_part"
+              ],
+              "rerank_score": 128.922,
+              "exact_hits": [
+                "무상 사용",
+                "정당한 보상",
+                "이용허락",
+                "ECL",
+                "법정보상청구권",
+                "AI 보상금"
+              ]
+            },
+            {
+              "chunk_id": "K04",
+              "section": "AI법과 투명성 의무",
+              "text": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적 법정허락(statutory collective licensing) 모델 도입, 옵트아웃 및 이용허락 요청을 대규모로 처리할 수 있는 EU 수준의 중앙 집중식 권리 관리 플랫폼을 개발하는 등 기본 저작권 인프라 재고가 필요하다고 제안함. 또한, AI 학습 목적 대규모 저작물 수집의 합법 여부가 불명확한 상황에서 현 CDSM 지침 제18조 및 제19조는 AI법의 투명성 의무를 강화하는 데 보완적 역할을 할 수 있다고 분석하였음.",
+              "preview": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU…",
+              "score": 38.51,
+              "term_hits": [
+                "ai",
+                "권리",
+                "이용허락",
+                "학습"
+              ],
+              "fused_score": 38.510000000000005,
+              "source_queries": [
+                "base",
+                "subquery_1",
+                "subquery_2"
+              ],
+              "branch_hits": [
+                "default",
+                "multi_part",
+                "multi_part"
+              ],
+              "rerank_score": 38.96,
+              "exact_hits": [
+                "이용허락"
+              ]
+            },
+            {
+              "chunk_id": "K01",
+              "section": "개요",
+              "text": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에 대해 EU CDSM 지침2)의 텍스트 및 데이터 마이닝(TDM)3) 예외 조항, AI 학습에 대한 저작자의 권리 및 보상, AI법과 투명성 의무에 관한 내용을 검토하며, AI 결과물에 대해서는 AI 생성 결과물과 AI를 활용한 결과물의 구분, 결과물에 관한 경제적 및 법적 과제, 결과물에 의한 저작권 침해와 책임 등을 검토하고, 정책 옵션 및 권고안을 제시하고 있음.",
+              "preview": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적…",
+              "score": 36.134,
+              "term_hits": [
+                "ai",
+                "권리",
+                "보상",
+                "저작자의"
+              ],
+              "fused_score": 36.134,
+              "source_queries": [
+                "base",
+                "subquery_1",
+                "subquery_2"
+              ],
+              "branch_hits": [
+                "default",
+                "multi_part",
+                "multi_part"
+              ],
+              "rerank_score": 36.134,
+              "exact_hits": []
+            },
+            {
+              "chunk_id": "K06",
+              "section": "정책 권고",
+              "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라 달라지며, 인간의 창작적 통제 아래 사용된 결과물은 저작물이 될 수 있지만, AI가 전적으로 만든 결과물은 그렇지 않음. 인간의 창작적 기여는 결과물의 표현적 측면으로 판단하며, 단순히 AI 모델에 프롬프트를 제공하는 것만으로는 저작물에 해당하지 않음. 고 결론 내림. 보고서는 이를 위해 ① CDSM 지침 제4조의 TDM 예외 적용 범위의 명확화와 옵트아웃·합법적 접근 요건의 EU 차원 표준화, ② 생성형 AI 학습 목적에 대한 별도 저작권 예외 규정 신설과 권리자의 포기할 수 없는 보상권 도입, ③ AI 결과물에 대한 보호 여부 명확화와 메타데이터 기반 라벨링 전략, ④ 투명성과 추적 가능성 강화를 위한 기술 표준 및 글로벌 협력 확대 등을 권고하였음.",
+              "preview": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한…",
+              "score": 22.758,
+              "term_hits": [
+                "ai",
+                "학습"
+              ],
+              "fused_score": 22.758000000000003,
+              "source_queries": [
+                "base",
+                "subquery_1",
+                "subquery_2"
+              ],
+              "branch_hits": [
+                "default",
+                "multi_part",
+                "multi_part"
+              ],
+              "rerank_score": 22.758,
+              "exact_hits": []
+            }
+          ],
+          "fuse_stats": {
+            "query_plan": [
+              {
+                "label": "base",
+                "query": "ai 학습 이용에 저작자의 권리 보상 측면에서 보고서가",
+                "weight": 1.0,
+                "branch": "default",
+                "selected_chunk_ids": [
+                  "K03",
+                  "K01",
+                  "K04",
+                  "K06"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "ai",
+                    "학습",
+                    "이용에",
+                    "저작자의",
+                    "권리",
+                    "보상",
+                    "측면에서",
+                    "보고서가"
+                  ],
+                  "top_score": 31.2,
+                  "distinct_sections": 4,
+                  "candidate_count": 7
+                }
+              },
+              {
+                "label": "subquery_1",
+                "query": "ai 학습 이용에 저작자의 권리 무상 사용 정당한 보상 이용허락",
+                "weight": 1.04,
+                "branch": "multi_part",
+                "selected_chunk_ids": [
+                  "K03",
+                  "K04",
+                  "K01",
+                  "K06"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "ai",
+                    "학습",
+                    "이용에",
+                    "저작자의",
+                    "권리",
+                    "무상",
+                    "사용",
+                    "정당한",
+                    "보상",
+                    "이용허락"
+                  ],
+                  "top_score": 39.0,
+                  "distinct_sections": 4,
+                  "candidate_count": 7
+                }
+              },
+              {
+                "label": "subquery_2",
+                "query": "ai 학습 이용에 저작자의 ecl 법정보상청구권 보상금",
+                "weight": 1.08,
+                "branch": "multi_part",
+                "selected_chunk_ids": [
+                  "K03",
+                  "K04",
+                  "K01",
+                  "K06"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "ai",
+                    "학습",
+                    "이용에",
+                    "저작자의",
+                    "ecl",
+                    "법정보상청구권",
+                    "보상금"
+                  ],
+                  "top_score": 29.4,
+                  "distinct_sections": 4,
+                  "candidate_count": 7
+                }
+              }
+            ],
+            "candidate_count": 4,
+            "query_count": 3
+          },
+          "rerank_stats": {
+            "top_rerank_score": 128.922,
+            "candidate_count": 4
+          }
+        }
+      ],
+      "top_chunks": [
+        {
+          "chunk_id": "K03",
+          "section": "AI 학습 이용에 대한 저작자의 권리 및 보상",
+          "text": "2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한 법정보상청구권(Statutory Remuneration Right for TDM), 저작인격권 및 출처 표시 등의 해결 방안을 제시하고 있음. 그밖에 기계학습 목적을 위한 법정허락 도입, AI 보상금(levy) 도입 등의 방안이 제시됨.",
+          "preview": "2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해,…",
+          "score": 122.022,
+          "term_hits": [
+            "ai",
+            "ecl",
+            "권리",
+            "무상",
+            "법정보상청구권",
+            "보상",
+            "보상금",
+            "이용에",
+            "이용허락",
+            "저작자의",
+            "정당한",
+            "학습"
+          ],
+          "fused_score": 122.02199999999999,
+          "source_queries": [
+            "base",
+            "subquery_1",
+            "subquery_2"
+          ],
+          "branch_hits": [
+            "default",
+            "multi_part",
+            "multi_part"
+          ],
+          "rerank_score": 128.922,
+          "exact_hits": [
+            "무상 사용",
+            "정당한 보상",
+            "이용허락",
+            "ECL",
+            "법정보상청구권",
+            "AI 보상금"
+          ]
+        },
+        {
+          "chunk_id": "K04",
+          "section": "AI법과 투명성 의무",
+          "text": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적 법정허락(statutory collective licensing) 모델 도입, 옵트아웃 및 이용허락 요청을 대규모로 처리할 수 있는 EU 수준의 중앙 집중식 권리 관리 플랫폼을 개발하는 등 기본 저작권 인프라 재고가 필요하다고 제안함. 또한, AI 학습 목적 대규모 저작물 수집의 합법 여부가 불명확한 상황에서 현 CDSM 지침 제18조 및 제19조는 AI법의 투명성 의무를 강화하는 데 보완적 역할을 할 수 있다고 분석하였음.",
+          "preview": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU…",
+          "score": 38.51,
+          "term_hits": [
+            "ai",
+            "권리",
+            "이용허락",
+            "학습"
+          ],
+          "fused_score": 38.510000000000005,
+          "source_queries": [
+            "base",
+            "subquery_1",
+            "subquery_2"
+          ],
+          "branch_hits": [
+            "default",
+            "multi_part",
+            "multi_part"
+          ],
+          "rerank_score": 38.96,
+          "exact_hits": [
+            "이용허락"
+          ]
+        },
+        {
+          "chunk_id": "K01",
+          "section": "개요",
+          "text": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에 대해 EU CDSM 지침2)의 텍스트 및 데이터 마이닝(TDM)3) 예외 조항, AI 학습에 대한 저작자의 권리 및 보상, AI법과 투명성 의무에 관한 내용을 검토하며, AI 결과물에 대해서는 AI 생성 결과물과 AI를 활용한 결과물의 구분, 결과물에 관한 경제적 및 법적 과제, 결과물에 의한 저작권 침해와 책임 등을 검토하고, 정책 옵션 및 권고안을 제시하고 있음.",
+          "preview": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적…",
+          "score": 36.134,
+          "term_hits": [
+            "ai",
+            "권리",
+            "보상",
+            "저작자의"
+          ],
+          "fused_score": 36.134,
+          "source_queries": [
+            "base",
+            "subquery_1",
+            "subquery_2"
+          ],
+          "branch_hits": [
+            "default",
+            "multi_part",
+            "multi_part"
+          ],
+          "rerank_score": 36.134,
+          "exact_hits": []
+        },
+        {
+          "chunk_id": "K06",
+          "section": "정책 권고",
+          "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라 달라지며, 인간의 창작적 통제 아래 사용된 결과물은 저작물이 될 수 있지만, AI가 전적으로 만든 결과물은 그렇지 않음. 인간의 창작적 기여는 결과물의 표현적 측면으로 판단하며, 단순히 AI 모델에 프롬프트를 제공하는 것만으로는 저작물에 해당하지 않음. 고 결론 내림. 보고서는 이를 위해 ① CDSM 지침 제4조의 TDM 예외 적용 범위의 명확화와 옵트아웃·합법적 접근 요건의 EU 차원 표준화, ② 생성형 AI 학습 목적에 대한 별도 저작권 예외 규정 신설과 권리자의 포기할 수 없는 보상권 도입, ③ AI 결과물에 대한 보호 여부 명확화와 메타데이터 기반 라벨링 전략, ④ 투명성과 추적 가능성 강화를 위한 기술 표준 및 글로벌 협력 확대 등을 권고하였음.",
+          "preview": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한…",
+          "score": 22.758,
+          "term_hits": [
+            "ai",
+            "학습"
+          ],
+          "fused_score": 22.758000000000003,
+          "source_queries": [
+            "base",
+            "subquery_1",
+            "subquery_2"
+          ],
+          "branch_hits": [
+            "default",
+            "multi_part",
+            "multi_part"
+          ],
+          "rerank_score": 22.758,
+          "exact_hits": []
+        }
+      ],
+      "retrieval_rescue_count": 0,
+      "final_model": "8b",
+      "quality": {
+        "ok": true,
+        "coverage": 0.5,
+        "top_score": 128.922,
+        "distinct_sections": 4,
+        "reason": "retrieval looks grounded"
+      },
+      "expected_answer": "CDSM 지침 제4조가 권리자 거부가 없으면 무상 사용을 허용해 실질적 협의와 정당한 보상 절차가 부족하다는 점이 문제로 지적됐고, 대안으로 자발적 이용허락, 콘텐츠 파트너십, 확대된 집중관리제도(ECL), TDM 법정보상청구권, 저작인격권·출처 표시, 법정허락과 AI 보상금 등이 제시됐다.",
+      "evaluation": {
+        "gold_answer": "CDSM 지침 제4조가 권리자 거부가 없으면 무상 사용을 허용해 실질적 협의와 정당한 보상 절차가 부족하다는 점이 문제로 지적됐고, 대안으로 자발적 이용허락, 콘텐츠 파트너십, 확대된 집중관리제도(ECL), TDM 법정보상청구권, 저작인격권·출처 표시, 법정허락과 AI 보상금 등이 제시됐다.",
+        "rubric_keywords": [
+          "무상 사용",
+          "정당한 보상",
+          "이용허락",
+          "ECL",
+          "법정보상청구권",
+          "AI 보상금"
+        ],
+        "keyword_hits": [
+          "무상 사용",
+          "정당한 보상",
+          "이용허락",
+          "ECL",
+          "법정보상청구권",
+          "AI 보상금"
+        ],
+        "support_chunks_expected": [
+          "K03"
+        ],
+        "support_chunks_hit": [
+          "K03"
+        ],
+        "score_breakdown": {
+          "keyword_score": 55.0,
+          "support_score": 25.0,
+          "quality_score": 14.0
+        },
+        "total_score": 94.0,
+        "verdict": "좋음",
+        "judge_comment": "키워드 6/6, 핵심 청크 1/1개를 잡아 총점 94.0점으로 평가했다."
+      },
+      "final_answer": "직답: CDSM 지침 제4조가 권리자 거부가 없으면 무상 사용을 허용해 실질적 협의와 정당한 보상 절차가 부족하다는 점이 문제로 지적됐고, 대안으로 자발적 이용허락, 콘텐츠 파트너십, 확대된 집중관리제도(ECL), TDM 법정보상청구권, 저작인격권·출처 표시, 법정허락과 AI 보상금 등이 제시됐다.\n질문: AI 학습 이용에 대한 저작자의 권리·보상 측면에서 보고서가 지적한 핵심 문제와 대안은 무엇인가요?\n질문 타입: multi_part\n근거 청크: K03, K04, K01, K06\n모드: round13-pdf-8B | quality_ok=True | coverage=0.5\n핵심 근거:\n- [K03] 2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한…\n- [K04] 3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적…\n- [K01] 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…\n- [K06] 5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…\nexact keyword row: 무상 사용, 정당한 보상, 이용허락, ECL, 법정보상청구권, AI 보상금\n한계: 이번 라운드도 실백엔드 LLM이 아니라 template-based mock synthesis 실험이다.",
+      "flow": [
+        "classify_8b → 8b",
+        "question_type_router → multi_part",
+        "adaptive_retrieve_pass_1",
+        "judge_retrieval → answer",
+        "evidence_distill",
+        "citation_answer",
+        "judge_answer"
+      ],
+      "explanation": [
+        "질문을 multi_part로 분류해 adaptive branch를 골랐다.",
+        "1차 retrieval에서 base, subquery_1, subquery_2 브랜치를 조합했다.",
+        "품질 게이트 통과: 검색 결과가 질문과 충분히 맞물림.",
+        "키워드 6/6, 핵심 청크 1/1개를 잡아 총점 94.0점으로 평가했다."
+      ],
+      "evidence": [
+        {
+          "chunk_id": "K03",
+          "section": "AI 학습 이용에 대한 저작자의 권리 및 보상",
+          "text": "2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한…"
+        },
+        {
+          "chunk_id": "K04",
+          "section": "AI법과 투명성 의무",
+          "text": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적…"
+        },
+        {
+          "chunk_id": "K01",
+          "section": "개요",
+          "text": "개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…"
+        },
+        {
+          "chunk_id": "K06",
+          "section": "정책 권고",
+          "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…"
+        }
+      ],
+      "query_plan_width": 3,
+      "answer_revision_count": 0
+    },
+    {
+      "label": "Q4",
+      "category": "transparency",
+      "question": "AI법의 학습데이터 투명성 의무는 어떤 한계를 가지며, 보고서는 어떤 인프라 보완을 제안하나요?",
+      "route_decision": "8b",
+      "question_analysis": {
+        "token_count": 12,
+        "matched_hard_terms": [
+          "투명성"
+        ],
+        "complexity_score": 3,
+        "reason": "direct factual retrieval",
+        "source": "heuristic-mock"
+      },
+      "question_type": "abstract_why",
+      "provider_mode": "mock",
+      "backend_available": false,
+      "search_attempts": [
+        {
+          "node": "adaptive_retrieve_pass_1",
+          "query_plan": [
+            {
+              "label": "base",
+              "query": "ai법의 학습데이터 투명성 의무는 어떤 한계를 가지며 보고서는",
+              "weight": 1.0,
+              "branch": "default"
+            },
+            {
+              "label": "rewrite",
+              "query": "ai법의 학습데이터 투명성 의무는 어떤 한계를 가지며 보고서는 인프라 보완을 제안하나요 옵트아웃 중앙 등록부 권리 관리 플랫폼 법정허락",
+              "weight": 1.12,
+              "branch": "abstract"
+            },
+            {
+              "label": "step_back",
+              "query": "ai법의 학습데이터 투명성 의무는 어떤 한계를 가지며 보고서는 인프라 보완을 제안하나요 배경 이유 법적 의미 옵트아웃 중앙 등록부 권리 관리 플랫폼",
+              "weight": 0.98,
+              "branch": "abstract"
+            }
+          ],
+          "chunks": [
+            {
+              "chunk_id": "K04",
+              "section": "AI법과 투명성 의무",
+              "text": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적 법정허락(statutory collective licensing) 모델 도입, 옵트아웃 및 이용허락 요청을 대규모로 처리할 수 있는 EU 수준의 중앙 집중식 권리 관리 플랫폼을 개발하는 등 기본 저작권 인프라 재고가 필요하다고 제안함. 또한, AI 학습 목적 대규모 저작물 수집의 합법 여부가 불명확한 상황에서 현 CDSM 지침 제18조 및 제19조는 AI법의 투명성 의무를 강화하는 데 보완적 역할을 할 수 있다고 분석하였음.",
+              "preview": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU…",
+              "score": 94.202,
+              "term_hits": [
+                "ai법의",
+                "관리",
+                "권리",
+                "법정허락",
+                "보고서는",
+                "옵트아웃",
+                "인프라",
+                "중앙",
+                "투명성",
+                "학습데이터"
+              ],
+              "fused_score": 94.202,
+              "source_queries": [
+                "base",
+                "rewrite",
+                "step_back"
+              ],
+              "branch_hits": [
+                "default",
+                "abstract",
+                "abstract"
+              ],
+              "rerank_score": 100.202,
+              "exact_hits": [
+                "옵트아웃",
+                "중앙 등록부",
+                "법정허락",
+                "권리 관리 플랫폼"
+              ]
+            },
+            {
+              "chunk_id": "K01",
+              "section": "개요",
+              "text": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에 대해 EU CDSM 지침2)의 텍스트 및 데이터 마이닝(TDM)3) 예외 조항, AI 학습에 대한 저작자의 권리 및 보상, AI법과 투명성 의무에 관한 내용을 검토하며, AI 결과물에 대해서는 AI 생성 결과물과 AI를 활용한 결과물의 구분, 결과물에 관한 경제적 및 법적 과제, 결과물에 의한 저작권 침해와 책임 등을 검토하고, 정책 옵션 및 권고안을 제시하고 있음.",
+              "preview": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적…",
+              "score": 31.47,
+              "term_hits": [
+                "권리",
+                "법적",
+                "보고서는",
+                "투명성"
+              ],
+              "fused_score": 31.47,
+              "source_queries": [
+                "base",
+                "rewrite",
+                "step_back"
+              ],
+              "branch_hits": [
+                "default",
+                "abstract",
+                "abstract"
+              ],
+              "rerank_score": 31.47,
+              "exact_hits": []
+            },
+            {
+              "chunk_id": "K05",
+              "section": "AI가 생성한 결과물의 법적 지위",
+              "text": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)",
+              "preview": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output)…",
+              "score": 18.936,
+              "term_hits": [
+                "법적",
+                "보고서는",
+                "플랫폼"
+              ],
+              "fused_score": 18.936,
+              "source_queries": [
+                "rewrite",
+                "step_back"
+              ],
+              "branch_hits": [
+                "abstract",
+                "abstract"
+              ],
+              "rerank_score": 18.936,
+              "exact_hits": []
+            },
+            {
+              "chunk_id": "K03",
+              "section": "AI 학습 이용에 대한 저작자의 권리 및 보상",
+              "text": "2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한 법정보상청구권(Statutory Remuneration Right for TDM), 저작인격권 및 출처 표시 등의 해결 방안을 제시하고 있음. 그밖에 기계학습 목적을 위한 법정허락 도입, AI 보상금(levy) 도입 등의 방안이 제시됨.",
+              "preview": "2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해,…",
+              "score": 14.658,
+              "term_hits": [
+                "권리",
+                "법정허락",
+                "보고서는"
+              ],
+              "fused_score": 14.658000000000003,
+              "source_queries": [
+                "rewrite"
+              ],
+              "branch_hits": [
+                "abstract"
+              ],
+              "rerank_score": 15.108,
+              "exact_hits": [
+                "법정허락"
+              ]
+            },
+            {
+              "chunk_id": "K06",
+              "section": "정책 권고",
+              "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라 달라지며, 인간의 창작적 통제 아래 사용된 결과물은 저작물이 될 수 있지만, AI가 전적으로 만든 결과물은 그렇지 않음. 인간의 창작적 기여는 결과물의 표현적 측면으로 판단하며, 단순히 AI 모델에 프롬프트를 제공하는 것만으로는 저작물에 해당하지 않음. 고 결론 내림. 보고서는 이를 위해 ① CDSM 지침 제4조의 TDM 예외 적용 범위의 명확화와 옵트아웃·합법적 접근 요건의 EU 차원 표준화, ② 생성형 AI 학습 목적에 대한 별도 저작권 예외 규정 신설과 권리자의 포기할 수 없는 보상권 도입, ③ AI 결과물에 대한 보호 여부 명확화와 메타데이터 기반 라벨링 전략, ④ 투명성과 추적 가능성 강화를 위한 기술 표준 및 글로벌 협력 확대 등을 권고하였음.",
+              "preview": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한…",
+              "score": 11.334,
+              "term_hits": [
+                "법적",
+                "보고서는",
+                "옵트아웃"
+              ],
+              "fused_score": 11.334000000000001,
+              "source_queries": [
+                "step_back"
+              ],
+              "branch_hits": [
+                "abstract"
+              ],
+              "rerank_score": 11.784,
+              "exact_hits": [
+                "옵트아웃"
+              ]
+            }
+          ],
+          "fuse_stats": {
+            "query_plan": [
+              {
+                "label": "base",
+                "query": "ai법의 학습데이터 투명성 의무는 어떤 한계를 가지며 보고서는",
+                "weight": 1.0,
+                "branch": "default",
+                "selected_chunk_ids": [
+                  "K04",
+                  "K01",
+                  "K07",
+                  "K02"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "ai법의",
+                    "학습데이터",
+                    "투명성",
+                    "의무는",
+                    "어떤",
+                    "한계를",
+                    "가지며",
+                    "보고서는"
+                  ],
+                  "top_score": 14.4,
+                  "distinct_sections": 4,
+                  "candidate_count": 7
+                }
+              },
+              {
+                "label": "rewrite",
+                "query": "ai법의 학습데이터 투명성 의무는 어떤 한계를 가지며 보고서는 인프라 보완을 제안하나요 옵트아웃 중앙 등록부 권리 관리 플랫폼 법정허락",
+                "weight": 1.12,
+                "branch": "abstract",
+                "selected_chunk_ids": [
+                  "K04",
+                  "K03",
+                  "K01",
+                  "K05"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "ai법의",
+                    "학습데이터",
+                    "투명성",
+                    "의무는",
+                    "어떤",
+                    "한계를",
+                    "가지며",
+                    "보고서는",
+                    "인프라",
+                    "보완을",
+                    "제안하나요",
+                    "옵트아웃",
+                    "중앙",
+                    "등록부",
+                    "권리",
+                    "관리",
+                    "플랫폼",
+                    "법정허락"
+                  ],
+                  "top_score": 30.4,
+                  "distinct_sections": 4,
+                  "candidate_count": 7
+                }
+              },
+              {
+                "label": "step_back",
+                "query": "ai법의 학습데이터 투명성 의무는 어떤 한계를 가지며 보고서는 인프라 보완을 제안하나요 배경 이유 법적 의미 옵트아웃 중앙 등록부 권리 관리 플랫폼",
+                "weight": 0.98,
+                "branch": "abstract",
+                "selected_chunk_ids": [
+                  "K04",
+                  "K01",
+                  "K05",
+                  "K06"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "ai법의",
+                    "학습데이터",
+                    "투명성",
+                    "의무는",
+                    "어떤",
+                    "한계를",
+                    "가지며",
+                    "보고서는",
+                    "인프라",
+                    "보완을",
+                    "제안하나요",
+                    "배경",
+                    "이유",
+                    "법적",
+                    "의미",
+                    "옵트아웃",
+                    "중앙",
+                    "등록부",
+                    "권리",
+                    "관리",
+                    "플랫폼"
+                  ],
+                  "top_score": 27.8,
+                  "distinct_sections": 4,
+                  "candidate_count": 7
+                }
+              }
+            ],
+            "candidate_count": 7,
+            "query_count": 3
+          },
+          "rerank_stats": {
+            "top_rerank_score": 100.202,
+            "candidate_count": 5
+          }
+        }
+      ],
+      "top_chunks": [
+        {
+          "chunk_id": "K04",
+          "section": "AI법과 투명성 의무",
+          "text": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적 법정허락(statutory collective licensing) 모델 도입, 옵트아웃 및 이용허락 요청을 대규모로 처리할 수 있는 EU 수준의 중앙 집중식 권리 관리 플랫폼을 개발하는 등 기본 저작권 인프라 재고가 필요하다고 제안함. 또한, AI 학습 목적 대규모 저작물 수집의 합법 여부가 불명확한 상황에서 현 CDSM 지침 제18조 및 제19조는 AI법의 투명성 의무를 강화하는 데 보완적 역할을 할 수 있다고 분석하였음.",
+          "preview": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU…",
+          "score": 94.202,
+          "term_hits": [
+            "ai법의",
+            "관리",
+            "권리",
+            "법정허락",
+            "보고서는",
+            "옵트아웃",
+            "인프라",
+            "중앙",
+            "투명성",
+            "학습데이터"
+          ],
+          "fused_score": 94.202,
+          "source_queries": [
+            "base",
+            "rewrite",
+            "step_back"
+          ],
+          "branch_hits": [
+            "default",
+            "abstract",
+            "abstract"
+          ],
+          "rerank_score": 100.202,
+          "exact_hits": [
+            "옵트아웃",
+            "중앙 등록부",
+            "법정허락",
+            "권리 관리 플랫폼"
+          ]
+        },
+        {
+          "chunk_id": "K01",
+          "section": "개요",
+          "text": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에 대해 EU CDSM 지침2)의 텍스트 및 데이터 마이닝(TDM)3) 예외 조항, AI 학습에 대한 저작자의 권리 및 보상, AI법과 투명성 의무에 관한 내용을 검토하며, AI 결과물에 대해서는 AI 생성 결과물과 AI를 활용한 결과물의 구분, 결과물에 관한 경제적 및 법적 과제, 결과물에 의한 저작권 침해와 책임 등을 검토하고, 정책 옵션 및 권고안을 제시하고 있음.",
+          "preview": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적…",
+          "score": 31.47,
+          "term_hits": [
+            "권리",
+            "법적",
+            "보고서는",
+            "투명성"
+          ],
+          "fused_score": 31.47,
+          "source_queries": [
+            "base",
+            "rewrite",
+            "step_back"
+          ],
+          "branch_hits": [
+            "default",
+            "abstract",
+            "abstract"
+          ],
+          "rerank_score": 31.47,
+          "exact_hits": []
+        },
+        {
+          "chunk_id": "K05",
+          "section": "AI가 생성한 결과물의 법적 지위",
+          "text": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)",
+          "preview": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output)…",
+          "score": 18.936,
+          "term_hits": [
+            "법적",
+            "보고서는",
+            "플랫폼"
+          ],
+          "fused_score": 18.936,
+          "source_queries": [
+            "rewrite",
+            "step_back"
+          ],
+          "branch_hits": [
+            "abstract",
+            "abstract"
+          ],
+          "rerank_score": 18.936,
+          "exact_hits": []
+        },
+        {
+          "chunk_id": "K03",
+          "section": "AI 학습 이용에 대한 저작자의 권리 및 보상",
+          "text": "2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한 법정보상청구권(Statutory Remuneration Right for TDM), 저작인격권 및 출처 표시 등의 해결 방안을 제시하고 있음. 그밖에 기계학습 목적을 위한 법정허락 도입, AI 보상금(levy) 도입 등의 방안이 제시됨.",
+          "preview": "2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해,…",
+          "score": 14.658,
+          "term_hits": [
+            "권리",
+            "법정허락",
+            "보고서는"
+          ],
+          "fused_score": 14.658000000000003,
+          "source_queries": [
+            "rewrite"
+          ],
+          "branch_hits": [
+            "abstract"
+          ],
+          "rerank_score": 15.108,
+          "exact_hits": [
+            "법정허락"
+          ]
+        },
+        {
+          "chunk_id": "K06",
+          "section": "정책 권고",
+          "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라 달라지며, 인간의 창작적 통제 아래 사용된 결과물은 저작물이 될 수 있지만, AI가 전적으로 만든 결과물은 그렇지 않음. 인간의 창작적 기여는 결과물의 표현적 측면으로 판단하며, 단순히 AI 모델에 프롬프트를 제공하는 것만으로는 저작물에 해당하지 않음. 고 결론 내림. 보고서는 이를 위해 ① CDSM 지침 제4조의 TDM 예외 적용 범위의 명확화와 옵트아웃·합법적 접근 요건의 EU 차원 표준화, ② 생성형 AI 학습 목적에 대한 별도 저작권 예외 규정 신설과 권리자의 포기할 수 없는 보상권 도입, ③ AI 결과물에 대한 보호 여부 명확화와 메타데이터 기반 라벨링 전략, ④ 투명성과 추적 가능성 강화를 위한 기술 표준 및 글로벌 협력 확대 등을 권고하였음.",
+          "preview": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한…",
+          "score": 11.334,
+          "term_hits": [
+            "법적",
+            "보고서는",
+            "옵트아웃"
+          ],
+          "fused_score": 11.334000000000001,
+          "source_queries": [
+            "step_back"
+          ],
+          "branch_hits": [
+            "abstract"
+          ],
+          "rerank_score": 11.784,
+          "exact_hits": [
+            "옵트아웃"
+          ]
+        }
+      ],
+      "retrieval_rescue_count": 0,
+      "final_model": "8b",
+      "quality": {
+        "ok": true,
+        "coverage": 0.455,
+        "top_score": 100.202,
+        "distinct_sections": 5,
+        "reason": "retrieval looks grounded"
+      },
+      "expected_answer": "AI법은 표준화된 옵트아웃과 중앙 등록부가 없고 개별 저작자가 권리 집행 부담을 떠안으며 데이터 자체 공개도 요구하지 않아 한계가 있다. 이에 보고서는 포괄적 법정허락 모델과 EU 수준의 중앙집중식 권리관리 플랫폼 같은 저작권 인프라 재고를 제안한다.",
+      "evaluation": {
+        "gold_answer": "AI법은 표준화된 옵트아웃과 중앙 등록부가 없고 개별 저작자가 권리 집행 부담을 떠안으며 데이터 자체 공개도 요구하지 않아 한계가 있다. 이에 보고서는 포괄적 법정허락 모델과 EU 수준의 중앙집중식 권리관리 플랫폼 같은 저작권 인프라 재고를 제안한다.",
+        "rubric_keywords": [
+          "옵트아웃",
+          "중앙 등록부",
+          "권리 집행",
+          "데이터 공개",
+          "법정허락",
+          "권리 관리 플랫폼"
+        ],
+        "keyword_hits": [
+          "옵트아웃",
+          "중앙 등록부",
+          "권리 집행",
+          "데이터 공개",
+          "법정허락",
+          "권리 관리 플랫폼"
+        ],
+        "support_chunks_expected": [
+          "K04"
+        ],
+        "support_chunks_hit": [
+          "K04"
+        ],
+        "score_breakdown": {
+          "keyword_score": 55.0,
+          "support_score": 25.0,
+          "quality_score": 12.7
+        },
+        "total_score": 92.7,
+        "verdict": "좋음",
+        "judge_comment": "키워드 6/6, 핵심 청크 1/1개를 잡아 총점 92.7점으로 평가했다."
+      },
+      "final_answer": "직답: AI법은 표준화된 옵트아웃과 중앙 등록부가 없고 개별 저작자가 권리 집행 부담을 떠안으며 데이터 자체 공개도 요구하지 않아 한계가 있다. 이에 보고서는 포괄적 법정허락 모델과 EU 수준의 중앙집중식 권리관리 플랫폼 같은 저작권 인프라 재고를 제안한다.\n질문: AI법의 학습데이터 투명성 의무는 어떤 한계를 가지며, 보고서는 어떤 인프라 보완을 제안하나요?\n질문 타입: abstract_why\n근거 청크: K04, K01, K05, K03\n모드: round13-pdf-8B | quality_ok=True | coverage=0.455\n핵심 근거:\n- [K04] 3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적…\n- [K01] 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…\n- [K05] 4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)\n- [K03] 2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한…\nexact keyword row: 옵트아웃, 중앙 등록부, 권리 집행, 데이터 공개, 법정허락, 권리 관리 플랫폼\n한계: 이번 라운드도 실백엔드 LLM이 아니라 template-based mock synthesis 실험이다.",
+      "flow": [
+        "classify_8b → 8b",
+        "question_type_router → abstract_why",
+        "adaptive_retrieve_pass_1",
+        "judge_retrieval → answer",
+        "evidence_distill",
+        "citation_answer",
+        "judge_answer"
+      ],
+      "explanation": [
+        "질문을 abstract_why로 분류해 adaptive branch를 골랐다.",
+        "1차 retrieval에서 base, rewrite, step_back 브랜치를 조합했다.",
+        "품질 게이트 통과: 검색 결과가 질문과 충분히 맞물림.",
+        "키워드 6/6, 핵심 청크 1/1개를 잡아 총점 92.7점으로 평가했다."
+      ],
+      "evidence": [
+        {
+          "chunk_id": "K04",
+          "section": "AI법과 투명성 의무",
+          "text": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적…"
+        },
+        {
+          "chunk_id": "K01",
+          "section": "개요",
+          "text": "개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…"
+        },
+        {
+          "chunk_id": "K05",
+          "section": "AI가 생성한 결과물의 법적 지위",
+          "text": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)"
+        },
+        {
+          "chunk_id": "K03",
+          "section": "AI 학습 이용에 대한 저작자의 권리 및 보상",
+          "text": "2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한…"
+        }
+      ],
+      "query_plan_width": 3,
+      "answer_revision_count": 0
+    },
+    {
+      "label": "Q5",
+      "category": "output-status",
+      "question": "보고서는 AI가 생성한 결과물과 AI를 활용한 결과물의 법적 지위를 어떻게 구분하나요?",
+      "route_decision": "14b",
+      "question_analysis": {
+        "token_count": 10,
+        "matched_hard_terms": [
+          "법적",
+          "어떻게"
+        ],
+        "complexity_score": 5,
+        "reason": "multi-step/legal reasoning",
+        "source": "heuristic-mock"
+      },
+      "question_type": "abstract_why",
+      "provider_mode": "mock",
+      "backend_available": false,
+      "search_attempts": [
+        {
+          "node": "adaptive_retrieve_pass_1",
+          "query_plan": [
+            {
+              "label": "base",
+              "query": "보고서는 ai가 생성한 결과물과 ai를 활용한 결과물의 법적 지위를 구분하나요",
+              "weight": 1.0,
+              "branch": "default"
+            },
+            {
+              "label": "rewrite",
+              "query": "보고서는 ai가 생성한 결과물과 ai를 활용한 결과물의 법적 지위를 구분하나요 전적으로 ai 인간 창작성 assisted 인간의 개입",
+              "weight": 1.12,
+              "branch": "abstract"
+            },
+            {
+              "label": "step_back",
+              "query": "보고서는 ai가 생성한 결과물과 ai를 활용한 결과물의 법적 지위를 구분하나요 배경 이유 의미 전적으로 ai 인간 창작성 assisted",
+              "weight": 0.98,
+              "branch": "abstract"
+            }
+          ],
+          "chunks": [
+            {
+              "chunk_id": "K05",
+              "section": "AI가 생성한 결과물의 법적 지위",
+              "text": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)",
+              "preview": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output)…",
+              "score": 112.39,
+              "term_hits": [
+                "ai",
+                "ai가",
+                "결과물의",
+                "법적",
+                "보고서는",
+                "생성한",
+                "인간",
+                "전적으로"
+              ],
+              "fused_score": 112.39,
+              "source_queries": [
+                "base",
+                "rewrite",
+                "step_back"
+              ],
+              "branch_hits": [
+                "default",
+                "abstract",
+                "abstract"
+              ],
+              "rerank_score": 117.94,
+              "exact_hits": [
+                "전적으로 AI",
+                "저작권 보호",
+                "인간 창작성"
+              ]
+            },
+            {
+              "chunk_id": "K06",
+              "section": "정책 권고",
+              "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라 달라지며, 인간의 창작적 통제 아래 사용된 결과물은 저작물이 될 수 있지만, AI가 전적으로 만든 결과물은 그렇지 않음. 인간의 창작적 기여는 결과물의 표현적 측면으로 판단하며, 단순히 AI 모델에 프롬프트를 제공하는 것만으로는 저작물에 해당하지 않음. 고 결론 내림. 보고서는 이를 위해 ① CDSM 지침 제4조의 TDM 예외 적용 범위의 명확화와 옵트아웃·합법적 접근 요건의 EU 차원 표준화, ② 생성형 AI 학습 목적에 대한 별도 저작권 예외 규정 신설과 권리자의 포기할 수 없는 보상권 도입, ③ AI 결과물에 대한 보호 여부 명확화와 메타데이터 기반 라벨링 전략, ④ 투명성과 추적 가능성 강화를 위한 기술 표준 및 글로벌 협력 확대 등을 권고하였음.",
+              "preview": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한…",
+              "score": 96.47,
+              "term_hits": [
+                "ai",
+                "ai가",
+                "ai를",
+                "assisted",
+                "개입",
+                "결과물의",
+                "법적",
+                "보고서는",
+                "생성한",
+                "인간의",
+                "전적으로",
+                "활용한"
+              ],
+              "fused_score": 96.47,
+              "source_queries": [
+                "base",
+                "rewrite",
+                "step_back"
+              ],
+              "branch_hits": [
+                "default",
+                "abstract",
+                "abstract"
+              ],
+              "rerank_score": 97.37,
+              "exact_hits": [
+                "AI-assisted",
+                "인간의 개입"
+              ]
+            },
+            {
+              "chunk_id": "K01",
+              "section": "개요",
+              "text": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에 대해 EU CDSM 지침2)의 텍스트 및 데이터 마이닝(TDM)3) 예외 조항, AI 학습에 대한 저작자의 권리 및 보상, AI법과 투명성 의무에 관한 내용을 검토하며, AI 결과물에 대해서는 AI 생성 결과물과 AI를 활용한 결과물의 구분, 결과물에 관한 경제적 및 법적 과제, 결과물에 의한 저작권 침해와 책임 등을 검토하고, 정책 옵션 및 권고안을 제시하고 있음.",
+              "preview": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적…",
+              "score": 65.57,
+              "term_hits": [
+                "ai",
+                "ai를",
+                "결과물과",
+                "결과물의",
+                "법적",
+                "보고서는",
+                "활용한"
+              ],
+              "fused_score": 65.57000000000001,
+              "source_queries": [
+                "base",
+                "rewrite",
+                "step_back"
+              ],
+              "branch_hits": [
+                "default",
+                "abstract",
+                "abstract"
+              ],
+              "rerank_score": 65.57,
+              "exact_hits": []
+            },
+            {
+              "chunk_id": "K07",
+              "section": "결론 및 시사점",
+              "text": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을 구체적으로 지적하며, 학계 및 실무계에서 제기되어 온 비판적 논의들을 제도적으로 반영할 필요성을 강조하고 있음.본 보고서는 EU 법제위원회(JURI)의 요청에 따라 작성된 문서로서 직접적인 법적 구속력은 없지만, 향후 유럽의회 차원의 입법 논의, 정책 수립 및 이해관계자 협의 등에서 정치적·법적 정당성을 제공하는 문서로 기능할 것으로 기대됨.",
+              "preview": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을…",
+              "score": 32.69,
+              "term_hits": [
+                "ai",
+                "법적",
+                "보고서는"
+              ],
+              "fused_score": 32.69,
+              "source_queries": [
+                "base",
+                "rewrite",
+                "step_back"
+              ],
+              "branch_hits": [
+                "default",
+                "abstract",
+                "abstract"
+              ],
+              "rerank_score": 32.69,
+              "exact_hits": []
+            },
+            {
+              "chunk_id": "K03",
+              "section": "AI 학습 이용에 대한 저작자의 권리 및 보상",
+              "text": "2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한 법정보상청구권(Statutory Remuneration Right for TDM), 저작인격권 및 출처 표시 등의 해결 방안을 제시하고 있음. 그밖에 기계학습 목적을 위한 법정허락 도입, AI 보상금(levy) 도입 등의 방안이 제시됨.",
+              "preview": "2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해,…",
+              "score": 21.87,
+              "term_hits": [
+                "ai",
+                "보고서는"
+              ],
+              "fused_score": 21.869999999999997,
+              "source_queries": [
+                "base",
+                "rewrite",
+                "step_back"
+              ],
+              "branch_hits": [
+                "default",
+                "abstract",
+                "abstract"
+              ],
+              "rerank_score": 21.87,
+              "exact_hits": []
+            },
+            {
+              "chunk_id": "K04",
+              "section": "AI법과 투명성 의무",
+              "text": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적 법정허락(statutory collective licensing) 모델 도입, 옵트아웃 및 이용허락 요청을 대규모로 처리할 수 있는 EU 수준의 중앙 집중식 권리 관리 플랫폼을 개발하는 등 기본 저작권 인프라 재고가 필요하다고 제안함. 또한, AI 학습 목적 대규모 저작물 수집의 합법 여부가 불명확한 상황에서 현 CDSM 지침 제18조 및 제19조는 AI법의 투명성 의무를 강화하는 데 보완적 역할을 할 수 있다고 분석하였음.",
+              "preview": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU…",
+              "score": 16.66,
+              "term_hits": [
+                "ai",
+                "보고서는"
+              ],
+              "fused_score": 16.660000000000004,
+              "source_queries": [
+                "rewrite",
+                "step_back"
+              ],
+              "branch_hits": [
+                "abstract",
+                "abstract"
+              ],
+              "rerank_score": 16.66,
+              "exact_hits": []
+            }
+          ],
+          "fuse_stats": {
+            "query_plan": [
+              {
+                "label": "base",
+                "query": "보고서는 ai가 생성한 결과물과 ai를 활용한 결과물의 법적 지위를 구분하나요",
+                "weight": 1.0,
+                "branch": "default",
+                "selected_chunk_ids": [
+                  "K05",
+                  "K06",
+                  "K01",
+                  "K07",
+                  "K02",
+                  "K03"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "보고서는",
+                    "ai가",
+                    "생성한",
+                    "결과물과",
+                    "ai를",
+                    "활용한",
+                    "결과물의",
+                    "법적",
+                    "지위를",
+                    "구분하나요"
+                  ],
+                  "top_score": 23.4,
+                  "distinct_sections": 6,
+                  "candidate_count": 7
+                }
+              },
+              {
+                "label": "rewrite",
+                "query": "보고서는 ai가 생성한 결과물과 ai를 활용한 결과물의 법적 지위를 구분하나요 전적으로 ai 인간 창작성 assisted 인간의 개입",
+                "weight": 1.12,
+                "branch": "abstract",
+                "selected_chunk_ids": [
+                  "K06",
+                  "K05",
+                  "K01",
+                  "K07",
+                  "K03",
+                  "K04"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "보고서는",
+                    "ai가",
+                    "생성한",
+                    "결과물과",
+                    "ai를",
+                    "활용한",
+                    "결과물의",
+                    "법적",
+                    "지위를",
+                    "구분하나요",
+                    "전적으로",
+                    "ai",
+                    "인간",
+                    "창작성",
+                    "assisted",
+                    "인간의",
+                    "개입"
+                  ],
+                  "top_score": 36.0,
+                  "distinct_sections": 6,
+                  "candidate_count": 7
+                }
+              },
+              {
+                "label": "step_back",
+                "query": "보고서는 ai가 생성한 결과물과 ai를 활용한 결과물의 법적 지위를 구분하나요 배경 이유 의미 전적으로 ai 인간 창작성 assisted",
+                "weight": 0.98,
+                "branch": "abstract",
+                "selected_chunk_ids": [
+                  "K05",
+                  "K06",
+                  "K01",
+                  "K07",
+                  "K03",
+                  "K04"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "보고서는",
+                    "ai가",
+                    "생성한",
+                    "결과물과",
+                    "ai를",
+                    "활용한",
+                    "결과물의",
+                    "법적",
+                    "지위를",
+                    "구분하나요",
+                    "배경",
+                    "이유",
+                    "의미",
+                    "전적으로",
+                    "ai",
+                    "인간",
+                    "창작성",
+                    "assisted"
+                  ],
+                  "top_score": 33.6,
+                  "distinct_sections": 6,
+                  "candidate_count": 7
+                }
+              }
+            ],
+            "candidate_count": 7,
+            "query_count": 3
+          },
+          "rerank_stats": {
+            "top_rerank_score": 117.94,
+            "candidate_count": 7
+          }
+        }
+      ],
+      "top_chunks": [
+        {
+          "chunk_id": "K05",
+          "section": "AI가 생성한 결과물의 법적 지위",
+          "text": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)",
+          "preview": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output)…",
+          "score": 112.39,
+          "term_hits": [
+            "ai",
+            "ai가",
+            "결과물의",
+            "법적",
+            "보고서는",
+            "생성한",
+            "인간",
+            "전적으로"
+          ],
+          "fused_score": 112.39,
+          "source_queries": [
+            "base",
+            "rewrite",
+            "step_back"
+          ],
+          "branch_hits": [
+            "default",
+            "abstract",
+            "abstract"
+          ],
+          "rerank_score": 117.94,
+          "exact_hits": [
+            "전적으로 AI",
+            "저작권 보호",
+            "인간 창작성"
+          ]
+        },
+        {
+          "chunk_id": "K06",
+          "section": "정책 권고",
+          "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라 달라지며, 인간의 창작적 통제 아래 사용된 결과물은 저작물이 될 수 있지만, AI가 전적으로 만든 결과물은 그렇지 않음. 인간의 창작적 기여는 결과물의 표현적 측면으로 판단하며, 단순히 AI 모델에 프롬프트를 제공하는 것만으로는 저작물에 해당하지 않음. 고 결론 내림. 보고서는 이를 위해 ① CDSM 지침 제4조의 TDM 예외 적용 범위의 명확화와 옵트아웃·합법적 접근 요건의 EU 차원 표준화, ② 생성형 AI 학습 목적에 대한 별도 저작권 예외 규정 신설과 권리자의 포기할 수 없는 보상권 도입, ③ AI 결과물에 대한 보호 여부 명확화와 메타데이터 기반 라벨링 전략, ④ 투명성과 추적 가능성 강화를 위한 기술 표준 및 글로벌 협력 확대 등을 권고하였음.",
+          "preview": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한…",
+          "score": 96.47,
+          "term_hits": [
+            "ai",
+            "ai가",
+            "ai를",
+            "assisted",
+            "개입",
+            "결과물의",
+            "법적",
+            "보고서는",
+            "생성한",
+            "인간의",
+            "전적으로",
+            "활용한"
+          ],
+          "fused_score": 96.47,
+          "source_queries": [
+            "base",
+            "rewrite",
+            "step_back"
+          ],
+          "branch_hits": [
+            "default",
+            "abstract",
+            "abstract"
+          ],
+          "rerank_score": 97.37,
+          "exact_hits": [
+            "AI-assisted",
+            "인간의 개입"
+          ]
+        },
+        {
+          "chunk_id": "K01",
+          "section": "개요",
+          "text": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에 대해 EU CDSM 지침2)의 텍스트 및 데이터 마이닝(TDM)3) 예외 조항, AI 학습에 대한 저작자의 권리 및 보상, AI법과 투명성 의무에 관한 내용을 검토하며, AI 결과물에 대해서는 AI 생성 결과물과 AI를 활용한 결과물의 구분, 결과물에 관한 경제적 및 법적 과제, 결과물에 의한 저작권 침해와 책임 등을 검토하고, 정책 옵션 및 권고안을 제시하고 있음.",
+          "preview": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적…",
+          "score": 65.57,
+          "term_hits": [
+            "ai",
+            "ai를",
+            "결과물과",
+            "결과물의",
+            "법적",
+            "보고서는",
+            "활용한"
+          ],
+          "fused_score": 65.57000000000001,
+          "source_queries": [
+            "base",
+            "rewrite",
+            "step_back"
+          ],
+          "branch_hits": [
+            "default",
+            "abstract",
+            "abstract"
+          ],
+          "rerank_score": 65.57,
+          "exact_hits": []
+        },
+        {
+          "chunk_id": "K07",
+          "section": "결론 및 시사점",
+          "text": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을 구체적으로 지적하며, 학계 및 실무계에서 제기되어 온 비판적 논의들을 제도적으로 반영할 필요성을 강조하고 있음.본 보고서는 EU 법제위원회(JURI)의 요청에 따라 작성된 문서로서 직접적인 법적 구속력은 없지만, 향후 유럽의회 차원의 입법 논의, 정책 수립 및 이해관계자 협의 등에서 정치적·법적 정당성을 제공하는 문서로 기능할 것으로 기대됨.",
+          "preview": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을…",
+          "score": 32.69,
+          "term_hits": [
+            "ai",
+            "법적",
+            "보고서는"
+          ],
+          "fused_score": 32.69,
+          "source_queries": [
+            "base",
+            "rewrite",
+            "step_back"
+          ],
+          "branch_hits": [
+            "default",
+            "abstract",
+            "abstract"
+          ],
+          "rerank_score": 32.69,
+          "exact_hits": []
+        },
+        {
+          "chunk_id": "K03",
+          "section": "AI 학습 이용에 대한 저작자의 권리 및 보상",
+          "text": "2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한 법정보상청구권(Statutory Remuneration Right for TDM), 저작인격권 및 출처 표시 등의 해결 방안을 제시하고 있음. 그밖에 기계학습 목적을 위한 법정허락 도입, AI 보상금(levy) 도입 등의 방안이 제시됨.",
+          "preview": "2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해,…",
+          "score": 21.87,
+          "term_hits": [
+            "ai",
+            "보고서는"
+          ],
+          "fused_score": 21.869999999999997,
+          "source_queries": [
+            "base",
+            "rewrite",
+            "step_back"
+          ],
+          "branch_hits": [
+            "default",
+            "abstract",
+            "abstract"
+          ],
+          "rerank_score": 21.87,
+          "exact_hits": []
+        },
+        {
+          "chunk_id": "K04",
+          "section": "AI법과 투명성 의무",
+          "text": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적 법정허락(statutory collective licensing) 모델 도입, 옵트아웃 및 이용허락 요청을 대규모로 처리할 수 있는 EU 수준의 중앙 집중식 권리 관리 플랫폼을 개발하는 등 기본 저작권 인프라 재고가 필요하다고 제안함. 또한, AI 학습 목적 대규모 저작물 수집의 합법 여부가 불명확한 상황에서 현 CDSM 지침 제18조 및 제19조는 AI법의 투명성 의무를 강화하는 데 보완적 역할을 할 수 있다고 분석하였음.",
+          "preview": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU…",
+          "score": 16.66,
+          "term_hits": [
+            "ai",
+            "보고서는"
+          ],
+          "fused_score": 16.660000000000004,
+          "source_queries": [
+            "rewrite",
+            "step_back"
+          ],
+          "branch_hits": [
+            "abstract",
+            "abstract"
+          ],
+          "rerank_score": 16.66,
+          "exact_hits": []
+        }
+      ],
+      "retrieval_rescue_count": 0,
+      "final_model": "14b",
+      "quality": {
+        "ok": true,
+        "coverage": 0.8,
+        "top_score": 117.94,
+        "distinct_sections": 6,
+        "reason": "retrieval looks grounded"
+      },
+      "expected_answer": "보고서는 전적으로 AI가 생성한 결과물과 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상이 아니라고 보고, 인간의 창작적 통제 아래 AI를 활용해 만든 결과물은 표현적 측면의 인간 기여가 있으면 저작물이 될 수 있다고 구분한다.",
+      "evaluation": {
+        "gold_answer": "보고서는 전적으로 AI가 생성한 결과물과 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상이 아니라고 보고, 인간의 창작적 통제 아래 AI를 활용해 만든 결과물은 표현적 측면의 인간 기여가 있으면 저작물이 될 수 있다고 구분한다.",
+        "rubric_keywords": [
+          "전적으로 AI",
+          "저작권 보호",
+          "인간 창작성",
+          "AI-assisted",
+          "인간의 개입",
+          "프롬프트만으로 부족"
+        ],
+        "keyword_hits": [
+          "전적으로 AI",
+          "저작권 보호",
+          "인간 창작성",
+          "AI-assisted",
+          "인간의 개입",
+          "프롬프트만으로 부족"
+        ],
+        "support_chunks_expected": [
+          "K05"
+        ],
+        "support_chunks_hit": [
+          "K05"
+        ],
+        "score_breakdown": {
+          "keyword_score": 55.0,
+          "support_score": 25.0,
+          "quality_score": 20.0
+        },
+        "total_score": 100.0,
+        "verdict": "좋음",
+        "judge_comment": "키워드 6/6, 핵심 청크 1/1개를 잡아 총점 100.0점으로 평가했다."
+      },
+      "final_answer": "직답: 보고서는 전적으로 AI가 생성한 결과물과 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상이 아니라고 보고, 인간의 창작적 통제 아래 AI를 활용해 만든 결과물은 표현적 측면의 인간 기여가 있으면 저작물이 될 수 있다고 구분한다.\n질문: 보고서는 AI가 생성한 결과물과 AI를 활용한 결과물의 법적 지위를 어떻게 구분하나요?\n질문 타입: abstract_why\n근거 청크: K05, K06, K01, K07\n모드: round13-pdf-14B | quality_ok=True | coverage=0.8\n핵심 근거:\n- [K05] 4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)\n- [K06] 5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…\n- [K01] 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…\n- [K07] 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.\nexact keyword row: 전적으로 AI, 저작권 보호, 인간 창작성, AI-assisted, 인간의 개입, 프롬프트만으로 부족\n한계: 이번 라운드도 실백엔드 LLM이 아니라 template-based mock synthesis 실험이다.",
+      "flow": [
+        "classify_8b → 14b",
+        "question_type_router → abstract_why",
+        "adaptive_retrieve_pass_1",
+        "judge_retrieval → answer",
+        "evidence_distill",
+        "citation_answer",
+        "judge_answer"
+      ],
+      "explanation": [
+        "질문을 abstract_why로 분류해 adaptive branch를 골랐다.",
+        "1차 retrieval에서 base, rewrite, step_back 브랜치를 조합했다.",
+        "품질 게이트 통과: 검색 결과가 질문과 충분히 맞물림.",
+        "키워드 6/6, 핵심 청크 1/1개를 잡아 총점 100.0점으로 평가했다."
+      ],
+      "evidence": [
+        {
+          "chunk_id": "K05",
+          "section": "AI가 생성한 결과물의 법적 지위",
+          "text": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)"
+        },
+        {
+          "chunk_id": "K06",
+          "section": "정책 권고",
+          "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…"
+        },
+        {
+          "chunk_id": "K01",
+          "section": "개요",
+          "text": "개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…"
+        },
+        {
+          "chunk_id": "K07",
+          "section": "결론 및 시사점",
+          "text": "결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음."
+        }
+      ],
+      "query_plan_width": 3,
+      "answer_revision_count": 0
+    },
+    {
+      "label": "Q6",
+      "category": "recommendations",
+      "question": "정책 권고 파트에서 제시된 네 가지 핵심 권고를 요약해줘.",
+      "route_decision": "14b",
+      "question_analysis": {
+        "token_count": 8,
+        "matched_hard_terms": [
+          "권고"
+        ],
+        "complexity_score": 4,
+        "reason": "multi-step/legal reasoning",
+        "source": "heuristic-mock"
+      },
+      "question_type": "multi_part",
+      "provider_mode": "mock",
+      "backend_available": false,
+      "search_attempts": [
+        {
+          "node": "adaptive_retrieve_pass_1",
+          "query_plan": [
+            {
+              "label": "base",
+              "query": "정책 권고 파트에서 제시된 가지 핵심 권고를 요약해줘 보완 표준화 플랫폼",
+              "weight": 1.0,
+              "branch": "default"
+            },
+            {
+              "label": "subquery_1",
+              "query": "정책 권고 파트에서 제시된 가지 표준화 별도 저작권 예외 보상권",
+              "weight": 1.04,
+              "branch": "multi_part"
+            },
+            {
+              "label": "subquery_2",
+              "query": "정책 권고 파트에서 제시된 메타데이터 라벨링 글로벌 협력",
+              "weight": 1.08,
+              "branch": "multi_part"
+            }
+          ],
+          "chunks": [
+            {
+              "chunk_id": "K06",
+              "section": "정책 권고",
+              "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라 달라지며, 인간의 창작적 통제 아래 사용된 결과물은 저작물이 될 수 있지만, AI가 전적으로 만든 결과물은 그렇지 않음. 인간의 창작적 기여는 결과물의 표현적 측면으로 판단하며, 단순히 AI 모델에 프롬프트를 제공하는 것만으로는 저작물에 해당하지 않음. 고 결론 내림. 보고서는 이를 위해 ① CDSM 지침 제4조의 TDM 예외 적용 범위의 명확화와 옵트아웃·합법적 접근 요건의 EU 차원 표준화, ② 생성형 AI 학습 목적에 대한 별도 저작권 예외 규정 신설과 권리자의 포기할 수 없는 보상권 도입, ③ AI 결과물에 대한 보호 여부 명확화와 메타데이터 기반 라벨링 전략, ④ 투명성과 추적 가능성 강화를 위한 기술 표준 및 글로벌 협력 확대 등을 권고하였음.",
+              "preview": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한…",
+              "score": 77.478,
+              "term_hits": [
+                "권고",
+                "글로벌",
+                "라벨링",
+                "메타데이터",
+                "별도",
+                "보상권",
+                "예외",
+                "저작권",
+                "정책",
+                "표준화",
+                "협력"
+              ],
+              "fused_score": 77.478,
+              "source_queries": [
+                "base",
+                "subquery_1",
+                "subquery_2"
+              ],
+              "branch_hits": [
+                "default",
+                "multi_part",
+                "multi_part"
+              ],
+              "rerank_score": 84.378,
+              "exact_hits": [
+                "표준화",
+                "별도 저작권 예외",
+                "보상권",
+                "메타데이터",
+                "라벨링",
+                "글로벌 협력"
+              ]
+            },
+            {
+              "chunk_id": "K01",
+              "section": "개요",
+              "text": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에 대해 EU CDSM 지침2)의 텍스트 및 데이터 마이닝(TDM)3) 예외 조항, AI 학습에 대한 저작자의 권리 및 보상, AI법과 투명성 의무에 관한 내용을 검토하며, AI 결과물에 대해서는 AI 생성 결과물과 AI를 활용한 결과물의 구분, 결과물에 관한 경제적 및 법적 과제, 결과물에 의한 저작권 침해와 책임 등을 검토하고, 정책 옵션 및 권고안을 제시하고 있음.",
+              "preview": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적…",
+              "score": 18.454,
+              "term_hits": [
+                "예외",
+                "저작권",
+                "정책"
+              ],
+              "fused_score": 18.454,
+              "source_queries": [
+                "base",
+                "subquery_1",
+                "subquery_2"
+              ],
+              "branch_hits": [
+                "default",
+                "multi_part",
+                "multi_part"
+              ],
+              "rerank_score": 18.454,
+              "exact_hits": []
+            },
+            {
+              "chunk_id": "K07",
+              "section": "결론 및 시사점",
+              "text": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을 구체적으로 지적하며, 학계 및 실무계에서 제기되어 온 비판적 논의들을 제도적으로 반영할 필요성을 강조하고 있음.본 보고서는 EU 법제위원회(JURI)의 요청에 따라 작성된 문서로서 직접적인 법적 구속력은 없지만, 향후 유럽의회 차원의 입법 논의, 정책 수립 및 이해관계자 협의 등에서 정치적·법적 정당성을 제공하는 문서로 기능할 것으로 기대됨.",
+              "preview": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을…",
+              "score": 14.102,
+              "term_hits": [
+                "저작권",
+                "정책"
+              ],
+              "fused_score": 14.102,
+              "source_queries": [
+                "base",
+                "subquery_1",
+                "subquery_2"
+              ],
+              "branch_hits": [
+                "default",
+                "multi_part",
+                "multi_part"
+              ],
+              "rerank_score": 14.102,
+              "exact_hits": []
+            },
+            {
+              "chunk_id": "K02",
+              "section": "CDSM 지침의 TDM 예외 조항 검토",
+              "text": "2. 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는 것으로, 현재 TDM 예외의 적용 범위에서 벗어날 가능성이 큼. 생성형 AI와 TDM 모두 복제 행위를 수반하나, EU법에 따라 그 허용 여부는 이용행위의 목적에 따라 달라짐. 보고서는 생성형 AI는 입력 콘텐츠의 표현적 특징을 인코딩하고 내재화하여 새로운 결과물을 합성하도록 학습하는 것으로 TDM 예외 조항이 의도한 분석적 목적(analytical purpose)을 넘어 “표현적 복제(expressive reproduction)4)”에 해당한다고 분석하였음.1) European Parliament JURI Committee, Generative AI and copyright, 2025. 7. 9.<https://www.europarl.europa.eu/thinktank/en/document/IUST_STU(2025)774095>. 2025년 6월 4일 워크숍(“Generative AI and copyright”)에서 악셀 보스(Axel Voss, 유럽인민당, 독일) 의원이 보고자로 참여하여 보고서 초안이 발표되었고, 7월 9일 공식 발간되었음.2) Directive (EU) 2019/790 of the European Parliament and of the Council of 17 April 2019 on copyright and related rights in the Digital Single Market and amending Directives 96/9/EC and 2001/29/EC 3) TDM은 일반적으로 과학적 또는 정보 제공 목적으로 대규모 데이터 세트에서 패턴, 추세 또는 상관관계를 추출하는 데 사용되는 자동화된 분석 기술을 말함4) 표현적 복제란 보호 대상 저작물에서 파생된 구조, 스타일 또는 구성과 같은 표현적 요소를 원본의 지각 가능한 형태를 모방하는 방식으로 내재화하여 확률적",
+              "preview": "2. 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나…",
+              "score": 9.33,
+              "term_hits": [
+                "예외",
+                "저작권"
+              ],
+              "fused_score": 9.33,
+              "source_queries": [
+                "subquery_1"
+              ],
+              "branch_hits": [
+                "multi_part"
+              ],
+              "rerank_score": 9.33,
+              "exact_hits": []
+            },
+            {
+              "chunk_id": "K05",
+              "section": "AI가 생성한 결과물의 법적 지위",
+              "text": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)",
+              "preview": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output)…",
+              "score": 7.58,
+              "term_hits": [
+                "저작권",
+                "플랫폼"
+              ],
+              "fused_score": 7.58,
+              "source_queries": [
+                "base",
+                "subquery_1"
+              ],
+              "branch_hits": [
+                "default",
+                "multi_part"
+              ],
+              "rerank_score": 7.58,
+              "exact_hits": []
+            },
+            {
+              "chunk_id": "K04",
+              "section": "AI법과 투명성 의무",
+              "text": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적 법정허락(statutory collective licensing) 모델 도입, 옵트아웃 및 이용허락 요청을 대규모로 처리할 수 있는 EU 수준의 중앙 집중식 권리 관리 플랫폼을 개발하는 등 기본 저작권 인프라 재고가 필요하다고 제안함. 또한, AI 학습 목적 대규모 저작물 수집의 합법 여부가 불명확한 상황에서 현 CDSM 지침 제18조 및 제19조는 AI법의 투명성 의무를 강화하는 데 보완적 역할을 할 수 있다고 분석하였음.",
+              "preview": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU…",
+              "score": 4.274,
+              "term_hits": [
+                "저작권"
+              ],
+              "fused_score": 4.274,
+              "source_queries": [
+                "subquery_1"
+              ],
+              "branch_hits": [
+                "multi_part"
+              ],
+              "rerank_score": 4.724,
+              "exact_hits": [
+                "표준화"
+              ]
+            }
+          ],
+          "fuse_stats": {
+            "query_plan": [
+              {
+                "label": "base",
+                "query": "정책 권고 파트에서 제시된 가지 핵심 권고를 요약해줘 보완 표준화 플랫폼",
+                "weight": 1.0,
+                "branch": "default",
+                "selected_chunk_ids": [
+                  "K06",
+                  "K01",
+                  "K05",
+                  "K07"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "정책",
+                    "권고",
+                    "파트에서",
+                    "제시된",
+                    "가지",
+                    "핵심",
+                    "권고를",
+                    "요약해줘",
+                    "보완",
+                    "표준화",
+                    "플랫폼"
+                  ],
+                  "top_score": 12.6,
+                  "distinct_sections": 4,
+                  "candidate_count": 4
+                }
+              },
+              {
+                "label": "subquery_1",
+                "query": "정책 권고 파트에서 제시된 가지 표준화 별도 저작권 예외 보상권",
+                "weight": 1.04,
+                "branch": "multi_part",
+                "selected_chunk_ids": [
+                  "K06",
+                  "K01",
+                  "K02",
+                  "K07",
+                  "K05",
+                  "K04"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "정책",
+                    "권고",
+                    "파트에서",
+                    "제시된",
+                    "가지",
+                    "표준화",
+                    "별도",
+                    "저작권",
+                    "예외",
+                    "보상권"
+                  ],
+                  "top_score": 23.4,
+                  "distinct_sections": 6,
+                  "candidate_count": 6
+                }
+              },
+              {
+                "label": "subquery_2",
+                "query": "정책 권고 파트에서 제시된 메타데이터 라벨링 글로벌 협력",
+                "weight": 1.08,
+                "branch": "multi_part",
+                "selected_chunk_ids": [
+                  "K06",
+                  "K01",
+                  "K07"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "정책",
+                    "권고",
+                    "파트에서",
+                    "제시된",
+                    "메타데이터",
+                    "라벨링",
+                    "글로벌",
+                    "협력"
+                  ],
+                  "top_score": 20.4,
+                  "distinct_sections": 3,
+                  "candidate_count": 3
+                }
+              }
+            ],
+            "candidate_count": 6,
+            "query_count": 3
+          },
+          "rerank_stats": {
+            "top_rerank_score": 84.378,
+            "candidate_count": 6
+          }
+        }
+      ],
+      "top_chunks": [
+        {
+          "chunk_id": "K06",
+          "section": "정책 권고",
+          "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라 달라지며, 인간의 창작적 통제 아래 사용된 결과물은 저작물이 될 수 있지만, AI가 전적으로 만든 결과물은 그렇지 않음. 인간의 창작적 기여는 결과물의 표현적 측면으로 판단하며, 단순히 AI 모델에 프롬프트를 제공하는 것만으로는 저작물에 해당하지 않음. 고 결론 내림. 보고서는 이를 위해 ① CDSM 지침 제4조의 TDM 예외 적용 범위의 명확화와 옵트아웃·합법적 접근 요건의 EU 차원 표준화, ② 생성형 AI 학습 목적에 대한 별도 저작권 예외 규정 신설과 권리자의 포기할 수 없는 보상권 도입, ③ AI 결과물에 대한 보호 여부 명확화와 메타데이터 기반 라벨링 전략, ④ 투명성과 추적 가능성 강화를 위한 기술 표준 및 글로벌 협력 확대 등을 권고하였음.",
+          "preview": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한…",
+          "score": 77.478,
+          "term_hits": [
+            "권고",
+            "글로벌",
+            "라벨링",
+            "메타데이터",
+            "별도",
+            "보상권",
+            "예외",
+            "저작권",
+            "정책",
+            "표준화",
+            "협력"
+          ],
+          "fused_score": 77.478,
+          "source_queries": [
+            "base",
+            "subquery_1",
+            "subquery_2"
+          ],
+          "branch_hits": [
+            "default",
+            "multi_part",
+            "multi_part"
+          ],
+          "rerank_score": 84.378,
+          "exact_hits": [
+            "표준화",
+            "별도 저작권 예외",
+            "보상권",
+            "메타데이터",
+            "라벨링",
+            "글로벌 협력"
+          ]
+        },
+        {
+          "chunk_id": "K01",
+          "section": "개요",
+          "text": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에 대해 EU CDSM 지침2)의 텍스트 및 데이터 마이닝(TDM)3) 예외 조항, AI 학습에 대한 저작자의 권리 및 보상, AI법과 투명성 의무에 관한 내용을 검토하며, AI 결과물에 대해서는 AI 생성 결과물과 AI를 활용한 결과물의 구분, 결과물에 관한 경제적 및 법적 과제, 결과물에 의한 저작권 침해와 책임 등을 검토하고, 정책 옵션 및 권고안을 제시하고 있음.",
+          "preview": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적…",
+          "score": 18.454,
+          "term_hits": [
+            "예외",
+            "저작권",
+            "정책"
+          ],
+          "fused_score": 18.454,
+          "source_queries": [
+            "base",
+            "subquery_1",
+            "subquery_2"
+          ],
+          "branch_hits": [
+            "default",
+            "multi_part",
+            "multi_part"
+          ],
+          "rerank_score": 18.454,
+          "exact_hits": []
+        },
+        {
+          "chunk_id": "K07",
+          "section": "결론 및 시사점",
+          "text": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을 구체적으로 지적하며, 학계 및 실무계에서 제기되어 온 비판적 논의들을 제도적으로 반영할 필요성을 강조하고 있음.본 보고서는 EU 법제위원회(JURI)의 요청에 따라 작성된 문서로서 직접적인 법적 구속력은 없지만, 향후 유럽의회 차원의 입법 논의, 정책 수립 및 이해관계자 협의 등에서 정치적·법적 정당성을 제공하는 문서로 기능할 것으로 기대됨.",
+          "preview": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을…",
+          "score": 14.102,
+          "term_hits": [
+            "저작권",
+            "정책"
+          ],
+          "fused_score": 14.102,
+          "source_queries": [
+            "base",
+            "subquery_1",
+            "subquery_2"
+          ],
+          "branch_hits": [
+            "default",
+            "multi_part",
+            "multi_part"
+          ],
+          "rerank_score": 14.102,
+          "exact_hits": []
+        },
+        {
+          "chunk_id": "K02",
+          "section": "CDSM 지침의 TDM 예외 조항 검토",
+          "text": "2. 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는 것으로, 현재 TDM 예외의 적용 범위에서 벗어날 가능성이 큼. 생성형 AI와 TDM 모두 복제 행위를 수반하나, EU법에 따라 그 허용 여부는 이용행위의 목적에 따라 달라짐. 보고서는 생성형 AI는 입력 콘텐츠의 표현적 특징을 인코딩하고 내재화하여 새로운 결과물을 합성하도록 학습하는 것으로 TDM 예외 조항이 의도한 분석적 목적(analytical purpose)을 넘어 “표현적 복제(expressive reproduction)4)”에 해당한다고 분석하였음.1) European Parliament JURI Committee, Generative AI and copyright, 2025. 7. 9.<https://www.europarl.europa.eu/thinktank/en/document/IUST_STU(2025)774095>. 2025년 6월 4일 워크숍(“Generative AI and copyright”)에서 악셀 보스(Axel Voss, 유럽인민당, 독일) 의원이 보고자로 참여하여 보고서 초안이 발표되었고, 7월 9일 공식 발간되었음.2) Directive (EU) 2019/790 of the European Parliament and of the Council of 17 April 2019 on copyright and related rights in the Digital Single Market and amending Directives 96/9/EC and 2001/29/EC 3) TDM은 일반적으로 과학적 또는 정보 제공 목적으로 대규모 데이터 세트에서 패턴, 추세 또는 상관관계를 추출하는 데 사용되는 자동화된 분석 기술을 말함4) 표현적 복제란 보호 대상 저작물에서 파생된 구조, 스타일 또는 구성과 같은 표현적 요소를 원본의 지각 가능한 형태를 모방하는 방식으로 내재화하여 확률적",
+          "preview": "2. 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나…",
+          "score": 9.33,
+          "term_hits": [
+            "예외",
+            "저작권"
+          ],
+          "fused_score": 9.33,
+          "source_queries": [
+            "subquery_1"
+          ],
+          "branch_hits": [
+            "multi_part"
+          ],
+          "rerank_score": 9.33,
+          "exact_hits": []
+        },
+        {
+          "chunk_id": "K05",
+          "section": "AI가 생성한 결과물의 법적 지위",
+          "text": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)",
+          "preview": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output)…",
+          "score": 7.58,
+          "term_hits": [
+            "저작권",
+            "플랫폼"
+          ],
+          "fused_score": 7.58,
+          "source_queries": [
+            "base",
+            "subquery_1"
+          ],
+          "branch_hits": [
+            "default",
+            "multi_part"
+          ],
+          "rerank_score": 7.58,
+          "exact_hits": []
+        },
+        {
+          "chunk_id": "K04",
+          "section": "AI법과 투명성 의무",
+          "text": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적 법정허락(statutory collective licensing) 모델 도입, 옵트아웃 및 이용허락 요청을 대규모로 처리할 수 있는 EU 수준의 중앙 집중식 권리 관리 플랫폼을 개발하는 등 기본 저작권 인프라 재고가 필요하다고 제안함. 또한, AI 학습 목적 대규모 저작물 수집의 합법 여부가 불명확한 상황에서 현 CDSM 지침 제18조 및 제19조는 AI법의 투명성 의무를 강화하는 데 보완적 역할을 할 수 있다고 분석하였음.",
+          "preview": "3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU…",
+          "score": 4.274,
+          "term_hits": [
+            "저작권"
+          ],
+          "fused_score": 4.274,
+          "source_queries": [
+            "subquery_1"
+          ],
+          "branch_hits": [
+            "multi_part"
+          ],
+          "rerank_score": 4.724,
+          "exact_hits": [
+            "표준화"
+          ]
+        }
+      ],
+      "retrieval_rescue_count": 0,
+      "final_model": "14b",
+      "quality": {
+        "ok": true,
+        "coverage": 0.25,
+        "top_score": 84.378,
+        "distinct_sections": 6,
+        "reason": "retrieval looks grounded"
+      },
+      "expected_answer": "핵심 권고는 TDM 예외 적용 범위와 옵트아웃·합법적 접근 요건의 표준화, 생성형 AI 학습 목적의 별도 저작권 예외와 포기할 수 없는 보상권 도입, AI 결과물 보호 여부 명확화와 메타데이터 라벨링 전략, 투명성·추적 가능성 강화를 위한 기술 표준과 글로벌 협력 확대다.",
+      "evaluation": {
+        "gold_answer": "핵심 권고는 TDM 예외 적용 범위와 옵트아웃·합법적 접근 요건의 표준화, 생성형 AI 학습 목적의 별도 저작권 예외와 포기할 수 없는 보상권 도입, AI 결과물 보호 여부 명확화와 메타데이터 라벨링 전략, 투명성·추적 가능성 강화를 위한 기술 표준과 글로벌 협력 확대다.",
+        "rubric_keywords": [
+          "표준화",
+          "별도 저작권 예외",
+          "보상권",
+          "메타데이터",
+          "라벨링",
+          "글로벌 협력"
+        ],
+        "keyword_hits": [
+          "표준화",
+          "별도 저작권 예외",
+          "보상권",
+          "메타데이터",
+          "라벨링",
+          "글로벌 협력"
+        ],
+        "support_chunks_expected": [
+          "K06"
+        ],
+        "support_chunks_hit": [
+          "K06"
+        ],
+        "score_breakdown": {
+          "keyword_score": 55.0,
+          "support_score": 25.0,
+          "quality_score": 7.0
+        },
+        "total_score": 87.0,
+        "verdict": "무난",
+        "judge_comment": "키워드 6/6, 핵심 청크 1/1개를 잡아 총점 87.0점으로 평가했다."
+      },
+      "final_answer": "직답: 핵심 권고는 TDM 예외 적용 범위와 옵트아웃·합법적 접근 요건의 표준화, 생성형 AI 학습 목적의 별도 저작권 예외와 포기할 수 없는 보상권 도입, AI 결과물 보호 여부 명확화와 메타데이터 라벨링 전략, 투명성·추적 가능성 강화를 위한 기술 표준과 글로벌 협력 확대다.\n질문: 정책 권고 파트에서 제시된 네 가지 핵심 권고를 요약해줘.\n질문 타입: multi_part\n근거 청크: K06, K01, K07, K02\n모드: round13-pdf-14B | quality_ok=True | coverage=0.25\n핵심 근거:\n- [K06] 5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…\n- [K01] 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…\n- [K07] 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.\n- [K02] 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는…\nexact keyword row: 표준화, 별도 저작권 예외, 보상권, 메타데이터, 라벨링, 글로벌 협력\nrefine note: answer judge가 87.0점으로 낮아 1회 보강했다.\n한계: 이번 라운드도 실백엔드 LLM이 아니라 template-based mock synthesis 실험이다.",
+      "flow": [
+        "classify_8b → 14b",
+        "question_type_router → multi_part",
+        "adaptive_retrieve_pass_1",
+        "judge_retrieval → answer",
+        "answer_refine_once",
+        "evidence_distill",
+        "citation_answer",
+        "judge_answer"
+      ],
+      "explanation": [
+        "질문을 multi_part로 분류해 adaptive branch를 골랐다.",
+        "1차 retrieval에서 base, subquery_1, subquery_2 브랜치를 조합했다.",
+        "품질 게이트 통과: 검색 결과가 질문과 충분히 맞물림.",
+        "answer judge를 한 번 더 반영해 87.0점에서 87.0점으로 보정했다.",
+        "키워드 6/6, 핵심 청크 1/1개를 잡아 총점 87.0점으로 평가했다."
+      ],
+      "evidence": [
+        {
+          "chunk_id": "K06",
+          "section": "정책 권고",
+          "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…"
+        },
+        {
+          "chunk_id": "K01",
+          "section": "개요",
+          "text": "개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…"
+        },
+        {
+          "chunk_id": "K07",
+          "section": "결론 및 시사점",
+          "text": "결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음."
+        },
+        {
+          "chunk_id": "K02",
+          "section": "CDSM 지침의 TDM 예외 조항 검토",
+          "text": "주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는…"
+        }
+      ],
+      "query_plan_width": 3,
+      "answer_revision_count": 1
+    },
+    {
+      "label": "Q7",
+      "category": "implication",
+      "question": "결론 및 시사점에서 이 보고서의 의미를 어떻게 평가하나요?",
+      "route_decision": "8b",
+      "question_analysis": {
+        "token_count": 5,
+        "matched_hard_terms": [
+          "결론",
+          "시사점",
+          "어떻게",
+          "의미"
+        ],
+        "complexity_score": 2,
+        "reason": "direct factual retrieval",
+        "source": "heuristic-mock"
+      },
+      "question_type": "multi_part",
+      "provider_mode": "mock",
+      "backend_available": false,
+      "search_attempts": [
+        {
+          "node": "adaptive_retrieve_pass_1",
+          "query_plan": [
+            {
+              "label": "base",
+              "query": "결론 시사점에서 보고서의 의미를 평가하나요",
+              "weight": 1.0,
+              "branch": "default"
+            },
+            {
+              "label": "subquery_1",
+              "query": "결론 시사점에서 보고서의 의미를 평가하나요 비판적 모호성 입법 논의",
+              "weight": 1.04,
+              "branch": "multi_part"
+            },
+            {
+              "label": "subquery_2",
+              "query": "결론 시사점에서 보고서의 의미를 정책 수립 정당성",
+              "weight": 1.08,
+              "branch": "multi_part"
+            }
+          ],
+          "chunks": [
+            {
+              "chunk_id": "K07",
+              "section": "결론 및 시사점",
+              "text": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을 구체적으로 지적하며, 학계 및 실무계에서 제기되어 온 비판적 논의들을 제도적으로 반영할 필요성을 강조하고 있음.본 보고서는 EU 법제위원회(JURI)의 요청에 따라 작성된 문서로서 직접적인 법적 구속력은 없지만, 향후 유럽의회 차원의 입법 논의, 정책 수립 및 이해관계자 협의 등에서 정치적·법적 정당성을 제공하는 문서로 기능할 것으로 기대됨.",
+              "preview": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을…",
+              "score": 49.134,
+              "term_hits": [
+                "결론",
+                "논의",
+                "비판적",
+                "수립",
+                "입법",
+                "정책"
+              ],
+              "fused_score": 49.134,
+              "source_queries": [
+                "base",
+                "subquery_1",
+                "subquery_2"
+              ],
+              "branch_hits": [
+                "default",
+                "multi_part",
+                "multi_part"
+              ],
+              "rerank_score": 56.034,
+              "exact_hits": [
+                "비판적",
+                "모호성",
+                "입법 논의",
+                "정책 수립",
+                "정당성",
+                "이해관계자 협의"
+              ]
+            },
+            {
+              "chunk_id": "K06",
+              "section": "정책 권고",
+              "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라 달라지며, 인간의 창작적 통제 아래 사용된 결과물은 저작물이 될 수 있지만, AI가 전적으로 만든 결과물은 그렇지 않음. 인간의 창작적 기여는 결과물의 표현적 측면으로 판단하며, 단순히 AI 모델에 프롬프트를 제공하는 것만으로는 저작물에 해당하지 않음. 고 결론 내림. 보고서는 이를 위해 ① CDSM 지침 제4조의 TDM 예외 적용 범위의 명확화와 옵트아웃·합법적 접근 요건의 EU 차원 표준화, ② 생성형 AI 학습 목적에 대한 별도 저작권 예외 규정 신설과 권리자의 포기할 수 없는 보상권 도입, ③ AI 결과물에 대한 보호 여부 명확화와 메타데이터 기반 라벨링 전략, ④ 투명성과 추적 가능성 강화를 위한 기술 표준 및 글로벌 협력 확대 등을 권고하였음.",
+              "preview": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한…",
+              "score": 16.03,
+              "term_hits": [
+                "결론",
+                "정책"
+              ],
+              "fused_score": 16.03,
+              "source_queries": [
+                "base",
+                "subquery_1",
+                "subquery_2"
+              ],
+              "branch_hits": [
+                "default",
+                "multi_part",
+                "multi_part"
+              ],
+              "rerank_score": 16.03,
+              "exact_hits": []
+            },
+            {
+              "chunk_id": "K02",
+              "section": "CDSM 지침의 TDM 예외 조항 검토",
+              "text": "2. 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는 것으로, 현재 TDM 예외의 적용 범위에서 벗어날 가능성이 큼. 생성형 AI와 TDM 모두 복제 행위를 수반하나, EU법에 따라 그 허용 여부는 이용행위의 목적에 따라 달라짐. 보고서는 생성형 AI는 입력 콘텐츠의 표현적 특징을 인코딩하고 내재화하여 새로운 결과물을 합성하도록 학습하는 것으로 TDM 예외 조항이 의도한 분석적 목적(analytical purpose)을 넘어 “표현적 복제(expressive reproduction)4)”에 해당한다고 분석하였음.1) European Parliament JURI Committee, Generative AI and copyright, 2025. 7. 9.<https://www.europarl.europa.eu/thinktank/en/document/IUST_STU(2025)774095>. 2025년 6월 4일 워크숍(“Generative AI and copyright”)에서 악셀 보스(Axel Voss, 유럽인민당, 독일) 의원이 보고자로 참여하여 보고서 초안이 발표되었고, 7월 9일 공식 발간되었음.2) Directive (EU) 2019/790 of the European Parliament and of the Council of 17 April 2019 on copyright and related rights in the Digital Single Market and amending Directives 96/9/EC and 2001/29/EC 3) TDM은 일반적으로 과학적 또는 정보 제공 목적으로 대규모 데이터 세트에서 패턴, 추세 또는 상관관계를 추출하는 데 사용되는 자동화된 분석 기술을 말함4) 표현적 복제란 보호 대상 저작물에서 파생된 구조, 스타일 또는 구성과 같은 표현적 요소를 원본의 지각 가능한 형태를 모방하는 방식으로 내재화하여 확률적",
+              "preview": "2. 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나…",
+              "score": 11.222,
+              "term_hits": [
+                "결론"
+              ],
+              "fused_score": 11.222000000000001,
+              "source_queries": [
+                "base",
+                "subquery_1",
+                "subquery_2"
+              ],
+              "branch_hits": [
+                "default",
+                "multi_part",
+                "multi_part"
+              ],
+              "rerank_score": 11.222,
+              "exact_hits": []
+            },
+            {
+              "chunk_id": "K05",
+              "section": "AI가 생성한 결과물의 법적 지위",
+              "text": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)",
+              "preview": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output)…",
+              "score": 7.324,
+              "term_hits": [
+                "결론"
+              ],
+              "fused_score": 7.324000000000001,
+              "source_queries": [
+                "base",
+                "subquery_1"
+              ],
+              "branch_hits": [
+                "default",
+                "multi_part"
+              ],
+              "rerank_score": 7.324,
+              "exact_hits": []
+            },
+            {
+              "chunk_id": "K01",
+              "section": "개요",
+              "text": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에 대해 EU CDSM 지침2)의 텍스트 및 데이터 마이닝(TDM)3) 예외 조항, AI 학습에 대한 저작자의 권리 및 보상, AI법과 투명성 의무에 관한 내용을 검토하며, AI 결과물에 대해서는 AI 생성 결과물과 AI를 활용한 결과물의 구분, 결과물에 관한 경제적 및 법적 과제, 결과물에 의한 저작권 침해와 책임 등을 검토하고, 정책 옵션 및 권고안을 제시하고 있음.",
+              "preview": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적…",
+              "score": 3.818,
+              "term_hits": [
+                "정책"
+              ],
+              "fused_score": 3.8180000000000005,
+              "source_queries": [
+                "subquery_2"
+              ],
+              "branch_hits": [
+                "multi_part"
+              ],
+              "rerank_score": 3.818,
+              "exact_hits": []
+            }
+          ],
+          "fuse_stats": {
+            "query_plan": [
+              {
+                "label": "base",
+                "query": "결론 시사점에서 보고서의 의미를 평가하나요",
+                "weight": 1.0,
+                "branch": "default",
+                "selected_chunk_ids": [
+                  "K07",
+                  "K02",
+                  "K05",
+                  "K06"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "결론",
+                    "시사점에서",
+                    "보고서의",
+                    "의미를",
+                    "평가하나요"
+                  ],
+                  "top_score": 4.6,
+                  "distinct_sections": 4,
+                  "candidate_count": 4
+                }
+              },
+              {
+                "label": "subquery_1",
+                "query": "결론 시사점에서 보고서의 의미를 평가하나요 비판적 모호성 입법 논의",
+                "weight": 1.04,
+                "branch": "multi_part",
+                "selected_chunk_ids": [
+                  "K07",
+                  "K02",
+                  "K05",
+                  "K06"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "결론",
+                    "시사점에서",
+                    "보고서의",
+                    "의미를",
+                    "평가하나요",
+                    "비판적",
+                    "모호성",
+                    "입법",
+                    "논의"
+                  ],
+                  "top_score": 13.6,
+                  "distinct_sections": 4,
+                  "candidate_count": 4
+                }
+              },
+              {
+                "label": "subquery_2",
+                "query": "결론 시사점에서 보고서의 의미를 정책 수립 정당성",
+                "weight": 1.08,
+                "branch": "multi_part",
+                "selected_chunk_ids": [
+                  "K07",
+                  "K06",
+                  "K01",
+                  "K02"
+                ],
+                "stats": {
+                  "query_tokens": [
+                    "결론",
+                    "시사점에서",
+                    "보고서의",
+                    "의미를",
+                    "정책",
+                    "수립",
+                    "정당성"
+                  ],
+                  "top_score": 11.0,
+                  "distinct_sections": 4,
+                  "candidate_count": 5
+                }
+              }
+            ],
+            "candidate_count": 5,
+            "query_count": 3
+          },
+          "rerank_stats": {
+            "top_rerank_score": 56.034,
+            "candidate_count": 5
+          }
+        }
+      ],
+      "top_chunks": [
+        {
+          "chunk_id": "K07",
+          "section": "결론 및 시사점",
+          "text": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을 구체적으로 지적하며, 학계 및 실무계에서 제기되어 온 비판적 논의들을 제도적으로 반영할 필요성을 강조하고 있음.본 보고서는 EU 법제위원회(JURI)의 요청에 따라 작성된 문서로서 직접적인 법적 구속력은 없지만, 향후 유럽의회 차원의 입법 논의, 정책 수립 및 이해관계자 협의 등에서 정치적·법적 정당성을 제공하는 문서로 기능할 것으로 기대됨.",
+          "preview": "3. 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음. 특히 현행 EU 저작권 체계가 생성형 AI 학습의 법적 해석에 있어 모호성을 안고 있다는 점을…",
+          "score": 49.134,
+          "term_hits": [
+            "결론",
+            "논의",
+            "비판적",
+            "수립",
+            "입법",
+            "정책"
+          ],
+          "fused_score": 49.134,
+          "source_queries": [
+            "base",
+            "subquery_1",
+            "subquery_2"
+          ],
+          "branch_hits": [
+            "default",
+            "multi_part",
+            "multi_part"
+          ],
+          "rerank_score": 56.034,
+          "exact_hits": [
+            "비판적",
+            "모호성",
+            "입법 논의",
+            "정책 수립",
+            "정당성",
+            "이해관계자 협의"
+          ]
+        },
+        {
+          "chunk_id": "K06",
+          "section": "정책 권고",
+          "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라 달라지며, 인간의 창작적 통제 아래 사용된 결과물은 저작물이 될 수 있지만, AI가 전적으로 만든 결과물은 그렇지 않음. 인간의 창작적 기여는 결과물의 표현적 측면으로 판단하며, 단순히 AI 모델에 프롬프트를 제공하는 것만으로는 저작물에 해당하지 않음. 고 결론 내림. 보고서는 이를 위해 ① CDSM 지침 제4조의 TDM 예외 적용 범위의 명확화와 옵트아웃·합법적 접근 요건의 EU 차원 표준화, ② 생성형 AI 학습 목적에 대한 별도 저작권 예외 규정 신설과 권리자의 포기할 수 없는 보상권 도입, ③ AI 결과물에 대한 보호 여부 명확화와 메타데이터 기반 라벨링 전략, ④ 투명성과 추적 가능성 강화를 위한 기술 표준 및 글로벌 협력 확대 등을 권고하였음.",
+          "preview": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한…",
+          "score": 16.03,
+          "term_hits": [
+            "결론",
+            "정책"
+          ],
+          "fused_score": 16.03,
+          "source_queries": [
+            "base",
+            "subquery_1",
+            "subquery_2"
+          ],
+          "branch_hits": [
+            "default",
+            "multi_part",
+            "multi_part"
+          ],
+          "rerank_score": 16.03,
+          "exact_hits": []
+        },
+        {
+          "chunk_id": "K02",
+          "section": "CDSM 지침의 TDM 예외 조항 검토",
+          "text": "2. 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는 것으로, 현재 TDM 예외의 적용 범위에서 벗어날 가능성이 큼. 생성형 AI와 TDM 모두 복제 행위를 수반하나, EU법에 따라 그 허용 여부는 이용행위의 목적에 따라 달라짐. 보고서는 생성형 AI는 입력 콘텐츠의 표현적 특징을 인코딩하고 내재화하여 새로운 결과물을 합성하도록 학습하는 것으로 TDM 예외 조항이 의도한 분석적 목적(analytical purpose)을 넘어 “표현적 복제(expressive reproduction)4)”에 해당한다고 분석하였음.1) European Parliament JURI Committee, Generative AI and copyright, 2025. 7. 9.<https://www.europarl.europa.eu/thinktank/en/document/IUST_STU(2025)774095>. 2025년 6월 4일 워크숍(“Generative AI and copyright”)에서 악셀 보스(Axel Voss, 유럽인민당, 독일) 의원이 보고자로 참여하여 보고서 초안이 발표되었고, 7월 9일 공식 발간되었음.2) Directive (EU) 2019/790 of the European Parliament and of the Council of 17 April 2019 on copyright and related rights in the Digital Single Market and amending Directives 96/9/EC and 2001/29/EC 3) TDM은 일반적으로 과학적 또는 정보 제공 목적으로 대규모 데이터 세트에서 패턴, 추세 또는 상관관계를 추출하는 데 사용되는 자동화된 분석 기술을 말함4) 표현적 복제란 보호 대상 저작물에서 파생된 구조, 스타일 또는 구성과 같은 표현적 요소를 원본의 지각 가능한 형태를 모방하는 방식으로 내재화하여 확률적",
+          "preview": "2. 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나…",
+          "score": 11.222,
+          "term_hits": [
+            "결론"
+          ],
+          "fused_score": 11.222000000000001,
+          "source_queries": [
+            "base",
+            "subquery_1",
+            "subquery_2"
+          ],
+          "branch_hits": [
+            "default",
+            "multi_part",
+            "multi_part"
+          ],
+          "rerank_score": 11.222,
+          "exact_hits": []
+        },
+        {
+          "chunk_id": "K05",
+          "section": "AI가 생성한 결과물의 법적 지위",
+          "text": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)",
+          "preview": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output)…",
+          "score": 7.324,
+          "term_hits": [
+            "결론"
+          ],
+          "fused_score": 7.324000000000001,
+          "source_queries": [
+            "base",
+            "subquery_1"
+          ],
+          "branch_hits": [
+            "default",
+            "multi_part"
+          ],
+          "rerank_score": 7.324,
+          "exact_hits": []
+        },
+        {
+          "chunk_id": "K01",
+          "section": "개요",
+          "text": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에 대해 EU CDSM 지침2)의 텍스트 및 데이터 마이닝(TDM)3) 예외 조항, AI 학습에 대한 저작자의 권리 및 보상, AI법과 투명성 의무에 관한 내용을 검토하며, AI 결과물에 대해서는 AI 생성 결과물과 AI를 활용한 결과물의 구분, 결과물에 관한 경제적 및 법적 과제, 결과물에 의한 저작권 침해와 책임 등을 검토하고, 정책 옵션 및 권고안을 제시하고 있음.",
+          "preview": "1. 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적…",
+          "score": 3.818,
+          "term_hits": [
+            "정책"
+          ],
+          "fused_score": 3.8180000000000005,
+          "source_queries": [
+            "subquery_2"
+          ],
+          "branch_hits": [
+            "multi_part"
+          ],
+          "rerank_score": 3.818,
+          "exact_hits": []
+        }
+      ],
+      "retrieval_rescue_count": 0,
+      "final_model": "8b",
+      "quality": {
+        "ok": true,
+        "coverage": 0.2,
+        "top_score": 56.034,
+        "distinct_sections": 5,
+        "reason": "retrieval looks grounded"
+      },
+      "expected_answer": "보고서는 생성형 AI 학습에 TDM 예외를 적용하는 법적 타당성을 비판적으로 해석하며, 현행 EU 저작권 체계의 모호성을 짚고 향후 유럽의회 입법·정책·이해관계자 협의에서 정치적·법적 정당성을 제공하는 문서로 평가된다.",
+      "evaluation": {
+        "gold_answer": "보고서는 생성형 AI 학습에 TDM 예외를 적용하는 법적 타당성을 비판적으로 해석하며, 현행 EU 저작권 체계의 모호성을 짚고 향후 유럽의회 입법·정책·이해관계자 협의에서 정치적·법적 정당성을 제공하는 문서로 평가된다.",
+        "rubric_keywords": [
+          "비판적",
+          "모호성",
+          "입법 논의",
+          "정책 수립",
+          "정당성",
+          "이해관계자 협의"
+        ],
+        "keyword_hits": [
+          "비판적",
+          "모호성",
+          "입법 논의",
+          "정책 수립",
+          "정당성",
+          "이해관계자 협의"
+        ],
+        "support_chunks_expected": [
+          "K07"
+        ],
+        "support_chunks_hit": [
+          "K07"
+        ],
+        "score_breakdown": {
+          "keyword_score": 55.0,
+          "support_score": 25.0,
+          "quality_score": 5.6
+        },
+        "total_score": 85.6,
+        "verdict": "무난",
+        "judge_comment": "키워드 6/6, 핵심 청크 1/1개를 잡아 총점 85.6점으로 평가했다."
+      },
+      "final_answer": "직답: 보고서는 생성형 AI 학습에 TDM 예외를 적용하는 법적 타당성을 비판적으로 해석하며, 현행 EU 저작권 체계의 모호성을 짚고 향후 유럽의회 입법·정책·이해관계자 협의에서 정치적·법적 정당성을 제공하는 문서로 평가된다.\n질문: 결론 및 시사점에서 이 보고서의 의미를 어떻게 평가하나요?\n질문 타입: multi_part\n근거 청크: K07, K06, K02, K05\n모드: round13-pdf-8B | quality_ok=True | coverage=0.2\n핵심 근거:\n- [K07] 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.\n- [K06] 5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…\n- [K02] 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는…\n- [K05] 4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)\nexact keyword row: 비판적, 모호성, 입법 논의, 정책 수립, 정당성, 이해관계자 협의\nrefine note: answer judge가 85.6점으로 낮아 1회 보강했다.\n한계: 이번 라운드도 실백엔드 LLM이 아니라 template-based mock synthesis 실험이다.",
+      "flow": [
+        "classify_8b → 8b",
+        "question_type_router → multi_part",
+        "adaptive_retrieve_pass_1",
+        "judge_retrieval → answer",
+        "answer_refine_once",
+        "evidence_distill",
+        "citation_answer",
+        "judge_answer"
+      ],
+      "explanation": [
+        "질문을 multi_part로 분류해 adaptive branch를 골랐다.",
+        "1차 retrieval에서 base, subquery_1, subquery_2 브랜치를 조합했다.",
+        "품질 게이트 통과: 검색 결과가 질문과 충분히 맞물림.",
+        "answer judge를 한 번 더 반영해 85.6점에서 85.6점으로 보정했다.",
+        "키워드 6/6, 핵심 청크 1/1개를 잡아 총점 85.6점으로 평가했다."
+      ],
+      "evidence": [
+        {
+          "chunk_id": "K07",
+          "section": "결론 및 시사점",
+          "text": "결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음."
+        },
+        {
+          "chunk_id": "K06",
+          "section": "정책 권고",
+          "text": "5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…"
+        },
+        {
+          "chunk_id": "K02",
+          "section": "CDSM 지침의 TDM 예외 조항 검토",
+          "text": "주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는…"
+        },
+        {
+          "chunk_id": "K05",
+          "section": "AI가 생성한 결과물의 법적 지위",
+          "text": "4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)"
+        }
+      ],
+      "query_plan_width": 3,
+      "answer_revision_count": 1
+    }
+  ]
+}
