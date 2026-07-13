@@ -1,0 +1,229 @@
+{
+  "title": "Round14 LangGraph Static Graph",
+  "source": {
+    "base_script": "round13_ko_pdf_experiment.py",
+    "reference_script": "round10_ko_experiment.py",
+    "summary_json": "artifacts/round13_ko_pdf_summary.json"
+  },
+  "notes": {
+    "mode": "static-graph",
+    "langgraph_runtime": false,
+    "provider_mode": "mock",
+    "backend_available": false,
+    "purpose": "LangSmith tracing 전 단계에서 최종 RAG의 분기 구조를 눈으로 검증하기 위한 정적 그래프"
+  },
+  "summary_snapshot": {
+    "question_count": 7,
+    "avg_judge_score": 92.3,
+    "retrieval_rescues": 0,
+    "answer_revisions": 3,
+    "question_type_counts": {
+      "simple_fact": 1,
+      "abstract_why": 3,
+      "multi_part": 3
+    }
+  },
+  "nodes": [
+    {
+      "id": "start",
+      "label": "질문 입력",
+      "kind": "io",
+      "function": "run_one(question_item, chunks)",
+      "why": "질문별로 독립 실행 trace를 만들기 위한 시작점이다."
+    },
+    {
+      "id": "classify",
+      "label": "classify_8b",
+      "kind": "compute",
+      "function": "classify_question(question)",
+      "why": "질문 복잡도를 계산해 8B/14B 경로의 첫 차선을 정한다."
+    },
+    {
+      "id": "qtype",
+      "label": "question_type_router",
+      "kind": "router",
+      "function": "detect_question_type(question_item, route, analysis)",
+      "why": "simple_fact / abstract_why / multi_part에 따라 query expansion 폭을 바꾼다."
+    },
+    {
+      "id": "plan1",
+      "label": "adaptive_query_plan\n(pass 1)",
+      "kind": "compute",
+      "function": "build_adaptive_query_plan(..., retry_reason='')",
+      "why": "첫 retrieval용 query 묶음을 만든다."
+    },
+    {
+      "id": "retrieve1",
+      "label": "adaptive_retrieve_pass_1",
+      "kind": "compute",
+      "function": "fuse_candidates() + rerank_chunks() + stitch_support_chunks()",
+      "why": "후보 수집, 재정렬, support chunk 보강을 한 번에 수행하는 핵심 검색 패스다."
+    },
+    {
+      "id": "judge1",
+      "label": "judge_retrieval",
+      "kind": "judge",
+      "function": "grade_search(question, final_chunks, stats, current_model)",
+      "why": "현재 검색 품질로 바로 답변 가능한지, rescue가 필요한지 결정한다."
+    },
+    {
+      "id": "rescue",
+      "label": "retrieval_rescue",
+      "kind": "router",
+      "function": "retry_reason = quality['reason']; current_model = '14b'",
+      "why": "품질이 낮을 때만 rescue branch를 열고 14B 차선으로 승격한다."
+    },
+    {
+      "id": "plan2",
+      "label": "adaptive_query_plan\n(pass 2)",
+      "kind": "compute",
+      "function": "build_adaptive_query_plan(..., retry_reason=quality.reason)",
+      "why": "실패 이유를 반영해 두 번째 query plan을 더 강하게 만든다."
+    },
+    {
+      "id": "retrieve2",
+      "label": "adaptive_retrieve_pass_2",
+      "kind": "compute",
+      "function": "fuse_candidates() + rerank_chunks() + stitch_support_chunks()",
+      "why": "rescue 이후의 보강 retrieval pass다."
+    },
+    {
+      "id": "judge2",
+      "label": "judge_retrieval\n(pass 2)",
+      "kind": "judge",
+      "function": "grade_search(question, final_chunks, stats, current_model)",
+      "why": "두 번째 pass 이후에는 답변으로 가거나 그냥 종료한다."
+    },
+    {
+      "id": "evidence",
+      "label": "evidence_distill",
+      "kind": "compute",
+      "function": "distill_evidence(question_item, final_chunks)",
+      "why": "긴 청크를 답변용 근거 문장으로 압축한다."
+    },
+    {
+      "id": "answer",
+      "label": "citation_answer",
+      "kind": "compute",
+      "function": "build_answer_text(...)",
+      "why": "직답 + 근거 + exact keyword row 형식의 답변을 만든다."
+    },
+    {
+      "id": "judge_answer",
+      "label": "judge_answer",
+      "kind": "judge",
+      "function": "evaluate_run(question_item, final_answer, top_chunks, quality)",
+      "why": "gold/rubric 기준으로 점수를 계산하고 refine 여부를 결정한다."
+    },
+    {
+      "id": "refine_gate",
+      "label": "score < 92?",
+      "kind": "judge",
+      "function": "if draft_eval['total_score'] < 92",
+      "why": "낮은 점수일 때만 1회 answer refine을 허용한다."
+    },
+    {
+      "id": "refine",
+      "label": "answer_refine_once",
+      "kind": "compute",
+      "function": "build_answer_text(..., answer_score_before=draft_eval['total_score'])",
+      "why": "무한 self-refine 대신 1회만 보정한다."
+    },
+    {
+      "id": "final",
+      "label": "최종 score / report row",
+      "kind": "io",
+      "function": "run payload + build_summary() + render_report()",
+      "why": "질문별 trace와 점수를 JSON/HTML로 저장하기 위한 종료 지점이다."
+    }
+  ],
+  "edges": [
+    {
+      "from": "start",
+      "to": "classify",
+      "label": "invoke"
+    },
+    {
+      "from": "classify",
+      "to": "qtype",
+      "label": "route + analysis"
+    },
+    {
+      "from": "qtype",
+      "to": "plan1",
+      "label": "simple_fact / abstract_why / multi_part"
+    },
+    {
+      "from": "plan1",
+      "to": "retrieve1",
+      "label": "query plan"
+    },
+    {
+      "from": "retrieve1",
+      "to": "judge1",
+      "label": "chunks + stats"
+    },
+    {
+      "from": "judge1",
+      "to": "evidence",
+      "label": "answer"
+    },
+    {
+      "from": "judge1",
+      "to": "rescue",
+      "label": "retry"
+    },
+    {
+      "from": "rescue",
+      "to": "plan2",
+      "label": "retry_reason + 14b"
+    },
+    {
+      "from": "plan2",
+      "to": "retrieve2",
+      "label": "rescued query plan"
+    },
+    {
+      "from": "retrieve2",
+      "to": "judge2",
+      "label": "chunks + stats"
+    },
+    {
+      "from": "judge2",
+      "to": "evidence",
+      "label": "answer / stop retry"
+    },
+    {
+      "from": "evidence",
+      "to": "answer",
+      "label": "evidence rows"
+    },
+    {
+      "from": "answer",
+      "to": "judge_answer",
+      "label": "draft answer"
+    },
+    {
+      "from": "judge_answer",
+      "to": "refine_gate",
+      "label": "draft score"
+    },
+    {
+      "from": "refine_gate",
+      "to": "refine",
+      "label": "yes"
+    },
+    {
+      "from": "refine_gate",
+      "to": "final",
+      "label": "no"
+    },
+    {
+      "from": "refine",
+      "to": "final",
+      "label": "re-evaluate"
+    }
+  ],
+  "flowline": "질문 입력 → classify_8b → question_type_router → adaptive_query_plan(pass1) → adaptive_retrieve_pass_1 → judge_retrieval → [필요시 retrieval_rescue + pass2] → evidence_distill → citation_answer → judge_answer → [필요시 answer_refine_once] → 최종 score",
+  "mermaid": "flowchart TD\n    start([질문 입력]) --> classify[classify_8b\n복잡도 기반 8B/14B route]\n    classify --> qtype{question_type_router\nsimple_fact / abstract_why / multi_part}\n    qtype --> plan1[adaptive_query_plan\npass 1]\n    plan1 --> retrieve1[adaptive_retrieve_pass_1\nfuse + rerank + support stitch]\n    retrieve1 --> judge1{judge_retrieval}\n    judge1 -->|answer| evidence[evidence_distill]\n    judge1 -->|retry| rescue[retrieval_rescue\n14B로 승격]\n    rescue --> plan2[adaptive_query_plan\npass 2 with retry_reason]\n    plan2 --> retrieve2[adaptive_retrieve_pass_2\nfuse + rerank + support stitch]\n    retrieve2 --> judge2{judge_retrieval\npass 2}\n    judge2 -->|answer or stop| evidence\n    evidence --> answer[citation_answer]\n    answer --> judge_answer[judge_answer\nevaluate_run]\n    judge_answer --> refine_gate{score < 92?}\n    refine_gate -->|yes| refine[answer_refine_once]\n    refine_gate -->|no| final([최종 score / report row])\n    refine --> final\n\n    qtype -.-> simple[simple_fact: focus query 강화]\n    qtype -.-> abstract[abstract_why: rewrite + step-back]\n    qtype -.-> multi[multi_part: subquery decomposition]\n\n    classDef io fill:#173153,stroke:#7cc9ff,color:#eef3ff,stroke-width:2px;\n    classDef compute fill:#1b2142,stroke:#9db3ff,color:#eef3ff;\n    classDef judge fill:#3a2446,stroke:#ffb2d8,color:#fff0fb;\n    classDef router fill:#213a2e,stroke:#8effc8,color:#eefcf5;\n\n    class start,final io;\n    class classify,plan1,retrieve1,plan2,retrieve2,evidence,answer,refine compute;\n    class judge1,judge2,judge_answer,refine_gate judge;\n    class qtype,rescue router;"
+}

@@ -26,9 +26,9 @@
 <body>
   <main class="wrap">
     <section class="hero">
-      <div class="pillrow"><span class="pill">RAG × LangGraph × Round Reports</span><span class="pill">Prompt branch added through round11</span></div>
+      <div class="pillrow"><span class="pill">RAG × LangGraph × Round Reports</span><span class="pill">Prompt branch added through round11</span><span class="pill">Static graph view added in round14</span></div>
       <h1>라운드별 RAG 실험 리포트 모음</h1>
-      <p>AWS 한국어 RAG 문서를 기준으로 만든 round1~round11 실험 결과를 한곳에 모았다. round5~round9는 구조만 더 붙이기보다 prompt/query branch를 실제로 늘려서 무엇이 바뀌었는지 HTML에 드러나도록 확장했다.</p>
+      <p>AWS 한국어 RAG 문서를 기준으로 만든 round1~round14 산출물을 한곳에 모았다. round5~round9는 prompt/query branch 확장, round13은 한국어 PDF rerun, round14는 최종 파이프라인의 정적 LangGraph-style graph view를 보여준다.</p>
       <div class="cta">
         <a class="btn" href="./rounds_1_to_9_flowchart.html">1~9 flow chart 보기</a>
         <a class="btn" href="./rounds_1_to_9_summary.html">1~9 요약 보기</a>
@@ -36,6 +36,7 @@
         <a class="btn" href="./round12_ko.html">round12 설명 보기</a>
         <a class="btn" href="./round13_ko_pdf.html">round13 PDF 보기</a>
         <a class="btn" href="./rag_architecture_rebuild_guide_ko.html">구조 설명 사이트</a>
+        <a class="btn" href="./round14_langgraph_static_graph.html">round14 static graph 보기</a>
         <a class="btn" href="https://github.com/hakvision/rag-langgraph-benefits">GitHub repo</a>
       </div>
     </section>
@@ -61,6 +62,7 @@
         <article class="card"><h3>Round12</h3><p>adaptive graph technical explainer</p></article>
         <article class="card"><h3>Round13</h3><p>new Korean PDF rerun branch</p></article>
         <article class="card"><h3>Guide</h3><p>deep rebuild architecture documentation</p></article>
+        <article class="card"><h3>Round14</h3><p>static LangGraph-style graph for final PDF branch</p></article>
       </div>
     </section>
     <section>
@@ -239,6 +241,17 @@
                 <a class="btn" href="./rag_architecture_rebuild_guide_ko.md">MD</a>
               </div>
             </article>
+                  <article class="card">
+              <h3>Round14 Static Graph</h3>
+              <ul>
+                <li>round13 final pipeline as static LangGraph-style graph</li>
+                <li>Mermaid + graph spec JSON</li>
+              </ul>
+              <div class="cta">
+                <a class="btn" href="./round14_langgraph_static_graph.html">HTML</a>
+                <a class="btn" href="./artifacts/round14_langgraph_static_graph.json">graph.json</a>
+              </div>
+            </article>
       </div>
     </section>
     <section>
@@ -252,8 +265,9 @@
             <li><a href="./round10_ko_experiment.py">round10_ko_experiment.py</a></li>
             <li><a href="./round11_ko_experiment.py">round11_ko_experiment.py</a></li>
             <li><a href="./round12_ko_explainer.py">round12_ko_explainer.py</a></li>
-            <li><a href="./round13_ko_pdf_experiment.py">round13_ko_pdf_experiment.py</a></li></ul></article>
-        <article class="card"><h3>메모</h3><ul><li>현재 타이밍은 mock 파이프라인 기준이라 실제 모델 추론 속도를 뜻하지 않음</li><li>GitHub Pages 루트는 이 index.html을 랜딩 페이지로 사용</li><li>round5~round9는 prompt/query branch 변화가 핵심</li><li>round13은 새 한국어 PDF source adapter를 검증한 branch</li><li>구조 설명 사이트는 rag_architecture_rebuild_guide_ko.html 에서 확인 가능</li></ul></article>
+            <li><a href="./round13_ko_pdf_experiment.py">round13_ko_pdf_experiment.py</a></li>
+            <li><a href="./round14_langgraph_static_graph.py">round14_langgraph_static_graph.py</a></li></ul></article>
+        <article class="card"><h3>메모</h3><ul><li>현재 타이밍은 mock 파이프라인 기준이라 실제 모델 추론 속도를 뜻하지 않음</li><li>GitHub Pages 루트는 이 index.html을 랜딩 페이지로 사용</li><li>round5~round9는 prompt/query branch 변화가 핵심</li><li>round13은 새 한국어 PDF source adapter를 검증한 branch</li><li>round14는 LangSmith 연결 전, 최종 분기 구조를 먼저 정적 그래프로 시각화한 페이지</li><li>구조 설명 사이트는 rag_architecture_rebuild_guide_ko.html 에서 확인 가능</li></ul></article>
       </div>
     </section>
   </main>

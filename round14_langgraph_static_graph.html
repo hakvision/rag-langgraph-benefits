@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang='ko'>
+<head>
+  <meta charset='utf-8' />
+  <meta name='viewport' content='width=device-width, initial-scale=1' />
+  <title>Round14 · Static LangGraph View</title>
+  <meta name='description' content='round13 KO PDF 파이프라인을 LangGraph 스타일 정적 그래프로 시각화한 페이지' />
+  <style>
+    :root { --bg:#09101d; --panel:#121933; --panel2:#172243; --text:#eef3ff; --muted:#a9b6d3; --line:#2a3768; --accent:#7cc9ff; --ok:#8effc8; --warn:#ffd479; --pink:#ffb2d8; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:linear-gradient(180deg,#09101d 0%,#0b1020 100%); color:var(--text); line-height:1.65; }
+    .wrap { max-width:1320px; margin:0 auto; padding:28px 18px 88px; }
+    .hero,.card,.panel,pre { background:var(--panel); border:1px solid var(--line); border-radius:24px; box-shadow:0 14px 40px rgba(0,0,0,.2); }
+    .hero,.card,.panel { padding:22px; }
+    .hero h1 { margin:0 0 10px; font-size:clamp(30px,4vw,52px); line-height:1.18; }
+    .eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.08em; font-size:12px; margin-bottom:8px; }
+    .pillrow,.cta { display:flex; flex-wrap:wrap; gap:8px; }
+    .pill,.btn { border:1px solid var(--line); border-radius:999px; padding:8px 12px; background:rgba(255,255,255,.03); color:var(--muted); text-decoration:none; }
+    .btn { border-radius:14px; color:var(--text); background:var(--panel2); font-weight:700; }
+    .grid { display:grid; gap:16px; }
+    .grid.two { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .grid.three { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .flowline { margin-top:14px; padding:14px 16px; border-radius:16px; border:1px solid #30457c; background:linear-gradient(180deg,rgba(124,201,255,.08),rgba(255,255,255,.02)); font-size:18px; font-weight:800; }
+    .panel p, .card p, li { color:var(--muted); }
+    .stats strong { display:block; color:var(--ok); font-size:30px; margin-bottom:6px; }
+    .mermaid-shell { padding:10px; border-radius:18px; background:rgba(255,255,255,.02); border:1px solid var(--line); overflow:auto; }
+    .mermaid { min-width:980px; }
+    pre { padding:18px; overflow:auto; white-space:pre-wrap; color:#d9e6ff; }
+    code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { border-top:1px solid var(--line); padding:10px; text-align:left; vertical-align:top; font-size:14px; }
+    th { color:var(--accent); font-size:13px; }
+    .kind-judge { border-color:#5b2f62; }
+    .kind-router { border-color:#2f6b51; }
+    .kind-io { border-color:#2f517a; }
+    .kind-compute { border-color:#394a86; }
+    .warn { color:var(--warn); }
+    a { color:var(--accent); }
+    @media (max-width: 980px) { .grid.two,.grid.three { grid-template-columns:1fr; } .flowline { font-size:16px; } .mermaid { min-width:760px; } }
+  </style>
+  <script type='module'>
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+</head>
+<body>
+  <main class='wrap'>
+    <section class='hero'>
+      <div class='eyebrow'>round14 · static langgraph view · ko</div>
+      <h1>Round14 · 최종 RAG를 LangGraph 스타일 정적 그래프로 먼저 시각화</h1>
+      <p>이 페이지는 <strong>round13_ko_pdf_experiment.py</strong>의 실제 함수 흐름을 기준으로 만든 <strong>정적 graph view</strong>다. 아직 LangSmith trace를 붙인 실행 런타임은 아니고, 먼저 “어디서 분기하고 어디서 점수를 매기는지”를 한눈에 보이게 만드는 A안 산출물이다.</p>
+      <div class='pillrow'>
+        <span class='pill'>question count: 7</span>
+        <span class='pill'>avg judge score: 92.3</span>
+        <span class='pill'>retrieval rescues: 0</span>
+        <span class='pill'>answer revisions: 3</span>
+        <span class='pill'>provider mode: mock</span>
+      </div>
+      <div class='pillrow' style='margin-top:10px;'>
+        <a class='btn' href='./round13_ko_pdf.html'>round13 PDF 리포트</a>
+        <a class='btn' href='./artifacts/round14_langgraph_static_graph.json'>graph spec JSON</a>
+        <a class='btn' href='./round14_langgraph_static_graph.py'>generator script</a>
+        <a class='btn' href='./round13_ko_pdf_experiment.py'>round13 코드</a>
+      </div>
+      <div class='flowline'>질문 입력 → classify_8b → question_type_router → adaptive_query_plan(pass1) → adaptive_retrieve_pass_1 → judge_retrieval → [필요시 retrieval_rescue + pass2] → evidence_distill → citation_answer → judge_answer → [필요시 answer_refine_once] → 최종 score</div>
+    </section>
+
+    <section class='grid three' style='margin-top:18px;'>
+      <article class='card stats'><strong>1</strong><p>simple_fact questions</p></article>
+      <article class='card stats'><strong>3</strong><p>abstract_why questions</p></article>
+      <article class='card stats'><strong>3</strong><p>multi_part questions</p></article>
+    </section>
+
+    <section class='card' style='margin-top:18px;'>
+      <div class='eyebrow'>graph</div>
+      <h2>Mermaid graph</h2>
+      <p>아래 그래프는 <span class='warn'>실행 trace</span>가 아니라 <strong>현재 코드 구조를 LangGraph 식으로 옮겨 적은 정적 다이어그램</strong>이다. 즉, 다음 단계에서 실제 <code>StateGraph</code>로 포팅할 때의 설계 청사진 역할을 한다.</p>
+      <div class='mermaid-shell'>
+        <div class='mermaid'>
+flowchart TD
+    start([질문 입력]) --&gt; classify[classify_8b
+복잡도 기반 8B/14B route]
+    classify --&gt; qtype{question_type_router
+simple_fact / abstract_why / multi_part}
+    qtype --&gt; plan1[adaptive_query_plan
+pass 1]
+    plan1 --&gt; retrieve1[adaptive_retrieve_pass_1
+fuse + rerank + support stitch]
+    retrieve1 --&gt; judge1{judge_retrieval}
+    judge1 --&gt;|answer| evidence[evidence_distill]
+    judge1 --&gt;|retry| rescue[retrieval_rescue
+14B로 승격]
+    rescue --&gt; plan2[adaptive_query_plan
+pass 2 with retry_reason]
+    plan2 --&gt; retrieve2[adaptive_retrieve_pass_2
+fuse + rerank + support stitch]
+    retrieve2 --&gt; judge2{judge_retrieval
+pass 2}
+    judge2 --&gt;|answer or stop| evidence
+    evidence --&gt; answer[citation_answer]
+    answer --&gt; judge_answer[judge_answer
+evaluate_run]
+    judge_answer --&gt; refine_gate{score &lt; 92?}
+    refine_gate --&gt;|yes| refine[answer_refine_once]
+    refine_gate --&gt;|no| final([최종 score / report row])
+    refine --&gt; final
+
+    qtype -.-&gt; simple[simple_fact: focus query 강화]
+    qtype -.-&gt; abstract[abstract_why: rewrite + step-back]
+    qtype -.-&gt; multi[multi_part: subquery decomposition]
+
+    classDef io fill:#173153,stroke:#7cc9ff,color:#eef3ff,stroke-width:2px;
+    classDef compute fill:#1b2142,stroke:#9db3ff,color:#eef3ff;
+    classDef judge fill:#3a2446,stroke:#ffb2d8,color:#fff0fb;
+    classDef router fill:#213a2e,stroke:#8effc8,color:#eefcf5;
+
+    class start,final io;
+    class classify,plan1,retrieve1,plan2,retrieve2,evidence,answer,refine compute;
+    class judge1,judge2,judge_answer,refine_gate judge;
+    class qtype,rescue router;
+        </div>
+      </div>
+    </section>
+
+    <section class='grid two' style='margin-top:18px;'>
+      <article class='panel'>
+        <div class='eyebrow'>what this proves</div>
+        <h2>A안에서 지금 확인한 것</h2>
+        <ul>
+          <li>최종 RAG가 실제로 어디서 branch 되는지 정리했다.</li>
+          <li><code>judge_retrieval</code>와 <code>judge_answer</code>가 별개 gate라는 점을 시각적으로 분리했다.</li>
+          <li>retrieval rescue와 answer refine가 <strong>항상 실행되는 노드가 아니라 조건부 노드</strong>라는 점을 드러냈다.</li>
+          <li>질문 유형에 따라 <code>adaptive_query_plan</code> 내부 폭이 달라진다는 사실을 별도 branch 힌트로 표현했다.</li>
+        </ul>
+      </article>
+      <article class='panel'>
+        <div class='eyebrow'>what this does not prove</div>
+        <h2>아직 아닌 것</h2>
+        <ul>
+          <li>실제 LangGraph runtime이나 LangSmith trace는 아직 연결하지 않았다.</li>
+          <li>노드별 입력/출력 state serialization은 아직 정의하지 않았다.</li>
+          <li>현재 페이지는 mock provider mode 기준 구조도이며, 실백엔드 추론 latency를 나타내지 않는다.</li>
+          <li>다음 단계 B안에서 <code>StateGraph</code> 래퍼를 만들어야 질문별 live trace를 볼 수 있다.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class='card' style='margin-top:18px;'>
+      <div class='eyebrow'>node catalog</div>
+      <h2>노드별 설명</h2>
+      <div class='grid three'>
+        
+            <article class='card node-card kind-io'>
+              <div class='eyebrow'>io</div>
+              <h3>질문 입력</h3>
+              <p><strong>코드 위치</strong><br><code>run_one(question_item, chunks)</code></p>
+              <p><strong>왜 필요한가</strong><br>질문별로 독립 실행 trace를 만들기 위한 시작점이다.</p>
+            </article>
+            
+
+            <article class='card node-card kind-compute'>
+              <div class='eyebrow'>compute</div>
+              <h3>classify_8b</h3>
+              <p><strong>코드 위치</strong><br><code>classify_question(question)</code></p>
+              <p><strong>왜 필요한가</strong><br>질문 복잡도를 계산해 8B/14B 경로의 첫 차선을 정한다.</p>
+            </article>
+            
+
+            <article class='card node-card kind-router'>
+              <div class='eyebrow'>router</div>
+              <h3>question_type_router</h3>
+              <p><strong>코드 위치</strong><br><code>detect_question_type(question_item, route, analysis)</code></p>
+              <p><strong>왜 필요한가</strong><br>simple_fact / abstract_why / multi_part에 따라 query expansion 폭을 바꾼다.</p>
+            </article>
+            
+
+            <article class='card node-card kind-compute'>
+              <div class='eyebrow'>compute</div>
+              <h3>adaptive_query_plan
+(pass 1)</h3>
+              <p><strong>코드 위치</strong><br><code>build_adaptive_query_plan(..., retry_reason=&#x27;&#x27;)</code></p>
+              <p><strong>왜 필요한가</strong><br>첫 retrieval용 query 묶음을 만든다.</p>
+            </article>
+            
+
+            <article class='card node-card kind-compute'>
+              <div class='eyebrow'>compute</div>
+              <h3>adaptive_retrieve_pass_1</h3>
+              <p><strong>코드 위치</strong><br><code>fuse_candidates() + rerank_chunks() + stitch_support_chunks()</code></p>
+              <p><strong>왜 필요한가</strong><br>후보 수집, 재정렬, support chunk 보강을 한 번에 수행하는 핵심 검색 패스다.</p>
+            </article>
+            
+
+            <article class='card node-card kind-judge'>
+              <div class='eyebrow'>judge</div>
+              <h3>judge_retrieval</h3>
+              <p><strong>코드 위치</strong><br><code>grade_search(question, final_chunks, stats, current_model)</code></p>
+              <p><strong>왜 필요한가</strong><br>현재 검색 품질로 바로 답변 가능한지, rescue가 필요한지 결정한다.</p>
+            </article>
+            
+
+            <article class='card node-card kind-router'>
+              <div class='eyebrow'>router</div>
+              <h3>retrieval_rescue</h3>
+              <p><strong>코드 위치</strong><br><code>retry_reason = quality[&#x27;reason&#x27;]; current_model = &#x27;14b&#x27;</code></p>
+              <p><strong>왜 필요한가</strong><br>품질이 낮을 때만 rescue branch를 열고 14B 차선으로 승격한다.</p>
+            </article>
+            
+
+            <article class='card node-card kind-compute'>
+              <div class='eyebrow'>compute</div>
+              <h3>adaptive_query_plan
+(pass 2)</h3>
+              <p><strong>코드 위치</strong><br><code>build_adaptive_query_plan(..., retry_reason=quality.reason)</code></p>
+              <p><strong>왜 필요한가</strong><br>실패 이유를 반영해 두 번째 query plan을 더 강하게 만든다.</p>
+            </article>
+            
+
+            <article class='card node-card kind-compute'>
+              <div class='eyebrow'>compute</div>
+              <h3>adaptive_retrieve_pass_2</h3>
+              <p><strong>코드 위치</strong><br><code>fuse_candidates() + rerank_chunks() + stitch_support_chunks()</code></p>
+              <p><strong>왜 필요한가</strong><br>rescue 이후의 보강 retrieval pass다.</p>
+            </article>
+            
+
+            <article class='card node-card kind-judge'>
+              <div class='eyebrow'>judge</div>
+              <h3>judge_retrieval
+(pass 2)</h3>
+              <p><strong>코드 위치</strong><br><code>grade_search(question, final_chunks, stats, current_model)</code></p>
+              <p><strong>왜 필요한가</strong><br>두 번째 pass 이후에는 답변으로 가거나 그냥 종료한다.</p>
+            </article>
+            
+
+            <article class='card node-card kind-compute'>
+              <div class='eyebrow'>compute</div>
+              <h3>evidence_distill</h3>
+              <p><strong>코드 위치</strong><br><code>distill_evidence(question_item, final_chunks)</code></p>
+              <p><strong>왜 필요한가</strong><br>긴 청크를 답변용 근거 문장으로 압축한다.</p>
+            </article>
+            
+
+            <article class='card node-card kind-compute'>
+              <div class='eyebrow'>compute</div>
+              <h3>citation_answer</h3>
+              <p><strong>코드 위치</strong><br><code>build_answer_text(...)</code></p>
+              <p><strong>왜 필요한가</strong><br>직답 + 근거 + exact keyword row 형식의 답변을 만든다.</p>
+            </article>
+            
+
+            <article class='card node-card kind-judge'>
+              <div class='eyebrow'>judge</div>
+              <h3>judge_answer</h3>
+              <p><strong>코드 위치</strong><br><code>evaluate_run(question_item, final_answer, top_chunks, quality)</code></p>
+              <p><strong>왜 필요한가</strong><br>gold/rubric 기준으로 점수를 계산하고 refine 여부를 결정한다.</p>
+            </article>
+            
+
+            <article class='card node-card kind-judge'>
+              <div class='eyebrow'>judge</div>
+              <h3>score &lt; 92?</h3>
+              <p><strong>코드 위치</strong><br><code>if draft_eval[&#x27;total_score&#x27;] &lt; 92</code></p>
+              <p><strong>왜 필요한가</strong><br>낮은 점수일 때만 1회 answer refine을 허용한다.</p>
+            </article>
+            
+
+            <article class='card node-card kind-compute'>
+              <div class='eyebrow'>compute</div>
+              <h3>answer_refine_once</h3>
+              <p><strong>코드 위치</strong><br><code>build_answer_text(..., answer_score_before=draft_eval[&#x27;total_score&#x27;])</code></p>
+              <p><strong>왜 필요한가</strong><br>무한 self-refine 대신 1회만 보정한다.</p>
+            </article>
+            
+
+            <article class='card node-card kind-io'>
+              <div class='eyebrow'>io</div>
+              <h3>최종 score / report row</h3>
+              <p><strong>코드 위치</strong><br><code>run payload + build_summary() + render_report()</code></p>
+              <p><strong>왜 필요한가</strong><br>질문별 trace와 점수를 JSON/HTML로 저장하기 위한 종료 지점이다.</p>
+            </article>
+            
+      </div>
+    </section>
+
+    <section class='grid two' style='margin-top:18px;'>
+      <article class='panel'>
+        <div class='eyebrow'>edge list</div>
+        <h2>Edge / transition 목록</h2>
+        <table>
+          <thead><tr><th>from</th><th>to</th><th>label</th></tr></thead>
+          <tbody>
+            <tr><td><code>start</code></td><td><code>classify</code></td><td>invoke</td></tr>
+<tr><td><code>classify</code></td><td><code>qtype</code></td><td>route + analysis</td></tr>
+<tr><td><code>qtype</code></td><td><code>plan1</code></td><td>simple_fact / abstract_why / multi_part</td></tr>
+<tr><td><code>plan1</code></td><td><code>retrieve1</code></td><td>query plan</td></tr>
+<tr><td><code>retrieve1</code></td><td><code>judge1</code></td><td>chunks + stats</td></tr>
+<tr><td><code>judge1</code></td><td><code>evidence</code></td><td>answer</td></tr>
+<tr><td><code>judge1</code></td><td><code>rescue</code></td><td>retry</td></tr>
+<tr><td><code>rescue</code></td><td><code>plan2</code></td><td>retry_reason + 14b</td></tr>
+<tr><td><code>plan2</code></td><td><code>retrieve2</code></td><td>rescued query plan</td></tr>
+<tr><td><code>retrieve2</code></td><td><code>judge2</code></td><td>chunks + stats</td></tr>
+<tr><td><code>judge2</code></td><td><code>evidence</code></td><td>answer / stop retry</td></tr>
+<tr><td><code>evidence</code></td><td><code>answer</code></td><td>evidence rows</td></tr>
+<tr><td><code>answer</code></td><td><code>judge_answer</code></td><td>draft answer</td></tr>
+<tr><td><code>judge_answer</code></td><td><code>refine_gate</code></td><td>draft score</td></tr>
+<tr><td><code>refine_gate</code></td><td><code>refine</code></td><td>yes</td></tr>
+<tr><td><code>refine_gate</code></td><td><code>final</code></td><td>no</td></tr>
+<tr><td><code>refine</code></td><td><code>final</code></td><td>re-evaluate</td></tr>
+          </tbody>
+        </table>
+      </article>
+      <article class='panel'>
+        <div class='eyebrow'>mermaid source</div>
+        <h2>원본 Mermaid 텍스트</h2>
+        <pre><code>flowchart TD
+    start([질문 입력]) --&gt; classify[classify_8b
+복잡도 기반 8B/14B route]
+    classify --&gt; qtype{question_type_router
+simple_fact / abstract_why / multi_part}
+    qtype --&gt; plan1[adaptive_query_plan
+pass 1]
+    plan1 --&gt; retrieve1[adaptive_retrieve_pass_1
+fuse + rerank + support stitch]
+    retrieve1 --&gt; judge1{judge_retrieval}
+    judge1 --&gt;|answer| evidence[evidence_distill]
+    judge1 --&gt;|retry| rescue[retrieval_rescue
+14B로 승격]
+    rescue --&gt; plan2[adaptive_query_plan
+pass 2 with retry_reason]
+    plan2 --&gt; retrieve2[adaptive_retrieve_pass_2
+fuse + rerank + support stitch]
+    retrieve2 --&gt; judge2{judge_retrieval
+pass 2}
+    judge2 --&gt;|answer or stop| evidence
+    evidence --&gt; answer[citation_answer]
+    answer --&gt; judge_answer[judge_answer
+evaluate_run]
+    judge_answer --&gt; refine_gate{score &lt; 92?}
+    refine_gate --&gt;|yes| refine[answer_refine_once]
+    refine_gate --&gt;|no| final([최종 score / report row])
+    refine --&gt; final
+
+    qtype -.-&gt; simple[simple_fact: focus query 강화]
+    qtype -.-&gt; abstract[abstract_why: rewrite + step-back]
+    qtype -.-&gt; multi[multi_part: subquery decomposition]
+
+    classDef io fill:#173153,stroke:#7cc9ff,color:#eef3ff,stroke-width:2px;
+    classDef compute fill:#1b2142,stroke:#9db3ff,color:#eef3ff;
+    classDef judge fill:#3a2446,stroke:#ffb2d8,color:#fff0fb;
+    classDef router fill:#213a2e,stroke:#8effc8,color:#eefcf5;
+
+    class start,final io;
+    class classify,plan1,retrieve1,plan2,retrieve2,evidence,answer,refine compute;
+    class judge1,judge2,judge_answer,refine_gate judge;
+    class qtype,rescue router;</code></pre>
+      </article>
+    </section>
+  </main>
+</body>
+</html>
