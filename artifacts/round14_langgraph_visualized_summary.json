@@ -1,0 +1,44 @@
+{
+  "round": "round14-langgraph-visualized",
+  "doc_title": "EU유럽의회 법제위원회, 생성형 AI와 저작권 보고서 발표",
+  "doc_url": "https://ai.wiseuser.go.kr/uploads/information/%ED%95%9C%EA%B5%AD%EC%A0%80%EC%9E%91%EA%B6%8C%EC%9C%84%EC%9B%90%ED%9A%8C_%EC%9C%A0%EB%9F%BD%EC%9D%98%ED%9A%8C_%EB%B2%95%EC%A0%9C%EC%9C%84%EC%9B%90%ED%9A%8C_%EC%83%9D%EC%84%B1%ED%98%95AI%EC%99%80%EC%A0%80%EC%9E%91%EA%B6%8C_%EB%B3%B4%EA%B3%A0%EC%84%9C_%EB%B0%9C%ED%91%9C.pdf",
+  "pdf_path": "/Users/hakvision/work-rag-langgraph-benefits/datasets/genai_copyright_report_ko.pdf",
+  "chunk_count": 7,
+  "provider_mode": "mock",
+  "backend_available": false,
+  "langgraph_runtime": true,
+  "langsmith_tracing_enabled": false,
+  "langsmith_env_present": false,
+  "models": {
+    "router_8b": "qwen3:8b",
+    "large_14b": "qwen3:14b"
+  },
+  "question_count": 7,
+  "avg_judge_score": 92.3,
+  "retrieval_rescues": 0,
+  "answer_revisions": 3,
+  "question_type_counts": {
+    "simple_fact": 1,
+    "abstract_why": 3,
+    "multi_part": 3
+  },
+  "score_bands": {
+    "good": 4,
+    "okay": 3,
+    "weak": 0,
+    "poor": 0
+  },
+  "question_scores": {
+    "Q1": 88.0,
+    "Q2": 98.7,
+    "Q3": 94.0,
+    "Q4": 92.7,
+    "Q5": 100.0,
+    "Q6": 87.0,
+    "Q7": 85.6
+  },
+  "graph": {
+    "mermaid": "---\nconfig:\n  flowchart:\n    curve: linear\n---\ngraph TD;\n\t__start__([<p>__start__</p>]):::first\n\tclassify_8b(classify_8b)\n\tquestion_type_router(question_type_router)\n\tadaptive_query_plan_pass_1(adaptive_query_plan_pass_1)\n\tadaptive_retrieve_pass_1(adaptive_retrieve_pass_1)\n\tjudge_retrieval_pass_1(judge_retrieval_pass_1)\n\tretrieval_rescue(retrieval_rescue)\n\tadaptive_query_plan_pass_2(adaptive_query_plan_pass_2)\n\tadaptive_retrieve_pass_2(adaptive_retrieve_pass_2)\n\tjudge_retrieval_pass_2(judge_retrieval_pass_2)\n\tevidence_distill(evidence_distill)\n\tcitation_answer(citation_answer)\n\tjudge_answer(judge_answer)\n\tanswer_refine_gate(answer_refine_gate)\n\tanswer_refine_once(answer_refine_once)\n\tfinalize(finalize)\n\t__end__([<p>__end__</p>]):::last\n\t__start__ --> classify_8b;\n\tadaptive_query_plan_pass_1 --> adaptive_retrieve_pass_1;\n\tadaptive_query_plan_pass_2 --> adaptive_retrieve_pass_2;\n\tadaptive_retrieve_pass_1 --> judge_retrieval_pass_1;\n\tadaptive_retrieve_pass_2 --> judge_retrieval_pass_2;\n\tanswer_refine_gate -.-> answer_refine_once;\n\tanswer_refine_gate -.-> finalize;\n\tanswer_refine_once --> finalize;\n\tcitation_answer --> judge_answer;\n\tclassify_8b --> question_type_router;\n\tevidence_distill --> citation_answer;\n\tjudge_answer --> answer_refine_gate;\n\tjudge_retrieval_pass_1 -.-> evidence_distill;\n\tjudge_retrieval_pass_1 -.-> retrieval_rescue;\n\tjudge_retrieval_pass_2 --> evidence_distill;\n\tquestion_type_router --> adaptive_query_plan_pass_1;\n\tretrieval_rescue --> adaptive_query_plan_pass_2;\n\tfinalize --> __end__;\n\tclassDef default fill:#f2f0ff,line-height:1.2\n\tclassDef first fill-opacity:0\n\tclassDef last fill:#bfb6fc\n",
+    "node_count": 15
+  }
+}

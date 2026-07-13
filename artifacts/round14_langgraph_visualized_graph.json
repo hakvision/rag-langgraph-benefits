@@ -1,0 +1,22 @@
+{
+  "mermaid": "---\nconfig:\n  flowchart:\n    curve: linear\n---\ngraph TD;\n\t__start__([<p>__start__</p>]):::first\n\tclassify_8b(classify_8b)\n\tquestion_type_router(question_type_router)\n\tadaptive_query_plan_pass_1(adaptive_query_plan_pass_1)\n\tadaptive_retrieve_pass_1(adaptive_retrieve_pass_1)\n\tjudge_retrieval_pass_1(judge_retrieval_pass_1)\n\tretrieval_rescue(retrieval_rescue)\n\tadaptive_query_plan_pass_2(adaptive_query_plan_pass_2)\n\tadaptive_retrieve_pass_2(adaptive_retrieve_pass_2)\n\tjudge_retrieval_pass_2(judge_retrieval_pass_2)\n\tevidence_distill(evidence_distill)\n\tcitation_answer(citation_answer)\n\tjudge_answer(judge_answer)\n\tanswer_refine_gate(answer_refine_gate)\n\tanswer_refine_once(answer_refine_once)\n\tfinalize(finalize)\n\t__end__([<p>__end__</p>]):::last\n\t__start__ --> classify_8b;\n\tadaptive_query_plan_pass_1 --> adaptive_retrieve_pass_1;\n\tadaptive_query_plan_pass_2 --> adaptive_retrieve_pass_2;\n\tadaptive_retrieve_pass_1 --> judge_retrieval_pass_1;\n\tadaptive_retrieve_pass_2 --> judge_retrieval_pass_2;\n\tanswer_refine_gate -.-> answer_refine_once;\n\tanswer_refine_gate -.-> finalize;\n\tanswer_refine_once --> finalize;\n\tcitation_answer --> judge_answer;\n\tclassify_8b --> question_type_router;\n\tevidence_distill --> citation_answer;\n\tjudge_answer --> answer_refine_gate;\n\tjudge_retrieval_pass_1 -.-> evidence_distill;\n\tjudge_retrieval_pass_1 -.-> retrieval_rescue;\n\tjudge_retrieval_pass_2 --> evidence_distill;\n\tquestion_type_router --> adaptive_query_plan_pass_1;\n\tretrieval_rescue --> adaptive_query_plan_pass_2;\n\tfinalize --> __end__;\n\tclassDef default fill:#f2f0ff,line-height:1.2\n\tclassDef first fill-opacity:0\n\tclassDef last fill:#bfb6fc\n",
+  "langgraph_runtime": true,
+  "langsmith_tracing_enabled": false,
+  "node_names": [
+    "classify_8b",
+    "question_type_router",
+    "adaptive_query_plan_pass_1",
+    "adaptive_retrieve_pass_1",
+    "judge_retrieval_pass_1",
+    "retrieval_rescue",
+    "adaptive_query_plan_pass_2",
+    "adaptive_retrieve_pass_2",
+    "judge_retrieval_pass_2",
+    "evidence_distill",
+    "citation_answer",
+    "judge_answer",
+    "answer_refine_gate",
+    "answer_refine_once",
+    "finalize"
+  ]
+}

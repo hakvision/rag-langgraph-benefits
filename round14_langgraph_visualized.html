@@ -1,0 +1,2432 @@
+<!doctype html>
+<html lang='ko'>
+<head>
+  <meta charset='utf-8' />
+  <meta name='viewport' content='width=device-width, initial-scale=1' />
+  <title>Round14 LangGraph Visualized · KO</title>
+  <meta name='description' content='round13 PDF branch를 실제 LangGraph StateGraph로 감싼 시각화 리포트' />
+  <style>
+    :root { --bg:#09101d; --panel:#121933; --panel2:#172243; --text:#eef3ff; --muted:#a9b6d3; --line:#2a3768; --accent:#7cc9ff; --ok:#8effc8; --warn:#ffd479; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif; background:linear-gradient(180deg,#09101d 0%,#0b1020 100%); color:var(--text); line-height:1.65; }
+    .wrap { max-width:1320px; margin:0 auto; padding:28px 18px 88px; }
+    .hero,.card,.panel,pre,.trace-row { background:var(--panel); border:1px solid var(--line); border-radius:24px; box-shadow:0 14px 40px rgba(0,0,0,.2); }
+    .hero,.card,.panel { padding:22px; }
+    pre { padding:16px; overflow:auto; white-space:pre-wrap; color:#d9e6ff; }
+    .hero h1 { margin:0 0 10px; font-size:clamp(30px,4vw,52px); line-height:1.18; }
+    .eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.08em; font-size:12px; margin-bottom:8px; }
+    .pillrow,.cta,.stats { display:flex; flex-wrap:wrap; gap:10px; }
+    .pill,.btn { border:1px solid var(--line); border-radius:999px; padding:8px 12px; background:rgba(255,255,255,.03); color:var(--muted); text-decoration:none; }
+    .btn { border-radius:14px; color:var(--text); background:var(--panel2); font-weight:700; }
+    .grid { display:grid; gap:16px; }
+    .grid.two { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .grid.three { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .stats strong { display:block; color:var(--ok); font-size:30px; margin-bottom:6px; }
+    .mini article { min-width:180px; flex:1; }
+    p, li, span { color:var(--muted); }
+    .mermaid-shell { padding:10px; border-radius:18px; background:rgba(255,255,255,.02); border:1px solid var(--line); overflow:auto; }
+    .mermaid { min-width:980px; }
+    .trace-list { display:grid; gap:10px; }
+    .trace-row { padding:14px; }
+    .trace-head { display:flex; justify-content:space-between; gap:12px; margin-bottom:8px; }
+    .score { color:var(--ok); }
+    h2,h3,h4,h5 { margin:0 0 10px; }
+    a { color:var(--accent); }
+    @media (max-width: 980px) { .grid.two,.grid.three { grid-template-columns:1fr; } .mermaid { min-width:760px; } }
+  </style>
+  <script type='module'>
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+</head>
+<body>
+  <main class='wrap'>
+    <section class='hero'>
+      <div class='eyebrow'>round14 · langgraph runtime wrapper · ko</div>
+      <h1>Round14 · round13 PDF branch를 실제 StateGraph로 감싸서 실행</h1>
+      <p>이번 페이지는 정적 구조도 수준을 넘어서, <strong>round13_ko_pdf_experiment.py</strong>의 핵심 단계들을 실제 <strong>LangGraph StateGraph</strong> 노드로 분해해 질문별로 <code>app.invoke()</code> 한 결과를 보여준다. 다만 현재 환경에는 LangSmith API key가 없어서 <strong>원격 LangSmith trace 업로드는 비활성</strong> 상태이고, 대신 로컬 trace timeline을 HTML과 JSON에 남겼다.</p>
+      <div class='pillrow'>
+        <span class='pill'>question count: 7</span>
+        <span class='pill'>avg judge score: 92.3</span>
+        <span class='pill'>retrieval rescues: 0</span>
+        <span class='pill'>answer revisions: 3</span>
+        <span class='pill'>langsmith tracing enabled: false</span>
+      </div>
+      <div class='pillrow' style='margin-top:10px;'>
+        <a class='btn' href='./round13_ko_pdf.html'>round13 PDF 리포트</a>
+        <a class='btn' href='./artifacts/round14_langgraph_visualized_results.json'>results.json</a>
+        <a class='btn' href='./artifacts/round14_langgraph_visualized_summary.json'>summary.json</a>
+        <a class='btn' href='./round14_langgraph_visualized.py'>runtime script</a>
+      </div>
+    </section>
+
+    <section class='grid three' style='margin-top:18px;'>
+      <article class='card stats'><strong>1</strong><p>simple_fact</p></article>
+      <article class='card stats'><strong>3</strong><p>abstract_why</p></article>
+      <article class='card stats'><strong>3</strong><p>multi_part</p></article>
+    </section>
+
+    <section class='card' style='margin-top:18px;'>
+      <div class='eyebrow'>graph runtime</div>
+      <h2>Compiled graph</h2>
+      <p>아래 Mermaid는 실제로 compile한 StateGraph 기준 구조다. 이 구조 위에서 각 질문을 실행했고, 결과 trace는 아래 질문별 섹션에서 확인할 수 있다.</p>
+      <div class='mermaid-shell'>
+        <div class='mermaid'>
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([&lt;p&gt;__start__&lt;/p&gt;]):::first
+	classify_8b(classify_8b)
+	question_type_router(question_type_router)
+	adaptive_query_plan_pass_1(adaptive_query_plan_pass_1)
+	adaptive_retrieve_pass_1(adaptive_retrieve_pass_1)
+	judge_retrieval_pass_1(judge_retrieval_pass_1)
+	retrieval_rescue(retrieval_rescue)
+	adaptive_query_plan_pass_2(adaptive_query_plan_pass_2)
+	adaptive_retrieve_pass_2(adaptive_retrieve_pass_2)
+	judge_retrieval_pass_2(judge_retrieval_pass_2)
+	evidence_distill(evidence_distill)
+	citation_answer(citation_answer)
+	judge_answer(judge_answer)
+	answer_refine_gate(answer_refine_gate)
+	answer_refine_once(answer_refine_once)
+	finalize(finalize)
+	__end__([&lt;p&gt;__end__&lt;/p&gt;]):::last
+	__start__ --&gt; classify_8b;
+	adaptive_query_plan_pass_1 --&gt; adaptive_retrieve_pass_1;
+	adaptive_query_plan_pass_2 --&gt; adaptive_retrieve_pass_2;
+	adaptive_retrieve_pass_1 --&gt; judge_retrieval_pass_1;
+	adaptive_retrieve_pass_2 --&gt; judge_retrieval_pass_2;
+	answer_refine_gate -.-&gt; answer_refine_once;
+	answer_refine_gate -.-&gt; finalize;
+	answer_refine_once --&gt; finalize;
+	citation_answer --&gt; judge_answer;
+	classify_8b --&gt; question_type_router;
+	evidence_distill --&gt; citation_answer;
+	judge_answer --&gt; answer_refine_gate;
+	judge_retrieval_pass_1 -.-&gt; evidence_distill;
+	judge_retrieval_pass_1 -.-&gt; retrieval_rescue;
+	judge_retrieval_pass_2 --&gt; evidence_distill;
+	question_type_router --&gt; adaptive_query_plan_pass_1;
+	retrieval_rescue --&gt; adaptive_query_plan_pass_2;
+	finalize --&gt; __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc
+
+        </div>
+      </div>
+    </section>
+
+    
+            <section class='card run'>
+              <div class='eyebrow'>Q1 · overview</div>
+              <h2>이 보고서는 무엇을 문제로 보고, 집행위원회에 어떤 조치를 촉구하나요?</h2>
+              <div class='stats mini'>
+                <article class='panel'><strong>88.0</strong><span>judge score</span></article>
+                <article class='panel'><strong>8B</strong><span>final lane</span></article>
+                <article class='panel'><strong>0</strong><span>retrieval rescues</span></article>
+                <article class='panel'><strong>1</strong><span>answer revisions</span></article>
+              </div>
+              <div class='grid two'>
+                <article class='panel'>
+                  <h3>Expected answer</h3>
+                  <p>보고서는 보호받는 저작물을 생성형 AI 학습에 사용하는 과정의 법적 불확실성과 불공정성을 문제로 보고, 관련 쟁점을 조속히 해결하라고 집행위원회에 권고한다.</p>
+                  <h3>Final answer</h3>
+                  <pre>직답: 보고서는 보호받는 저작물을 생성형 AI 학습에 사용하는 과정의 법적 불확실성과 불공정성을 문제로 보고, 관련 쟁점을 조속히 해결하라고 집행위원회에 권고한다.
+질문: 이 보고서는 무엇을 문제로 보고, 집행위원회에 어떤 조치를 촉구하나요?
+질문 타입: simple_fact
+근거 청크: K01, K07, K05, K06
+모드: round13-pdf-8B | quality_ok=True | coverage=0.286
+핵심 근거:
+- [K01] 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…
+- [K07] 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.
+- [K05] 4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)
+- [K06] 5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…
+exact keyword row: 법적 불확실성, 불공정성, 보호받는 저작물, 생성형 AI 학습, 조속히, 해결
+refine note: answer judge가 88.0점으로 낮아 1회 보강했다.
+한계: 이번 라운드도 실백엔드 LLM이 아니라 template-based mock synthesis 실험이다.</pre>
+                </article>
+                <article class='panel'>
+                  <h3>Judge summary</h3>
+                  <ul>
+                    <li>verdict: <strong>무난</strong></li>
+                    <li>keyword hits: 법적 불확실성, 불공정성, 보호받는 저작물, 생성형 AI 학습, 조속히, 해결</li>
+                    <li>support hits: K01</li>
+                    <li>quality score: 8.0</li>
+                  </ul>
+                  <p>키워드 6/6, 핵심 청크 1/1개를 잡아 총점 88.0점으로 평가했다.</p>
+                  <h3>Evidence</h3>
+                  <ul><li><strong>K01</strong> · 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…</li><li><strong>K07</strong> · 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.</li><li><strong>K05</strong> · 4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)</li><li><strong>K06</strong> · 5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…</li></ul>
+                </article>
+              </div>
+              <article class='panel'>
+                <h3>Trace timeline</h3>
+                <div class='trace-list'>
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>classify_8b</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>복잡도 0로 8b lane 선택</p>
+              <pre>{
+  &quot;route&quot;: &quot;8b&quot;,
+  &quot;analysis&quot;: {
+    &quot;token_count&quot;: 7,
+    &quot;matched_hard_terms&quot;: [],
+    &quot;complexity_score&quot;: 0,
+    &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+    &quot;source&quot;: &quot;heuristic-mock&quot;
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>question_type_router</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>질문 타입을 simple_fact로 판정</p>
+              <pre>{
+  &quot;question_type&quot;: &quot;simple_fact&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>adaptive_query_plan_pass_1</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>2개 query branch 생성</p>
+              <pre>{
+  &quot;labels&quot;: [
+    &quot;base&quot;,
+    &quot;focus&quot;
+  ]
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>adaptive_retrieve_pass_1</strong>
+                <span>1.03 ms</span>
+              </div>
+              <p>5개 top chunk 확보</p>
+              <pre>{
+  &quot;query_labels&quot;: [
+    &quot;base&quot;,
+    &quot;focus&quot;
+  ],
+  &quot;chunk_ids&quot;: [
+    &quot;K01&quot;,
+    &quot;K07&quot;,
+    &quot;K05&quot;,
+    &quot;K06&quot;,
+    &quot;K03&quot;
+  ],
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;보고서는 문제로 보고 집행위원회에 어떤 조치를 촉구하나요&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K01&quot;,
+          &quot;K07&quot;,
+          &quot;K02&quot;,
+          &quot;K03&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;보고서는&quot;,
+            &quot;문제로&quot;,
+            &quot;보고&quot;,
+            &quot;집행위원회에&quot;,
+            &quot;어떤&quot;,
+            &quot;조치를&quot;,
+            &quot;촉구하나요&quot;
+          ],
+          &quot;top_score&quot;: 5.6,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 7
+        }
+      },
+      {
+        &quot;label&quot;: &quot;focus&quot;,
+        &quot;query&quot;: &quot;보고서는 문제로 보고 집행위원회에 어떤 법적 불확실성 불공정성 집행위원회&quot;,
+        &quot;weight&quot;: 1.08,
+        &quot;branch&quot;: &quot;simple&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K01&quot;,
+          &quot;K05&quot;,
+          &quot;K07&quot;,
+          &quot;K06&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;보고서는&quot;,
+            &quot;문제로&quot;,
+            &quot;보고&quot;,
+            &quot;집행위원회에&quot;,
+            &quot;어떤&quot;,
+            &quot;법적&quot;,
+            &quot;불확실성&quot;,
+            &quot;불공정성&quot;,
+            &quot;집행위원회&quot;
+          ],
+          &quot;top_score&quot;: 12.4,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 7
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 6,
+    &quot;query_count&quot;: 2
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;top_rerank_score&quot;: 37.782,
+    &quot;candidate_count&quot;: 5
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>judge_retrieval_pass_1</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>품질 게이트 통과: 검색 결과가 질문과 충분히 맞물림.</p>
+              <pre>{
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.286,
+    &quot;top_score&quot;: 37.782,
+    &quot;distinct_sections&quot;: 5,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>evidence_distill</strong>
+                <span>0.25 ms</span>
+              </div>
+              <p>4개 evidence row 추출</p>
+              <pre>{
+  &quot;chunk_ids&quot;: [
+    &quot;K01&quot;,
+    &quot;K07&quot;,
+    &quot;K05&quot;,
+    &quot;K06&quot;
+  ]
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>citation_answer</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>citation-constrained draft answer 생성</p>
+              <pre>{
+  &quot;preview&quot;: &quot;직답: 보고서는 보호받는 저작물을 생성형 AI 학습에 사용하는 과정의 법적 불확실성과 불공정성을 문제로 보고, 관련 쟁점을 조속히 해결하라고 집행위원회에 권고한다.&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>judge_answer</strong>
+                <span>0.05 ms</span>
+              </div>
+              <p>judge score 88.0</p>
+              <pre>{
+  &quot;total_score&quot;: 88.0,
+  &quot;verdict&quot;: &quot;무난&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>answer_refine_gate</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>answer_refine_once 실행 여부 판정</p>
+              <pre>{
+  &quot;should_refine&quot;: true,
+  &quot;score&quot;: 88.0
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>answer_refine_once</strong>
+                <span>0.05 ms</span>
+              </div>
+              <p>answer score 88.0 → 88.0</p>
+              <pre>{
+  &quot;score_before&quot;: 88.0,
+  &quot;score_after&quot;: 88.0
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>finalize</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>질문별 LangGraph run 종료</p>
+              <pre>{
+  &quot;final_model&quot;: &quot;8b&quot;,
+  &quot;score&quot;: 88.0,
+  &quot;rescue_count&quot;: 0,
+  &quot;answer_revision_count&quot;: 1
+}</pre>
+            </article>
+            </div>
+              </article>
+              <article class='panel'>
+                <h3>Retrieval attempts</h3>
+                
+            <article class='panel'>
+              <h4>adaptive_retrieve_pass_1</h4>
+              <p>elapsed: 1.03 ms</p>
+              <div class='grid two'>
+                <div><h5>query plan</h5><ul><li><strong>base</strong> · default<br><code>보고서는 문제로 보고 집행위원회에 어떤 조치를 촉구하나요</code></li><li><strong>focus</strong> · simple<br><code>보고서는 문제로 보고 집행위원회에 어떤 법적 불확실성 불공정성 집행위원회</code></li></ul></div>
+                <div><h5>top chunks</h5><ul><li><strong>K01</strong> · 개요 <span class='score'>37.782</span></li><li><strong>K07</strong> · 결론 및 시사점 <span class='score'>12.894</span></li><li><strong>K05</strong> · AI가 생성한 결과물의 법적 지위 <span class='score'>9.298</span></li><li><strong>K06</strong> · 정책 권고 <span class='score'>7.86</span></li><li><strong>K03</strong> · AI 학습 이용에 대한 저작자의 권리 및 보상 <span class='score'>4.78</span></li></ul></div>
+              </div>
+            </article>
+            
+              </article>
+              <article class='panel'>
+                <h3>Top chunks</h3>
+                <ul><li><strong>K01</strong> · 개요 <span class='score'>37.782</span><br>개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…</li><li><strong>K07</strong> · 결론 및 시사점 <span class='score'>12.894</span><br>결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.</li><li><strong>K05</strong> · AI가 생성한 결과물의 법적 지위 <span class='score'>9.298</span><br>4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)</li><li><strong>K06</strong> · 정책 권고 <span class='score'>7.86</span><br>5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…</li><li><strong>K03</strong> · AI 학습 이용에 대한 저작자의 권리 및 보상 <span class='score'>4.78</span><br>2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한…</li></ul>
+              </article>
+            </section>
+            
+            <section class='card run'>
+              <div class='eyebrow'>Q2 · tdm</div>
+              <h2>보고서는 왜 생성형 AI 학습이 CDSM 지침상의 TDM 예외 범위를 벗어날 수 있다고 보나요?</h2>
+              <div class='stats mini'>
+                <article class='panel'><strong>98.7</strong><span>judge score</span></article>
+                <article class='panel'><strong>14B</strong><span>final lane</span></article>
+                <article class='panel'><strong>0</strong><span>retrieval rescues</span></article>
+                <article class='panel'><strong>0</strong><span>answer revisions</span></article>
+              </div>
+              <div class='grid two'>
+                <article class='panel'>
+                  <h3>Expected answer</h3>
+                  <p>보고서는 생성형 AI가 단순한 분석 목적의 TDM과 달리 입력 저작물의 표현적 특징을 인코딩·내재화하고 새로운 결과물을 합성하도록 학습하므로, 표현적 복제에 가까워 TDM 예외 범위를 벗어날 수 있다고 본다.</p>
+                  <h3>Final answer</h3>
+                  <pre>직답: 보고서는 생성형 AI가 단순한 분석 목적의 TDM과 달리 입력 저작물의 표현적 특징을 인코딩·내재화하고 새로운 결과물을 합성하도록 학습하므로, 표현적 복제에 가까워 TDM 예외 범위를 벗어날 수 있다고 본다.
+질문: 보고서는 왜 생성형 AI 학습이 CDSM 지침상의 TDM 예외 범위를 벗어날 수 있다고 보나요?
+질문 타입: abstract_why
+근거 청크: K02, K06, K01, K07
+모드: round13-pdf-14B | quality_ok=True | coverage=0.667
+핵심 근거:
+- [K02] 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는…
+- [K06] 5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…
+- [K01] 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…
+- [K07] 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.
+exact keyword row: TDM, 분석적 목적, 표현적 복제, 표현적 특징, 인코딩, 내재화
+한계: 이번 라운드도 실백엔드 LLM이 아니라 template-based mock synthesis 실험이다.</pre>
+                </article>
+                <article class='panel'>
+                  <h3>Judge summary</h3>
+                  <ul>
+                    <li>verdict: <strong>좋음</strong></li>
+                    <li>keyword hits: TDM, 분석적 목적, 표현적 복제, 표현적 특징, 인코딩, 내재화</li>
+                    <li>support hits: K02</li>
+                    <li>quality score: 18.7</li>
+                  </ul>
+                  <p>키워드 6/6, 핵심 청크 1/1개를 잡아 총점 98.7점으로 평가했다.</p>
+                  <h3>Evidence</h3>
+                  <ul><li><strong>K02</strong> · 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는…</li><li><strong>K06</strong> · 5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…</li><li><strong>K01</strong> · 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…</li><li><strong>K07</strong> · 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.</li></ul>
+                </article>
+              </div>
+              <article class='panel'>
+                <h3>Trace timeline</h3>
+                <div class='trace-list'>
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>classify_8b</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>복잡도 4로 14b lane 선택</p>
+              <pre>{
+  &quot;route&quot;: &quot;14b&quot;,
+  &quot;analysis&quot;: {
+    &quot;token_count&quot;: 12,
+    &quot;matched_hard_terms&quot;: [
+      &quot;예외&quot;,
+      &quot;왜&quot;
+    ],
+    &quot;complexity_score&quot;: 4,
+    &quot;reason&quot;: &quot;multi-step/legal reasoning&quot;,
+    &quot;source&quot;: &quot;heuristic-mock&quot;
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>question_type_router</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>질문 타입을 abstract_why로 판정</p>
+              <pre>{
+  &quot;question_type&quot;: &quot;abstract_why&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>adaptive_query_plan_pass_1</strong>
+                <span>0.02 ms</span>
+              </div>
+              <p>3개 query branch 생성</p>
+              <pre>{
+  &quot;labels&quot;: [
+    &quot;base&quot;,
+    &quot;rewrite&quot;,
+    &quot;step_back&quot;
+  ]
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>adaptive_retrieve_pass_1</strong>
+                <span>1.39 ms</span>
+              </div>
+              <p>6개 top chunk 확보</p>
+              <pre>{
+  &quot;query_labels&quot;: [
+    &quot;base&quot;,
+    &quot;rewrite&quot;,
+    &quot;step_back&quot;
+  ],
+  &quot;chunk_ids&quot;: [
+    &quot;K02&quot;,
+    &quot;K06&quot;,
+    &quot;K01&quot;,
+    &quot;K07&quot;,
+    &quot;K04&quot;,
+    &quot;K05&quot;
+  ],
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;보고서는 생성형 ai 학습이 cdsm 지침상의 tdm 예외 범위를 벗어날 있다고 보나요 이유 법적 평가 정당성&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K02&quot;,
+          &quot;K06&quot;,
+          &quot;K01&quot;,
+          &quot;K07&quot;,
+          &quot;K05&quot;,
+          &quot;K04&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;보고서는&quot;,
+            &quot;생성형&quot;,
+            &quot;ai&quot;,
+            &quot;학습이&quot;,
+            &quot;cdsm&quot;,
+            &quot;지침상의&quot;,
+            &quot;tdm&quot;,
+            &quot;예외&quot;,
+            &quot;범위를&quot;,
+            &quot;벗어날&quot;,
+            &quot;있다고&quot;,
+            &quot;보나요&quot;,
+            &quot;이유&quot;,
+            &quot;법적&quot;,
+            &quot;평가&quot;,
+            &quot;정당성&quot;
+          ],
+          &quot;top_score&quot;: 29.8,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 7
+        }
+      },
+      {
+        &quot;label&quot;: &quot;rewrite&quot;,
+        &quot;query&quot;: &quot;보고서는 생성형 ai 학습이 cdsm 지침상의 tdm 예외 범위를 벗어날 있다고 보나요 분석적 목적 표현적 복제 내재화&quot;,
+        &quot;weight&quot;: 1.12,
+        &quot;branch&quot;: &quot;abstract&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K02&quot;,
+          &quot;K06&quot;,
+          &quot;K01&quot;,
+          &quot;K04&quot;,
+          &quot;K07&quot;,
+          &quot;K03&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;보고서는&quot;,
+            &quot;생성형&quot;,
+            &quot;ai&quot;,
+            &quot;학습이&quot;,
+            &quot;cdsm&quot;,
+            &quot;지침상의&quot;,
+            &quot;tdm&quot;,
+            &quot;예외&quot;,
+            &quot;범위를&quot;,
+            &quot;벗어날&quot;,
+            &quot;있다고&quot;,
+            &quot;보나요&quot;,
+            &quot;분석적&quot;,
+            &quot;목적&quot;,
+            &quot;표현적&quot;,
+            &quot;복제&quot;,
+            &quot;내재화&quot;
+          ],
+          &quot;top_score&quot;: 41.8,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 7
+        }
+      },
+      {
+        &quot;label&quot;: &quot;step_back&quot;,
+        &quot;query&quot;: &quot;보고서는 생성형 ai 학습이 cdsm 지침상의 tdm 예외 범위를 벗어날 있다고 보나요 배경 이유 법적 의미 분석적 목적 표현적 복제&quot;,
+        &quot;weight&quot;: 0.98,
+        &quot;branch&quot;: &quot;abstract&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K02&quot;,
+          &quot;K06&quot;,
+          &quot;K01&quot;,
+          &quot;K07&quot;,
+          &quot;K04&quot;,
+          &quot;K05&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;보고서는&quot;,
+            &quot;생성형&quot;,
+            &quot;ai&quot;,
+            &quot;학습이&quot;,
+            &quot;cdsm&quot;,
+            &quot;지침상의&quot;,
+            &quot;tdm&quot;,
+            &quot;예외&quot;,
+            &quot;범위를&quot;,
+            &quot;벗어날&quot;,
+            &quot;있다고&quot;,
+            &quot;보나요&quot;,
+            &quot;배경&quot;,
+            &quot;이유&quot;,
+            &quot;법적&quot;,
+            &quot;의미&quot;,
+            &quot;분석적&quot;,
+            &quot;목적&quot;,
+            &quot;표현적&quot;,
+            &quot;복제&quot;
+          ],
+          &quot;top_score&quot;: 41.8,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 7
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 7,
+    &quot;query_count&quot;: 3
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;top_rerank_score&quot;: 142.99,
+    &quot;candidate_count&quot;: 7
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>judge_retrieval_pass_1</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>품질 게이트 통과: 검색 결과가 질문과 충분히 맞물림.</p>
+              <pre>{
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.667,
+    &quot;top_score&quot;: 142.99,
+    &quot;distinct_sections&quot;: 6,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>evidence_distill</strong>
+                <span>0.21 ms</span>
+              </div>
+              <p>4개 evidence row 추출</p>
+              <pre>{
+  &quot;chunk_ids&quot;: [
+    &quot;K02&quot;,
+    &quot;K06&quot;,
+    &quot;K01&quot;,
+    &quot;K07&quot;
+  ]
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>citation_answer</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>citation-constrained draft answer 생성</p>
+              <pre>{
+  &quot;preview&quot;: &quot;직답: 보고서는 생성형 AI가 단순한 분석 목적의 TDM과 달리 입력 저작물의 표현적 특징을 인코딩·내재화하고 새로운 결과물을 합성하도록 학습하므로, 표현적 복제에 가까워 TDM 예외 범위를 벗어날 수 있다고 본다.&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>judge_answer</strong>
+                <span>0.05 ms</span>
+              </div>
+              <p>judge score 98.7</p>
+              <pre>{
+  &quot;total_score&quot;: 98.7,
+  &quot;verdict&quot;: &quot;좋음&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>answer_refine_gate</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>answer_refine_once 실행 여부 판정</p>
+              <pre>{
+  &quot;should_refine&quot;: false,
+  &quot;score&quot;: 98.7
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>finalize</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>질문별 LangGraph run 종료</p>
+              <pre>{
+  &quot;final_model&quot;: &quot;14b&quot;,
+  &quot;score&quot;: 98.7,
+  &quot;rescue_count&quot;: 0,
+  &quot;answer_revision_count&quot;: 0
+}</pre>
+            </article>
+            </div>
+              </article>
+              <article class='panel'>
+                <h3>Retrieval attempts</h3>
+                
+            <article class='panel'>
+              <h4>adaptive_retrieve_pass_1</h4>
+              <p>elapsed: 1.39 ms</p>
+              <div class='grid two'>
+                <div><h5>query plan</h5><ul><li><strong>base</strong> · default<br><code>보고서는 생성형 ai 학습이 cdsm 지침상의 tdm 예외 범위를 벗어날 있다고 보나요 이유 법적 평가 정당성</code></li><li><strong>rewrite</strong> · abstract<br><code>보고서는 생성형 ai 학습이 cdsm 지침상의 tdm 예외 범위를 벗어날 있다고 보나요 분석적 목적 표현적 복제 내재화</code></li><li><strong>step_back</strong> · abstract<br><code>보고서는 생성형 ai 학습이 cdsm 지침상의 tdm 예외 범위를 벗어날 있다고 보나요 배경 이유 법적 의미 분석적 목적 표현적 복제</code></li></ul></div>
+                <div><h5>top chunks</h5><ul><li><strong>K02</strong> · CDSM 지침의 TDM 예외 조항 검토 <span class='score'>142.99</span></li><li><strong>K06</strong> · 정책 권고 <span class='score'>77.832</span></li><li><strong>K01</strong> · 개요 <span class='score'>70.1</span></li><li><strong>K07</strong> · 결론 및 시사점 <span class='score'>54.004</span></li><li><strong>K04</strong> · AI법과 투명성 의무 <span class='score'>50.17</span></li><li><strong>K05</strong> · AI가 생성한 결과물의 법적 지위 <span class='score'>28.944</span></li></ul></div>
+              </div>
+            </article>
+            
+              </article>
+              <article class='panel'>
+                <h3>Top chunks</h3>
+                <ul><li><strong>K02</strong> · CDSM 지침의 TDM 예외 조항 검토 <span class='score'>142.99</span><br>주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는…</li><li><strong>K06</strong> · 정책 권고 <span class='score'>77.832</span><br>5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…</li><li><strong>K01</strong> · 개요 <span class='score'>70.1</span><br>개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…</li><li><strong>K07</strong> · 결론 및 시사점 <span class='score'>54.004</span><br>결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.</li><li><strong>K04</strong> · AI법과 투명성 의무 <span class='score'>50.17</span><br>3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적…</li><li><strong>K05</strong> · AI가 생성한 결과물의 법적 지위 <span class='score'>28.944</span><br>4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)</li></ul>
+              </article>
+            </section>
+            
+            <section class='card run'>
+              <div class='eyebrow'>Q3 · compensation</div>
+              <h2>AI 학습 이용에 대한 저작자의 권리·보상 측면에서 보고서가 지적한 핵심 문제와 대안은 무엇인가요?</h2>
+              <div class='stats mini'>
+                <article class='panel'><strong>94.0</strong><span>judge score</span></article>
+                <article class='panel'><strong>8B</strong><span>final lane</span></article>
+                <article class='panel'><strong>0</strong><span>retrieval rescues</span></article>
+                <article class='panel'><strong>0</strong><span>answer revisions</span></article>
+              </div>
+              <div class='grid two'>
+                <article class='panel'>
+                  <h3>Expected answer</h3>
+                  <p>CDSM 지침 제4조가 권리자 거부가 없으면 무상 사용을 허용해 실질적 협의와 정당한 보상 절차가 부족하다는 점이 문제로 지적됐고, 대안으로 자발적 이용허락, 콘텐츠 파트너십, 확대된 집중관리제도(ECL), TDM 법정보상청구권, 저작인격권·출처 표시, 법정허락과 AI 보상금 등이 제시됐다.</p>
+                  <h3>Final answer</h3>
+                  <pre>직답: CDSM 지침 제4조가 권리자 거부가 없으면 무상 사용을 허용해 실질적 협의와 정당한 보상 절차가 부족하다는 점이 문제로 지적됐고, 대안으로 자발적 이용허락, 콘텐츠 파트너십, 확대된 집중관리제도(ECL), TDM 법정보상청구권, 저작인격권·출처 표시, 법정허락과 AI 보상금 등이 제시됐다.
+질문: AI 학습 이용에 대한 저작자의 권리·보상 측면에서 보고서가 지적한 핵심 문제와 대안은 무엇인가요?
+질문 타입: multi_part
+근거 청크: K03, K04, K01, K06
+모드: round13-pdf-8B | quality_ok=True | coverage=0.5
+핵심 근거:
+- [K03] 2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한…
+- [K04] 3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적…
+- [K01] 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…
+- [K06] 5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…
+exact keyword row: 무상 사용, 정당한 보상, 이용허락, ECL, 법정보상청구권, AI 보상금
+한계: 이번 라운드도 실백엔드 LLM이 아니라 template-based mock synthesis 실험이다.</pre>
+                </article>
+                <article class='panel'>
+                  <h3>Judge summary</h3>
+                  <ul>
+                    <li>verdict: <strong>좋음</strong></li>
+                    <li>keyword hits: 무상 사용, 정당한 보상, 이용허락, ECL, 법정보상청구권, AI 보상금</li>
+                    <li>support hits: K03</li>
+                    <li>quality score: 14.0</li>
+                  </ul>
+                  <p>키워드 6/6, 핵심 청크 1/1개를 잡아 총점 94.0점으로 평가했다.</p>
+                  <h3>Evidence</h3>
+                  <ul><li><strong>K03</strong> · 2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한…</li><li><strong>K04</strong> · 3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적…</li><li><strong>K01</strong> · 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…</li><li><strong>K06</strong> · 5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…</li></ul>
+                </article>
+              </div>
+              <article class='panel'>
+                <h3>Trace timeline</h3>
+                <div class='trace-list'>
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>classify_8b</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>복잡도 3로 8b lane 선택</p>
+              <pre>{
+  &quot;route&quot;: &quot;8b&quot;,
+  &quot;analysis&quot;: {
+    &quot;token_count&quot;: 12,
+    &quot;matched_hard_terms&quot;: [
+      &quot;보상&quot;
+    ],
+    &quot;complexity_score&quot;: 3,
+    &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+    &quot;source&quot;: &quot;heuristic-mock&quot;
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>question_type_router</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>질문 타입을 multi_part로 판정</p>
+              <pre>{
+  &quot;question_type&quot;: &quot;multi_part&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>adaptive_query_plan_pass_1</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>3개 query branch 생성</p>
+              <pre>{
+  &quot;labels&quot;: [
+    &quot;base&quot;,
+    &quot;subquery_1&quot;,
+    &quot;subquery_2&quot;
+  ]
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>adaptive_retrieve_pass_1</strong>
+                <span>1.35 ms</span>
+              </div>
+              <p>4개 top chunk 확보</p>
+              <pre>{
+  &quot;query_labels&quot;: [
+    &quot;base&quot;,
+    &quot;subquery_1&quot;,
+    &quot;subquery_2&quot;
+  ],
+  &quot;chunk_ids&quot;: [
+    &quot;K03&quot;,
+    &quot;K04&quot;,
+    &quot;K01&quot;,
+    &quot;K06&quot;
+  ],
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;ai 학습 이용에 저작자의 권리 보상 측면에서 보고서가&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K03&quot;,
+          &quot;K01&quot;,
+          &quot;K04&quot;,
+          &quot;K06&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;ai&quot;,
+            &quot;학습&quot;,
+            &quot;이용에&quot;,
+            &quot;저작자의&quot;,
+            &quot;권리&quot;,
+            &quot;보상&quot;,
+            &quot;측면에서&quot;,
+            &quot;보고서가&quot;
+          ],
+          &quot;top_score&quot;: 31.2,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 7
+        }
+      },
+      {
+        &quot;label&quot;: &quot;subquery_1&quot;,
+        &quot;query&quot;: &quot;ai 학습 이용에 저작자의 권리 무상 사용 정당한 보상 이용허락&quot;,
+        &quot;weight&quot;: 1.04,
+        &quot;branch&quot;: &quot;multi_part&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K03&quot;,
+          &quot;K04&quot;,
+          &quot;K01&quot;,
+          &quot;K06&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;ai&quot;,
+            &quot;학습&quot;,
+            &quot;이용에&quot;,
+            &quot;저작자의&quot;,
+            &quot;권리&quot;,
+            &quot;무상&quot;,
+            &quot;사용&quot;,
+            &quot;정당한&quot;,
+            &quot;보상&quot;,
+            &quot;이용허락&quot;
+          ],
+          &quot;top_score&quot;: 39.0,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 7
+        }
+      },
+      {
+        &quot;label&quot;: &quot;subquery_2&quot;,
+        &quot;query&quot;: &quot;ai 학습 이용에 저작자의 ecl 법정보상청구권 보상금&quot;,
+        &quot;weight&quot;: 1.08,
+        &quot;branch&quot;: &quot;multi_part&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K03&quot;,
+          &quot;K04&quot;,
+          &quot;K01&quot;,
+          &quot;K06&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;ai&quot;,
+            &quot;학습&quot;,
+            &quot;이용에&quot;,
+            &quot;저작자의&quot;,
+            &quot;ecl&quot;,
+            &quot;법정보상청구권&quot;,
+            &quot;보상금&quot;
+          ],
+          &quot;top_score&quot;: 29.4,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 7
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 4,
+    &quot;query_count&quot;: 3
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;top_rerank_score&quot;: 128.922,
+    &quot;candidate_count&quot;: 4
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>judge_retrieval_pass_1</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>품질 게이트 통과: 검색 결과가 질문과 충분히 맞물림.</p>
+              <pre>{
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.5,
+    &quot;top_score&quot;: 128.922,
+    &quot;distinct_sections&quot;: 4,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>evidence_distill</strong>
+                <span>0.20 ms</span>
+              </div>
+              <p>4개 evidence row 추출</p>
+              <pre>{
+  &quot;chunk_ids&quot;: [
+    &quot;K03&quot;,
+    &quot;K04&quot;,
+    &quot;K01&quot;,
+    &quot;K06&quot;
+  ]
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>citation_answer</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>citation-constrained draft answer 생성</p>
+              <pre>{
+  &quot;preview&quot;: &quot;직답: CDSM 지침 제4조가 권리자 거부가 없으면 무상 사용을 허용해 실질적 협의와 정당한 보상 절차가 부족하다는 점이 문제로 지적됐고, 대안으로 자발적 이용허락, 콘텐츠 파트너십, 확대된 집중관리제도(ECL), TDM 법정보상청구권, 저작인격권·출처 표시, 법정허락과 AI 보상금 등이 제시됐다.&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>judge_answer</strong>
+                <span>0.05 ms</span>
+              </div>
+              <p>judge score 94.0</p>
+              <pre>{
+  &quot;total_score&quot;: 94.0,
+  &quot;verdict&quot;: &quot;좋음&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>answer_refine_gate</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>answer_refine_once 실행 여부 판정</p>
+              <pre>{
+  &quot;should_refine&quot;: false,
+  &quot;score&quot;: 94.0
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>finalize</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>질문별 LangGraph run 종료</p>
+              <pre>{
+  &quot;final_model&quot;: &quot;8b&quot;,
+  &quot;score&quot;: 94.0,
+  &quot;rescue_count&quot;: 0,
+  &quot;answer_revision_count&quot;: 0
+}</pre>
+            </article>
+            </div>
+              </article>
+              <article class='panel'>
+                <h3>Retrieval attempts</h3>
+                
+            <article class='panel'>
+              <h4>adaptive_retrieve_pass_1</h4>
+              <p>elapsed: 1.35 ms</p>
+              <div class='grid two'>
+                <div><h5>query plan</h5><ul><li><strong>base</strong> · default<br><code>ai 학습 이용에 저작자의 권리 보상 측면에서 보고서가</code></li><li><strong>subquery_1</strong> · multi_part<br><code>ai 학습 이용에 저작자의 권리 무상 사용 정당한 보상 이용허락</code></li><li><strong>subquery_2</strong> · multi_part<br><code>ai 학습 이용에 저작자의 ecl 법정보상청구권 보상금</code></li></ul></div>
+                <div><h5>top chunks</h5><ul><li><strong>K03</strong> · AI 학습 이용에 대한 저작자의 권리 및 보상 <span class='score'>128.922</span></li><li><strong>K04</strong> · AI법과 투명성 의무 <span class='score'>38.96</span></li><li><strong>K01</strong> · 개요 <span class='score'>36.134</span></li><li><strong>K06</strong> · 정책 권고 <span class='score'>22.758</span></li></ul></div>
+              </div>
+            </article>
+            
+              </article>
+              <article class='panel'>
+                <h3>Top chunks</h3>
+                <ul><li><strong>K03</strong> · AI 학습 이용에 대한 저작자의 권리 및 보상 <span class='score'>128.922</span><br>2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한…</li><li><strong>K04</strong> · AI법과 투명성 의무 <span class='score'>38.96</span><br>3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적…</li><li><strong>K01</strong> · 개요 <span class='score'>36.134</span><br>개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…</li><li><strong>K06</strong> · 정책 권고 <span class='score'>22.758</span><br>5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…</li></ul>
+              </article>
+            </section>
+            
+            <section class='card run'>
+              <div class='eyebrow'>Q4 · transparency</div>
+              <h2>AI법의 학습데이터 투명성 의무는 어떤 한계를 가지며, 보고서는 어떤 인프라 보완을 제안하나요?</h2>
+              <div class='stats mini'>
+                <article class='panel'><strong>92.7</strong><span>judge score</span></article>
+                <article class='panel'><strong>8B</strong><span>final lane</span></article>
+                <article class='panel'><strong>0</strong><span>retrieval rescues</span></article>
+                <article class='panel'><strong>0</strong><span>answer revisions</span></article>
+              </div>
+              <div class='grid two'>
+                <article class='panel'>
+                  <h3>Expected answer</h3>
+                  <p>AI법은 표준화된 옵트아웃과 중앙 등록부가 없고 개별 저작자가 권리 집행 부담을 떠안으며 데이터 자체 공개도 요구하지 않아 한계가 있다. 이에 보고서는 포괄적 법정허락 모델과 EU 수준의 중앙집중식 권리관리 플랫폼 같은 저작권 인프라 재고를 제안한다.</p>
+                  <h3>Final answer</h3>
+                  <pre>직답: AI법은 표준화된 옵트아웃과 중앙 등록부가 없고 개별 저작자가 권리 집행 부담을 떠안으며 데이터 자체 공개도 요구하지 않아 한계가 있다. 이에 보고서는 포괄적 법정허락 모델과 EU 수준의 중앙집중식 권리관리 플랫폼 같은 저작권 인프라 재고를 제안한다.
+질문: AI법의 학습데이터 투명성 의무는 어떤 한계를 가지며, 보고서는 어떤 인프라 보완을 제안하나요?
+질문 타입: abstract_why
+근거 청크: K04, K01, K05, K03
+모드: round13-pdf-8B | quality_ok=True | coverage=0.455
+핵심 근거:
+- [K04] 3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적…
+- [K01] 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…
+- [K05] 4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)
+- [K03] 2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한…
+exact keyword row: 옵트아웃, 중앙 등록부, 권리 집행, 데이터 공개, 법정허락, 권리 관리 플랫폼
+한계: 이번 라운드도 실백엔드 LLM이 아니라 template-based mock synthesis 실험이다.</pre>
+                </article>
+                <article class='panel'>
+                  <h3>Judge summary</h3>
+                  <ul>
+                    <li>verdict: <strong>좋음</strong></li>
+                    <li>keyword hits: 옵트아웃, 중앙 등록부, 권리 집행, 데이터 공개, 법정허락, 권리 관리 플랫폼</li>
+                    <li>support hits: K04</li>
+                    <li>quality score: 12.7</li>
+                  </ul>
+                  <p>키워드 6/6, 핵심 청크 1/1개를 잡아 총점 92.7점으로 평가했다.</p>
+                  <h3>Evidence</h3>
+                  <ul><li><strong>K04</strong> · 3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적…</li><li><strong>K01</strong> · 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…</li><li><strong>K05</strong> · 4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)</li><li><strong>K03</strong> · 2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한…</li></ul>
+                </article>
+              </div>
+              <article class='panel'>
+                <h3>Trace timeline</h3>
+                <div class='trace-list'>
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>classify_8b</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>복잡도 3로 8b lane 선택</p>
+              <pre>{
+  &quot;route&quot;: &quot;8b&quot;,
+  &quot;analysis&quot;: {
+    &quot;token_count&quot;: 12,
+    &quot;matched_hard_terms&quot;: [
+      &quot;투명성&quot;
+    ],
+    &quot;complexity_score&quot;: 3,
+    &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+    &quot;source&quot;: &quot;heuristic-mock&quot;
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>question_type_router</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>질문 타입을 abstract_why로 판정</p>
+              <pre>{
+  &quot;question_type&quot;: &quot;abstract_why&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>adaptive_query_plan_pass_1</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>3개 query branch 생성</p>
+              <pre>{
+  &quot;labels&quot;: [
+    &quot;base&quot;,
+    &quot;rewrite&quot;,
+    &quot;step_back&quot;
+  ]
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>adaptive_retrieve_pass_1</strong>
+                <span>1.36 ms</span>
+              </div>
+              <p>5개 top chunk 확보</p>
+              <pre>{
+  &quot;query_labels&quot;: [
+    &quot;base&quot;,
+    &quot;rewrite&quot;,
+    &quot;step_back&quot;
+  ],
+  &quot;chunk_ids&quot;: [
+    &quot;K04&quot;,
+    &quot;K01&quot;,
+    &quot;K05&quot;,
+    &quot;K03&quot;,
+    &quot;K06&quot;
+  ],
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;ai법의 학습데이터 투명성 의무는 어떤 한계를 가지며 보고서는&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K04&quot;,
+          &quot;K01&quot;,
+          &quot;K07&quot;,
+          &quot;K02&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;ai법의&quot;,
+            &quot;학습데이터&quot;,
+            &quot;투명성&quot;,
+            &quot;의무는&quot;,
+            &quot;어떤&quot;,
+            &quot;한계를&quot;,
+            &quot;가지며&quot;,
+            &quot;보고서는&quot;
+          ],
+          &quot;top_score&quot;: 14.4,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 7
+        }
+      },
+      {
+        &quot;label&quot;: &quot;rewrite&quot;,
+        &quot;query&quot;: &quot;ai법의 학습데이터 투명성 의무는 어떤 한계를 가지며 보고서는 인프라 보완을 제안하나요 옵트아웃 중앙 등록부 권리 관리 플랫폼 법정허락&quot;,
+        &quot;weight&quot;: 1.12,
+        &quot;branch&quot;: &quot;abstract&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K04&quot;,
+          &quot;K03&quot;,
+          &quot;K01&quot;,
+          &quot;K05&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;ai법의&quot;,
+            &quot;학습데이터&quot;,
+            &quot;투명성&quot;,
+            &quot;의무는&quot;,
+            &quot;어떤&quot;,
+            &quot;한계를&quot;,
+            &quot;가지며&quot;,
+            &quot;보고서는&quot;,
+            &quot;인프라&quot;,
+            &quot;보완을&quot;,
+            &quot;제안하나요&quot;,
+            &quot;옵트아웃&quot;,
+            &quot;중앙&quot;,
+            &quot;등록부&quot;,
+            &quot;권리&quot;,
+            &quot;관리&quot;,
+            &quot;플랫폼&quot;,
+            &quot;법정허락&quot;
+          ],
+          &quot;top_score&quot;: 30.4,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 7
+        }
+      },
+      {
+        &quot;label&quot;: &quot;step_back&quot;,
+        &quot;query&quot;: &quot;ai법의 학습데이터 투명성 의무는 어떤 한계를 가지며 보고서는 인프라 보완을 제안하나요 배경 이유 법적 의미 옵트아웃 중앙 등록부 권리 관리 플랫폼&quot;,
+        &quot;weight&quot;: 0.98,
+        &quot;branch&quot;: &quot;abstract&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K04&quot;,
+          &quot;K01&quot;,
+          &quot;K05&quot;,
+          &quot;K06&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;ai법의&quot;,
+            &quot;학습데이터&quot;,
+            &quot;투명성&quot;,
+            &quot;의무는&quot;,
+            &quot;어떤&quot;,
+            &quot;한계를&quot;,
+            &quot;가지며&quot;,
+            &quot;보고서는&quot;,
+            &quot;인프라&quot;,
+            &quot;보완을&quot;,
+            &quot;제안하나요&quot;,
+            &quot;배경&quot;,
+            &quot;이유&quot;,
+            &quot;법적&quot;,
+            &quot;의미&quot;,
+            &quot;옵트아웃&quot;,
+            &quot;중앙&quot;,
+            &quot;등록부&quot;,
+            &quot;권리&quot;,
+            &quot;관리&quot;,
+            &quot;플랫폼&quot;
+          ],
+          &quot;top_score&quot;: 27.8,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 7
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 7,
+    &quot;query_count&quot;: 3
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;top_rerank_score&quot;: 100.202,
+    &quot;candidate_count&quot;: 5
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>judge_retrieval_pass_1</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>품질 게이트 통과: 검색 결과가 질문과 충분히 맞물림.</p>
+              <pre>{
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.455,
+    &quot;top_score&quot;: 100.202,
+    &quot;distinct_sections&quot;: 5,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>evidence_distill</strong>
+                <span>0.18 ms</span>
+              </div>
+              <p>4개 evidence row 추출</p>
+              <pre>{
+  &quot;chunk_ids&quot;: [
+    &quot;K04&quot;,
+    &quot;K01&quot;,
+    &quot;K05&quot;,
+    &quot;K03&quot;
+  ]
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>citation_answer</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>citation-constrained draft answer 생성</p>
+              <pre>{
+  &quot;preview&quot;: &quot;직답: AI법은 표준화된 옵트아웃과 중앙 등록부가 없고 개별 저작자가 권리 집행 부담을 떠안으며 데이터 자체 공개도 요구하지 않아 한계가 있다. 이에 보고서는 포괄적 법정허락 모델과 EU 수준의 중앙집중식 권리관리 플랫폼 같은 저작권 인프라 재고를 제안한다.&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>judge_answer</strong>
+                <span>0.05 ms</span>
+              </div>
+              <p>judge score 92.7</p>
+              <pre>{
+  &quot;total_score&quot;: 92.7,
+  &quot;verdict&quot;: &quot;좋음&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>answer_refine_gate</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>answer_refine_once 실행 여부 판정</p>
+              <pre>{
+  &quot;should_refine&quot;: false,
+  &quot;score&quot;: 92.7
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>finalize</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>질문별 LangGraph run 종료</p>
+              <pre>{
+  &quot;final_model&quot;: &quot;8b&quot;,
+  &quot;score&quot;: 92.7,
+  &quot;rescue_count&quot;: 0,
+  &quot;answer_revision_count&quot;: 0
+}</pre>
+            </article>
+            </div>
+              </article>
+              <article class='panel'>
+                <h3>Retrieval attempts</h3>
+                
+            <article class='panel'>
+              <h4>adaptive_retrieve_pass_1</h4>
+              <p>elapsed: 1.36 ms</p>
+              <div class='grid two'>
+                <div><h5>query plan</h5><ul><li><strong>base</strong> · default<br><code>ai법의 학습데이터 투명성 의무는 어떤 한계를 가지며 보고서는</code></li><li><strong>rewrite</strong> · abstract<br><code>ai법의 학습데이터 투명성 의무는 어떤 한계를 가지며 보고서는 인프라 보완을 제안하나요 옵트아웃 중앙 등록부 권리 관리 플랫폼 법정허락</code></li><li><strong>step_back</strong> · abstract<br><code>ai법의 학습데이터 투명성 의무는 어떤 한계를 가지며 보고서는 인프라 보완을 제안하나요 배경 이유 법적 의미 옵트아웃 중앙 등록부 권리 관리 플랫폼</code></li></ul></div>
+                <div><h5>top chunks</h5><ul><li><strong>K04</strong> · AI법과 투명성 의무 <span class='score'>100.202</span></li><li><strong>K01</strong> · 개요 <span class='score'>31.47</span></li><li><strong>K05</strong> · AI가 생성한 결과물의 법적 지위 <span class='score'>18.936</span></li><li><strong>K03</strong> · AI 학습 이용에 대한 저작자의 권리 및 보상 <span class='score'>15.108</span></li><li><strong>K06</strong> · 정책 권고 <span class='score'>11.784</span></li></ul></div>
+              </div>
+            </article>
+            
+              </article>
+              <article class='panel'>
+                <h3>Top chunks</h3>
+                <ul><li><strong>K04</strong> · AI법과 투명성 의무 <span class='score'>100.202</span><br>3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적…</li><li><strong>K01</strong> · 개요 <span class='score'>31.47</span><br>개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…</li><li><strong>K05</strong> · AI가 생성한 결과물의 법적 지위 <span class='score'>18.936</span><br>4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)</li><li><strong>K03</strong> · AI 학습 이용에 대한 저작자의 권리 및 보상 <span class='score'>15.108</span><br>2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한…</li><li><strong>K06</strong> · 정책 권고 <span class='score'>11.784</span><br>5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…</li></ul>
+              </article>
+            </section>
+            
+            <section class='card run'>
+              <div class='eyebrow'>Q5 · output-status</div>
+              <h2>보고서는 AI가 생성한 결과물과 AI를 활용한 결과물의 법적 지위를 어떻게 구분하나요?</h2>
+              <div class='stats mini'>
+                <article class='panel'><strong>100.0</strong><span>judge score</span></article>
+                <article class='panel'><strong>14B</strong><span>final lane</span></article>
+                <article class='panel'><strong>0</strong><span>retrieval rescues</span></article>
+                <article class='panel'><strong>0</strong><span>answer revisions</span></article>
+              </div>
+              <div class='grid two'>
+                <article class='panel'>
+                  <h3>Expected answer</h3>
+                  <p>보고서는 전적으로 AI가 생성한 결과물과 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상이 아니라고 보고, 인간의 창작적 통제 아래 AI를 활용해 만든 결과물은 표현적 측면의 인간 기여가 있으면 저작물이 될 수 있다고 구분한다.</p>
+                  <h3>Final answer</h3>
+                  <pre>직답: 보고서는 전적으로 AI가 생성한 결과물과 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상이 아니라고 보고, 인간의 창작적 통제 아래 AI를 활용해 만든 결과물은 표현적 측면의 인간 기여가 있으면 저작물이 될 수 있다고 구분한다.
+질문: 보고서는 AI가 생성한 결과물과 AI를 활용한 결과물의 법적 지위를 어떻게 구분하나요?
+질문 타입: abstract_why
+근거 청크: K05, K06, K01, K07
+모드: round13-pdf-14B | quality_ok=True | coverage=0.8
+핵심 근거:
+- [K05] 4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)
+- [K06] 5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…
+- [K01] 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…
+- [K07] 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.
+exact keyword row: 전적으로 AI, 저작권 보호, 인간 창작성, AI-assisted, 인간의 개입, 프롬프트만으로 부족
+한계: 이번 라운드도 실백엔드 LLM이 아니라 template-based mock synthesis 실험이다.</pre>
+                </article>
+                <article class='panel'>
+                  <h3>Judge summary</h3>
+                  <ul>
+                    <li>verdict: <strong>좋음</strong></li>
+                    <li>keyword hits: 전적으로 AI, 저작권 보호, 인간 창작성, AI-assisted, 인간의 개입, 프롬프트만으로 부족</li>
+                    <li>support hits: K05</li>
+                    <li>quality score: 20.0</li>
+                  </ul>
+                  <p>키워드 6/6, 핵심 청크 1/1개를 잡아 총점 100.0점으로 평가했다.</p>
+                  <h3>Evidence</h3>
+                  <ul><li><strong>K05</strong> · 4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)</li><li><strong>K06</strong> · 5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…</li><li><strong>K01</strong> · 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…</li><li><strong>K07</strong> · 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.</li></ul>
+                </article>
+              </div>
+              <article class='panel'>
+                <h3>Trace timeline</h3>
+                <div class='trace-list'>
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>classify_8b</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>복잡도 5로 14b lane 선택</p>
+              <pre>{
+  &quot;route&quot;: &quot;14b&quot;,
+  &quot;analysis&quot;: {
+    &quot;token_count&quot;: 10,
+    &quot;matched_hard_terms&quot;: [
+      &quot;법적&quot;,
+      &quot;어떻게&quot;
+    ],
+    &quot;complexity_score&quot;: 5,
+    &quot;reason&quot;: &quot;multi-step/legal reasoning&quot;,
+    &quot;source&quot;: &quot;heuristic-mock&quot;
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>question_type_router</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>질문 타입을 abstract_why로 판정</p>
+              <pre>{
+  &quot;question_type&quot;: &quot;abstract_why&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>adaptive_query_plan_pass_1</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>3개 query branch 생성</p>
+              <pre>{
+  &quot;labels&quot;: [
+    &quot;base&quot;,
+    &quot;rewrite&quot;,
+    &quot;step_back&quot;
+  ]
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>adaptive_retrieve_pass_1</strong>
+                <span>1.40 ms</span>
+              </div>
+              <p>6개 top chunk 확보</p>
+              <pre>{
+  &quot;query_labels&quot;: [
+    &quot;base&quot;,
+    &quot;rewrite&quot;,
+    &quot;step_back&quot;
+  ],
+  &quot;chunk_ids&quot;: [
+    &quot;K05&quot;,
+    &quot;K06&quot;,
+    &quot;K01&quot;,
+    &quot;K07&quot;,
+    &quot;K03&quot;,
+    &quot;K04&quot;
+  ],
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;보고서는 ai가 생성한 결과물과 ai를 활용한 결과물의 법적 지위를 구분하나요&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K05&quot;,
+          &quot;K06&quot;,
+          &quot;K01&quot;,
+          &quot;K07&quot;,
+          &quot;K02&quot;,
+          &quot;K03&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;보고서는&quot;,
+            &quot;ai가&quot;,
+            &quot;생성한&quot;,
+            &quot;결과물과&quot;,
+            &quot;ai를&quot;,
+            &quot;활용한&quot;,
+            &quot;결과물의&quot;,
+            &quot;법적&quot;,
+            &quot;지위를&quot;,
+            &quot;구분하나요&quot;
+          ],
+          &quot;top_score&quot;: 23.4,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 7
+        }
+      },
+      {
+        &quot;label&quot;: &quot;rewrite&quot;,
+        &quot;query&quot;: &quot;보고서는 ai가 생성한 결과물과 ai를 활용한 결과물의 법적 지위를 구분하나요 전적으로 ai 인간 창작성 assisted 인간의 개입&quot;,
+        &quot;weight&quot;: 1.12,
+        &quot;branch&quot;: &quot;abstract&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K06&quot;,
+          &quot;K05&quot;,
+          &quot;K01&quot;,
+          &quot;K07&quot;,
+          &quot;K03&quot;,
+          &quot;K04&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;보고서는&quot;,
+            &quot;ai가&quot;,
+            &quot;생성한&quot;,
+            &quot;결과물과&quot;,
+            &quot;ai를&quot;,
+            &quot;활용한&quot;,
+            &quot;결과물의&quot;,
+            &quot;법적&quot;,
+            &quot;지위를&quot;,
+            &quot;구분하나요&quot;,
+            &quot;전적으로&quot;,
+            &quot;ai&quot;,
+            &quot;인간&quot;,
+            &quot;창작성&quot;,
+            &quot;assisted&quot;,
+            &quot;인간의&quot;,
+            &quot;개입&quot;
+          ],
+          &quot;top_score&quot;: 36.0,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 7
+        }
+      },
+      {
+        &quot;label&quot;: &quot;step_back&quot;,
+        &quot;query&quot;: &quot;보고서는 ai가 생성한 결과물과 ai를 활용한 결과물의 법적 지위를 구분하나요 배경 이유 의미 전적으로 ai 인간 창작성 assisted&quot;,
+        &quot;weight&quot;: 0.98,
+        &quot;branch&quot;: &quot;abstract&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K05&quot;,
+          &quot;K06&quot;,
+          &quot;K01&quot;,
+          &quot;K07&quot;,
+          &quot;K03&quot;,
+          &quot;K04&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;보고서는&quot;,
+            &quot;ai가&quot;,
+            &quot;생성한&quot;,
+            &quot;결과물과&quot;,
+            &quot;ai를&quot;,
+            &quot;활용한&quot;,
+            &quot;결과물의&quot;,
+            &quot;법적&quot;,
+            &quot;지위를&quot;,
+            &quot;구분하나요&quot;,
+            &quot;배경&quot;,
+            &quot;이유&quot;,
+            &quot;의미&quot;,
+            &quot;전적으로&quot;,
+            &quot;ai&quot;,
+            &quot;인간&quot;,
+            &quot;창작성&quot;,
+            &quot;assisted&quot;
+          ],
+          &quot;top_score&quot;: 33.6,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 7
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 7,
+    &quot;query_count&quot;: 3
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;top_rerank_score&quot;: 117.94,
+    &quot;candidate_count&quot;: 7
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>judge_retrieval_pass_1</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>품질 게이트 통과: 검색 결과가 질문과 충분히 맞물림.</p>
+              <pre>{
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.8,
+    &quot;top_score&quot;: 117.94,
+    &quot;distinct_sections&quot;: 6,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>evidence_distill</strong>
+                <span>0.17 ms</span>
+              </div>
+              <p>4개 evidence row 추출</p>
+              <pre>{
+  &quot;chunk_ids&quot;: [
+    &quot;K05&quot;,
+    &quot;K06&quot;,
+    &quot;K01&quot;,
+    &quot;K07&quot;
+  ]
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>citation_answer</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>citation-constrained draft answer 생성</p>
+              <pre>{
+  &quot;preview&quot;: &quot;직답: 보고서는 전적으로 AI가 생성한 결과물과 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상이 아니라고 보고, 인간의 창작적 통제 아래 AI를 활용해 만든 결과물은 표현적 측면의 인간 기여가 있으면 저작물이 될 수 있다고 구분한다.&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>judge_answer</strong>
+                <span>0.05 ms</span>
+              </div>
+              <p>judge score 100.0</p>
+              <pre>{
+  &quot;total_score&quot;: 100.0,
+  &quot;verdict&quot;: &quot;좋음&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>answer_refine_gate</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>answer_refine_once 실행 여부 판정</p>
+              <pre>{
+  &quot;should_refine&quot;: false,
+  &quot;score&quot;: 100.0
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>finalize</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>질문별 LangGraph run 종료</p>
+              <pre>{
+  &quot;final_model&quot;: &quot;14b&quot;,
+  &quot;score&quot;: 100.0,
+  &quot;rescue_count&quot;: 0,
+  &quot;answer_revision_count&quot;: 0
+}</pre>
+            </article>
+            </div>
+              </article>
+              <article class='panel'>
+                <h3>Retrieval attempts</h3>
+                
+            <article class='panel'>
+              <h4>adaptive_retrieve_pass_1</h4>
+              <p>elapsed: 1.4 ms</p>
+              <div class='grid two'>
+                <div><h5>query plan</h5><ul><li><strong>base</strong> · default<br><code>보고서는 ai가 생성한 결과물과 ai를 활용한 결과물의 법적 지위를 구분하나요</code></li><li><strong>rewrite</strong> · abstract<br><code>보고서는 ai가 생성한 결과물과 ai를 활용한 결과물의 법적 지위를 구분하나요 전적으로 ai 인간 창작성 assisted 인간의 개입</code></li><li><strong>step_back</strong> · abstract<br><code>보고서는 ai가 생성한 결과물과 ai를 활용한 결과물의 법적 지위를 구분하나요 배경 이유 의미 전적으로 ai 인간 창작성 assisted</code></li></ul></div>
+                <div><h5>top chunks</h5><ul><li><strong>K05</strong> · AI가 생성한 결과물의 법적 지위 <span class='score'>117.94</span></li><li><strong>K06</strong> · 정책 권고 <span class='score'>97.37</span></li><li><strong>K01</strong> · 개요 <span class='score'>65.57</span></li><li><strong>K07</strong> · 결론 및 시사점 <span class='score'>32.69</span></li><li><strong>K03</strong> · AI 학습 이용에 대한 저작자의 권리 및 보상 <span class='score'>21.87</span></li><li><strong>K04</strong> · AI법과 투명성 의무 <span class='score'>16.66</span></li></ul></div>
+              </div>
+            </article>
+            
+              </article>
+              <article class='panel'>
+                <h3>Top chunks</h3>
+                <ul><li><strong>K05</strong> · AI가 생성한 결과물의 법적 지위 <span class='score'>117.94</span><br>4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)</li><li><strong>K06</strong> · 정책 권고 <span class='score'>97.37</span><br>5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…</li><li><strong>K01</strong> · 개요 <span class='score'>65.57</span><br>개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…</li><li><strong>K07</strong> · 결론 및 시사점 <span class='score'>32.69</span><br>결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.</li><li><strong>K03</strong> · AI 학습 이용에 대한 저작자의 권리 및 보상 <span class='score'>21.87</span><br>2) AI 학습 이용에 대한 저작자의 권리 및 보상CDSM 지침 제4조는 권리자가 명시적으로 거부하지 않는 한 AI 학습에 사용되는 저작물에 대해 무상 사용을 허용하여, 권리자 협의나 정당한 보상을 받을 실질적인 절차를 제공하지 않음. 이에 따라 보고서는 AI 학습 이용에 대한 저작자의 권리 및 보상 방안에 대해, 자발적 이용허락 및 콘텐츠 파트너십, 확대된 저작권집중관리제도(ECL), TDM에 대한…</li><li><strong>K04</strong> · AI법과 투명성 의무 <span class='score'>16.66</span><br>3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적…</li></ul>
+              </article>
+            </section>
+            
+            <section class='card run'>
+              <div class='eyebrow'>Q6 · recommendations</div>
+              <h2>정책 권고 파트에서 제시된 네 가지 핵심 권고를 요약해줘.</h2>
+              <div class='stats mini'>
+                <article class='panel'><strong>87.0</strong><span>judge score</span></article>
+                <article class='panel'><strong>14B</strong><span>final lane</span></article>
+                <article class='panel'><strong>0</strong><span>retrieval rescues</span></article>
+                <article class='panel'><strong>1</strong><span>answer revisions</span></article>
+              </div>
+              <div class='grid two'>
+                <article class='panel'>
+                  <h3>Expected answer</h3>
+                  <p>핵심 권고는 TDM 예외 적용 범위와 옵트아웃·합법적 접근 요건의 표준화, 생성형 AI 학습 목적의 별도 저작권 예외와 포기할 수 없는 보상권 도입, AI 결과물 보호 여부 명확화와 메타데이터 라벨링 전략, 투명성·추적 가능성 강화를 위한 기술 표준과 글로벌 협력 확대다.</p>
+                  <h3>Final answer</h3>
+                  <pre>직답: 핵심 권고는 TDM 예외 적용 범위와 옵트아웃·합법적 접근 요건의 표준화, 생성형 AI 학습 목적의 별도 저작권 예외와 포기할 수 없는 보상권 도입, AI 결과물 보호 여부 명확화와 메타데이터 라벨링 전략, 투명성·추적 가능성 강화를 위한 기술 표준과 글로벌 협력 확대다.
+질문: 정책 권고 파트에서 제시된 네 가지 핵심 권고를 요약해줘.
+질문 타입: multi_part
+근거 청크: K06, K01, K07, K02
+모드: round13-pdf-14B | quality_ok=True | coverage=0.25
+핵심 근거:
+- [K06] 5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…
+- [K01] 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…
+- [K07] 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.
+- [K02] 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는…
+exact keyword row: 표준화, 별도 저작권 예외, 보상권, 메타데이터, 라벨링, 글로벌 협력
+refine note: answer judge가 87.0점으로 낮아 1회 보강했다.
+한계: 이번 라운드도 실백엔드 LLM이 아니라 template-based mock synthesis 실험이다.</pre>
+                </article>
+                <article class='panel'>
+                  <h3>Judge summary</h3>
+                  <ul>
+                    <li>verdict: <strong>무난</strong></li>
+                    <li>keyword hits: 표준화, 별도 저작권 예외, 보상권, 메타데이터, 라벨링, 글로벌 협력</li>
+                    <li>support hits: K06</li>
+                    <li>quality score: 7.0</li>
+                  </ul>
+                  <p>키워드 6/6, 핵심 청크 1/1개를 잡아 총점 87.0점으로 평가했다.</p>
+                  <h3>Evidence</h3>
+                  <ul><li><strong>K06</strong> · 5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…</li><li><strong>K01</strong> · 개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…</li><li><strong>K07</strong> · 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.</li><li><strong>K02</strong> · 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는…</li></ul>
+                </article>
+              </div>
+              <article class='panel'>
+                <h3>Trace timeline</h3>
+                <div class='trace-list'>
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>classify_8b</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>복잡도 4로 14b lane 선택</p>
+              <pre>{
+  &quot;route&quot;: &quot;14b&quot;,
+  &quot;analysis&quot;: {
+    &quot;token_count&quot;: 8,
+    &quot;matched_hard_terms&quot;: [
+      &quot;권고&quot;
+    ],
+    &quot;complexity_score&quot;: 4,
+    &quot;reason&quot;: &quot;multi-step/legal reasoning&quot;,
+    &quot;source&quot;: &quot;heuristic-mock&quot;
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>question_type_router</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>질문 타입을 multi_part로 판정</p>
+              <pre>{
+  &quot;question_type&quot;: &quot;multi_part&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>adaptive_query_plan_pass_1</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>3개 query branch 생성</p>
+              <pre>{
+  &quot;labels&quot;: [
+    &quot;base&quot;,
+    &quot;subquery_1&quot;,
+    &quot;subquery_2&quot;
+  ]
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>adaptive_retrieve_pass_1</strong>
+                <span>0.87 ms</span>
+              </div>
+              <p>6개 top chunk 확보</p>
+              <pre>{
+  &quot;query_labels&quot;: [
+    &quot;base&quot;,
+    &quot;subquery_1&quot;,
+    &quot;subquery_2&quot;
+  ],
+  &quot;chunk_ids&quot;: [
+    &quot;K06&quot;,
+    &quot;K01&quot;,
+    &quot;K07&quot;,
+    &quot;K02&quot;,
+    &quot;K05&quot;,
+    &quot;K04&quot;
+  ],
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;정책 권고 파트에서 제시된 가지 핵심 권고를 요약해줘 보완 표준화 플랫폼&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K06&quot;,
+          &quot;K01&quot;,
+          &quot;K05&quot;,
+          &quot;K07&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;정책&quot;,
+            &quot;권고&quot;,
+            &quot;파트에서&quot;,
+            &quot;제시된&quot;,
+            &quot;가지&quot;,
+            &quot;핵심&quot;,
+            &quot;권고를&quot;,
+            &quot;요약해줘&quot;,
+            &quot;보완&quot;,
+            &quot;표준화&quot;,
+            &quot;플랫폼&quot;
+          ],
+          &quot;top_score&quot;: 12.6,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 4
+        }
+      },
+      {
+        &quot;label&quot;: &quot;subquery_1&quot;,
+        &quot;query&quot;: &quot;정책 권고 파트에서 제시된 가지 표준화 별도 저작권 예외 보상권&quot;,
+        &quot;weight&quot;: 1.04,
+        &quot;branch&quot;: &quot;multi_part&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K06&quot;,
+          &quot;K01&quot;,
+          &quot;K02&quot;,
+          &quot;K07&quot;,
+          &quot;K05&quot;,
+          &quot;K04&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;정책&quot;,
+            &quot;권고&quot;,
+            &quot;파트에서&quot;,
+            &quot;제시된&quot;,
+            &quot;가지&quot;,
+            &quot;표준화&quot;,
+            &quot;별도&quot;,
+            &quot;저작권&quot;,
+            &quot;예외&quot;,
+            &quot;보상권&quot;
+          ],
+          &quot;top_score&quot;: 23.4,
+          &quot;distinct_sections&quot;: 6,
+          &quot;candidate_count&quot;: 6
+        }
+      },
+      {
+        &quot;label&quot;: &quot;subquery_2&quot;,
+        &quot;query&quot;: &quot;정책 권고 파트에서 제시된 메타데이터 라벨링 글로벌 협력&quot;,
+        &quot;weight&quot;: 1.08,
+        &quot;branch&quot;: &quot;multi_part&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K06&quot;,
+          &quot;K01&quot;,
+          &quot;K07&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;정책&quot;,
+            &quot;권고&quot;,
+            &quot;파트에서&quot;,
+            &quot;제시된&quot;,
+            &quot;메타데이터&quot;,
+            &quot;라벨링&quot;,
+            &quot;글로벌&quot;,
+            &quot;협력&quot;
+          ],
+          &quot;top_score&quot;: 20.4,
+          &quot;distinct_sections&quot;: 3,
+          &quot;candidate_count&quot;: 3
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 6,
+    &quot;query_count&quot;: 3
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;top_rerank_score&quot;: 84.378,
+    &quot;candidate_count&quot;: 6
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>judge_retrieval_pass_1</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>품질 게이트 통과: 검색 결과가 질문과 충분히 맞물림.</p>
+              <pre>{
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.25,
+    &quot;top_score&quot;: 84.378,
+    &quot;distinct_sections&quot;: 6,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>evidence_distill</strong>
+                <span>0.21 ms</span>
+              </div>
+              <p>4개 evidence row 추출</p>
+              <pre>{
+  &quot;chunk_ids&quot;: [
+    &quot;K06&quot;,
+    &quot;K01&quot;,
+    &quot;K07&quot;,
+    &quot;K02&quot;
+  ]
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>citation_answer</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>citation-constrained draft answer 생성</p>
+              <pre>{
+  &quot;preview&quot;: &quot;직답: 핵심 권고는 TDM 예외 적용 범위와 옵트아웃·합법적 접근 요건의 표준화, 생성형 AI 학습 목적의 별도 저작권 예외와 포기할 수 없는 보상권 도입, AI 결과물 보호 여부 명확화와 메타데이터 라벨링 전략, 투명성·추적 가능성 강화를 위한 기술 표준과 글로벌 협력 확대다.&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>judge_answer</strong>
+                <span>0.05 ms</span>
+              </div>
+              <p>judge score 87.0</p>
+              <pre>{
+  &quot;total_score&quot;: 87.0,
+  &quot;verdict&quot;: &quot;무난&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>answer_refine_gate</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>answer_refine_once 실행 여부 판정</p>
+              <pre>{
+  &quot;should_refine&quot;: true,
+  &quot;score&quot;: 87.0
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>answer_refine_once</strong>
+                <span>0.05 ms</span>
+              </div>
+              <p>answer score 87.0 → 87.0</p>
+              <pre>{
+  &quot;score_before&quot;: 87.0,
+  &quot;score_after&quot;: 87.0
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>finalize</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>질문별 LangGraph run 종료</p>
+              <pre>{
+  &quot;final_model&quot;: &quot;14b&quot;,
+  &quot;score&quot;: 87.0,
+  &quot;rescue_count&quot;: 0,
+  &quot;answer_revision_count&quot;: 1
+}</pre>
+            </article>
+            </div>
+              </article>
+              <article class='panel'>
+                <h3>Retrieval attempts</h3>
+                
+            <article class='panel'>
+              <h4>adaptive_retrieve_pass_1</h4>
+              <p>elapsed: 0.87 ms</p>
+              <div class='grid two'>
+                <div><h5>query plan</h5><ul><li><strong>base</strong> · default<br><code>정책 권고 파트에서 제시된 가지 핵심 권고를 요약해줘 보완 표준화 플랫폼</code></li><li><strong>subquery_1</strong> · multi_part<br><code>정책 권고 파트에서 제시된 가지 표준화 별도 저작권 예외 보상권</code></li><li><strong>subquery_2</strong> · multi_part<br><code>정책 권고 파트에서 제시된 메타데이터 라벨링 글로벌 협력</code></li></ul></div>
+                <div><h5>top chunks</h5><ul><li><strong>K06</strong> · 정책 권고 <span class='score'>84.378</span></li><li><strong>K01</strong> · 개요 <span class='score'>18.454</span></li><li><strong>K07</strong> · 결론 및 시사점 <span class='score'>14.102</span></li><li><strong>K02</strong> · CDSM 지침의 TDM 예외 조항 검토 <span class='score'>9.33</span></li><li><strong>K05</strong> · AI가 생성한 결과물의 법적 지위 <span class='score'>7.58</span></li><li><strong>K04</strong> · AI법과 투명성 의무 <span class='score'>4.724</span></li></ul></div>
+              </div>
+            </article>
+            
+              </article>
+              <article class='panel'>
+                <h3>Top chunks</h3>
+                <ul><li><strong>K06</strong> · 정책 권고 <span class='score'>84.378</span><br>5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…</li><li><strong>K01</strong> · 개요 <span class='score'>18.454</span><br>개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…</li><li><strong>K07</strong> · 결론 및 시사점 <span class='score'>14.102</span><br>결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.</li><li><strong>K02</strong> · CDSM 지침의 TDM 예외 조항 검토 <span class='score'>9.33</span><br>주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는…</li><li><strong>K05</strong> · AI가 생성한 결과물의 법적 지위 <span class='score'>7.58</span><br>4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)</li><li><strong>K04</strong> · AI법과 투명성 의무 <span class='score'>4.724</span><br>3) AI법과 투명성 의무AI법상 학습데이터 투명성 요건은 기계판독 가능한 표준화된 옵트아웃이 부재하고, 옵트아웃된 저작물의 중앙 등록부가 없으며, 개별 저작자가 자신의 권리를 모니터링하고 집행해야 하는 부담이 있음. AI법은 학습데이터의 ’충분히 상세한 요약‘만을 요구할 뿐 데이터 자체의 공개를 요구하지 않으며, EU 역외 위치한 제공자에 대한 집행 가능성을 확보하지 못함.보고서는 AI 학습을 위한 포괄적…</li></ul>
+              </article>
+            </section>
+            
+            <section class='card run'>
+              <div class='eyebrow'>Q7 · implication</div>
+              <h2>결론 및 시사점에서 이 보고서의 의미를 어떻게 평가하나요?</h2>
+              <div class='stats mini'>
+                <article class='panel'><strong>85.6</strong><span>judge score</span></article>
+                <article class='panel'><strong>8B</strong><span>final lane</span></article>
+                <article class='panel'><strong>0</strong><span>retrieval rescues</span></article>
+                <article class='panel'><strong>1</strong><span>answer revisions</span></article>
+              </div>
+              <div class='grid two'>
+                <article class='panel'>
+                  <h3>Expected answer</h3>
+                  <p>보고서는 생성형 AI 학습에 TDM 예외를 적용하는 법적 타당성을 비판적으로 해석하며, 현행 EU 저작권 체계의 모호성을 짚고 향후 유럽의회 입법·정책·이해관계자 협의에서 정치적·법적 정당성을 제공하는 문서로 평가된다.</p>
+                  <h3>Final answer</h3>
+                  <pre>직답: 보고서는 생성형 AI 학습에 TDM 예외를 적용하는 법적 타당성을 비판적으로 해석하며, 현행 EU 저작권 체계의 모호성을 짚고 향후 유럽의회 입법·정책·이해관계자 협의에서 정치적·법적 정당성을 제공하는 문서로 평가된다.
+질문: 결론 및 시사점에서 이 보고서의 의미를 어떻게 평가하나요?
+질문 타입: multi_part
+근거 청크: K07, K06, K02, K05
+모드: round13-pdf-8B | quality_ok=True | coverage=0.2
+핵심 근거:
+- [K07] 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.
+- [K06] 5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…
+- [K02] 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는…
+- [K05] 4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)
+exact keyword row: 비판적, 모호성, 입법 논의, 정책 수립, 정당성, 이해관계자 협의
+refine note: answer judge가 85.6점으로 낮아 1회 보강했다.
+한계: 이번 라운드도 실백엔드 LLM이 아니라 template-based mock synthesis 실험이다.</pre>
+                </article>
+                <article class='panel'>
+                  <h3>Judge summary</h3>
+                  <ul>
+                    <li>verdict: <strong>무난</strong></li>
+                    <li>keyword hits: 비판적, 모호성, 입법 논의, 정책 수립, 정당성, 이해관계자 협의</li>
+                    <li>support hits: K07</li>
+                    <li>quality score: 5.6</li>
+                  </ul>
+                  <p>키워드 6/6, 핵심 청크 1/1개를 잡아 총점 85.6점으로 평가했다.</p>
+                  <h3>Evidence</h3>
+                  <ul><li><strong>K07</strong> · 결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.</li><li><strong>K06</strong> · 5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…</li><li><strong>K02</strong> · 주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는…</li><li><strong>K05</strong> · 4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)</li></ul>
+                </article>
+              </div>
+              <article class='panel'>
+                <h3>Trace timeline</h3>
+                <div class='trace-list'>
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>classify_8b</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>복잡도 2로 8b lane 선택</p>
+              <pre>{
+  &quot;route&quot;: &quot;8b&quot;,
+  &quot;analysis&quot;: {
+    &quot;token_count&quot;: 5,
+    &quot;matched_hard_terms&quot;: [
+      &quot;결론&quot;,
+      &quot;시사점&quot;,
+      &quot;어떻게&quot;,
+      &quot;의미&quot;
+    ],
+    &quot;complexity_score&quot;: 2,
+    &quot;reason&quot;: &quot;direct factual retrieval&quot;,
+    &quot;source&quot;: &quot;heuristic-mock&quot;
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>question_type_router</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>질문 타입을 multi_part로 판정</p>
+              <pre>{
+  &quot;question_type&quot;: &quot;multi_part&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>adaptive_query_plan_pass_1</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>3개 query branch 생성</p>
+              <pre>{
+  &quot;labels&quot;: [
+    &quot;base&quot;,
+    &quot;subquery_1&quot;,
+    &quot;subquery_2&quot;
+  ]
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>adaptive_retrieve_pass_1</strong>
+                <span>0.96 ms</span>
+              </div>
+              <p>5개 top chunk 확보</p>
+              <pre>{
+  &quot;query_labels&quot;: [
+    &quot;base&quot;,
+    &quot;subquery_1&quot;,
+    &quot;subquery_2&quot;
+  ],
+  &quot;chunk_ids&quot;: [
+    &quot;K07&quot;,
+    &quot;K06&quot;,
+    &quot;K02&quot;,
+    &quot;K05&quot;,
+    &quot;K01&quot;
+  ],
+  &quot;fuse_stats&quot;: {
+    &quot;query_plan&quot;: [
+      {
+        &quot;label&quot;: &quot;base&quot;,
+        &quot;query&quot;: &quot;결론 시사점에서 보고서의 의미를 평가하나요&quot;,
+        &quot;weight&quot;: 1.0,
+        &quot;branch&quot;: &quot;default&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K07&quot;,
+          &quot;K02&quot;,
+          &quot;K05&quot;,
+          &quot;K06&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;결론&quot;,
+            &quot;시사점에서&quot;,
+            &quot;보고서의&quot;,
+            &quot;의미를&quot;,
+            &quot;평가하나요&quot;
+          ],
+          &quot;top_score&quot;: 4.6,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 4
+        }
+      },
+      {
+        &quot;label&quot;: &quot;subquery_1&quot;,
+        &quot;query&quot;: &quot;결론 시사점에서 보고서의 의미를 평가하나요 비판적 모호성 입법 논의&quot;,
+        &quot;weight&quot;: 1.04,
+        &quot;branch&quot;: &quot;multi_part&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K07&quot;,
+          &quot;K02&quot;,
+          &quot;K05&quot;,
+          &quot;K06&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;결론&quot;,
+            &quot;시사점에서&quot;,
+            &quot;보고서의&quot;,
+            &quot;의미를&quot;,
+            &quot;평가하나요&quot;,
+            &quot;비판적&quot;,
+            &quot;모호성&quot;,
+            &quot;입법&quot;,
+            &quot;논의&quot;
+          ],
+          &quot;top_score&quot;: 13.6,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 4
+        }
+      },
+      {
+        &quot;label&quot;: &quot;subquery_2&quot;,
+        &quot;query&quot;: &quot;결론 시사점에서 보고서의 의미를 정책 수립 정당성&quot;,
+        &quot;weight&quot;: 1.08,
+        &quot;branch&quot;: &quot;multi_part&quot;,
+        &quot;selected_chunk_ids&quot;: [
+          &quot;K07&quot;,
+          &quot;K06&quot;,
+          &quot;K01&quot;,
+          &quot;K02&quot;
+        ],
+        &quot;stats&quot;: {
+          &quot;query_tokens&quot;: [
+            &quot;결론&quot;,
+            &quot;시사점에서&quot;,
+            &quot;보고서의&quot;,
+            &quot;의미를&quot;,
+            &quot;정책&quot;,
+            &quot;수립&quot;,
+            &quot;정당성&quot;
+          ],
+          &quot;top_score&quot;: 11.0,
+          &quot;distinct_sections&quot;: 4,
+          &quot;candidate_count&quot;: 5
+        }
+      }
+    ],
+    &quot;candidate_count&quot;: 5,
+    &quot;query_count&quot;: 3
+  },
+  &quot;rerank_stats&quot;: {
+    &quot;top_rerank_score&quot;: 56.034,
+    &quot;candidate_count&quot;: 5
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>judge_retrieval_pass_1</strong>
+                <span>0.01 ms</span>
+              </div>
+              <p>품질 게이트 통과: 검색 결과가 질문과 충분히 맞물림.</p>
+              <pre>{
+  &quot;action&quot;: &quot;answer&quot;,
+  &quot;quality&quot;: {
+    &quot;ok&quot;: true,
+    &quot;coverage&quot;: 0.2,
+    &quot;top_score&quot;: 56.034,
+    &quot;distinct_sections&quot;: 5,
+    &quot;reason&quot;: &quot;retrieval looks grounded&quot;
+  }
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>evidence_distill</strong>
+                <span>0.17 ms</span>
+              </div>
+              <p>4개 evidence row 추출</p>
+              <pre>{
+  &quot;chunk_ids&quot;: [
+    &quot;K07&quot;,
+    &quot;K06&quot;,
+    &quot;K02&quot;,
+    &quot;K05&quot;
+  ]
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>citation_answer</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>citation-constrained draft answer 생성</p>
+              <pre>{
+  &quot;preview&quot;: &quot;직답: 보고서는 생성형 AI 학습에 TDM 예외를 적용하는 법적 타당성을 비판적으로 해석하며, 현행 EU 저작권 체계의 모호성을 짚고 향후 유럽의회 입법·정책·이해관계자 협의에서 정치적·법적 정당성을 제공하는 문서로 평가된다.&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>judge_answer</strong>
+                <span>0.05 ms</span>
+              </div>
+              <p>judge score 85.6</p>
+              <pre>{
+  &quot;total_score&quot;: 85.6,
+  &quot;verdict&quot;: &quot;무난&quot;
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>answer_refine_gate</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>answer_refine_once 실행 여부 판정</p>
+              <pre>{
+  &quot;should_refine&quot;: true,
+  &quot;score&quot;: 85.6
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>answer_refine_once</strong>
+                <span>0.05 ms</span>
+              </div>
+              <p>answer score 85.6 → 85.6</p>
+              <pre>{
+  &quot;score_before&quot;: 85.6,
+  &quot;score_after&quot;: 85.6
+}</pre>
+            </article>
+            
+
+            <article class='trace-row'>
+              <div class='trace-head'>
+                <strong>finalize</strong>
+                <span>0.00 ms</span>
+              </div>
+              <p>질문별 LangGraph run 종료</p>
+              <pre>{
+  &quot;final_model&quot;: &quot;8b&quot;,
+  &quot;score&quot;: 85.6,
+  &quot;rescue_count&quot;: 0,
+  &quot;answer_revision_count&quot;: 1
+}</pre>
+            </article>
+            </div>
+              </article>
+              <article class='panel'>
+                <h3>Retrieval attempts</h3>
+                
+            <article class='panel'>
+              <h4>adaptive_retrieve_pass_1</h4>
+              <p>elapsed: 0.96 ms</p>
+              <div class='grid two'>
+                <div><h5>query plan</h5><ul><li><strong>base</strong> · default<br><code>결론 시사점에서 보고서의 의미를 평가하나요</code></li><li><strong>subquery_1</strong> · multi_part<br><code>결론 시사점에서 보고서의 의미를 평가하나요 비판적 모호성 입법 논의</code></li><li><strong>subquery_2</strong> · multi_part<br><code>결론 시사점에서 보고서의 의미를 정책 수립 정당성</code></li></ul></div>
+                <div><h5>top chunks</h5><ul><li><strong>K07</strong> · 결론 및 시사점 <span class='score'>56.034</span></li><li><strong>K06</strong> · 정책 권고 <span class='score'>16.03</span></li><li><strong>K02</strong> · CDSM 지침의 TDM 예외 조항 검토 <span class='score'>11.222</span></li><li><strong>K05</strong> · AI가 생성한 결과물의 법적 지위 <span class='score'>7.324</span></li><li><strong>K01</strong> · 개요 <span class='score'>3.818</span></li></ul></div>
+              </div>
+            </article>
+            
+              </article>
+              <article class='panel'>
+                <h3>Top chunks</h3>
+                <ul><li><strong>K07</strong> · 결론 및 시사점 <span class='score'>56.034</span><br>결론 및 시사점이번 유럽의회의 보고서는 EUIPO의 ⸢저작권 관점으로 본 생성형 AI의 발전⸥ 보고서6)에 비해 TDM 예외를 생성형 AI 학습에 적용하는 것의 법적 타당성 문제를 보다 비판적인 관점에서 해석하고 있음.</li><li><strong>K06</strong> · 정책 권고 <span class='score'>16.03</span><br>5) 정책 권고보고서는 위 각각의 내용을 검토한 결과, 텍스트 및 데이터 마이닝(TDM) 예외의 공정한 이행과 생성형 AI 학습의 법적 기반 마련, 그리고 AI 결과물의 법적 지위 명확화를 위해 제도적·기술적 보완이 필요하다으로 재조합하는 것을 의미5) AI를 활용한 결과물(AI-assisted)과 AI가 생성한 결과물(AI-generated)의 법적 적격성(legal eligibility)은 인간의 개입 정도에 따라…</li><li><strong>K02</strong> · CDSM 지침의 TDM 예외 조항 검토 <span class='score'>11.222</span><br>주요내용1) CDSM 지침의 TDM 예외 조항 검토보고서는 ‘AI 모델 학습을 위한 저작물 활용이 EU 법률에 따라 허용되는지 여부’를 검토하고, ‘생성형 AI 학습을 CDSM 지침상 TDM 예외 적용 범위에 포함할 경우, 권리자 보호 약화 및 국제 저작권 규범 위반 가능성이 있다’고 결론 내렸음.사실적 패턴이나 인사이트를 추출하는 데 중점을 두는 현행 TDM과 달리, 생성형 AI 시스템은 표현적 콘텐츠를 내재화하고 복제하는…</li><li><strong>K05</strong> · AI가 생성한 결과물의 법적 지위 <span class='score'>7.324</span><br>4) AI가 생성한 결과물의 법적 지위EU는 여전히 인간 창작성에 기반한 저작권 체계를 유지하고 있으며, AI 결과물(AI-Generated outputs)의 법적 지위에 대한 논의는 진행 중임. 보고서는 전적으로 AI가 생성한 결과물(Fully AI-processed outputs / Autonomous Output) 및 창작자 식별이 불가능한 플랫폼 소유 결과물은 저작권 보호 대상 아니라고 결론 내림.5)</li><li><strong>K01</strong> · 개요 <span class='score'>3.818</span><br>개요유럽의회(European Parliament) 법제위원회(JURI Committee)는 2025년 7월 9일, “생성형 AI와 저작권(Generative AI and copyright)1)”이라는 이름의 보고서를 발표함. 보고서는 보호받는 저작물을 생성형 AI 시스템의 학습을 위해 사용하는 것과 관련된 법적 불확실성 및 불공정성을 지적하며, 집행위원회에 조속히 관련 문제를 해결할 것을 권고하고 있음.보고서는 AI 학습에…</li></ul>
+              </article>
+            </section>
+            
+  </main>
+</body>
+</html>
